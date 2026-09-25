@@ -1,0 +1,945 @@
+{
+  "scenes": 62,
+  "screenshots": 142,
+  "errors": [],
+  "layout": [
+    {
+      "scene": "home",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "home-ready",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "chat",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "command",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "inline-diff",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "diff",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "diff-uncertain",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "diff-binary",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "diff-renamed",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "diff-missing",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "diff-large",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "plan",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "approval",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "plan-approval",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "tasks",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "subagents",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "child",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "browser",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "browser-auth",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "browser-stale",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "terminal",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "markdown",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "error",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "stopped",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "worktree",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "folder-conflict",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "models-picker",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "runtime-switch",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "reasoning",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "permissions",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "context",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "directories",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "agents",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "agent-edit",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "models",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "provider-edit",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "subscriptions",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "runtime",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "runtime-login",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "capabilities",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "mcp",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "mcp-detail",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "mcp-auth",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "mcp-error",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "plugins",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "plugin-detail",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "plugin-install",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "hook-auth",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "skills",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "skill-detail",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "memory",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "memory-edit",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "files",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "appearance",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "computer",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "browser-settings",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "search-settings",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "data",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "import",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "export",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "exit",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "search",
+      "theme": "light",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "home",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "home-ready",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "chat",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "command",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "inline-diff",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "diff",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "diff-uncertain",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "diff-binary",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "diff-renamed",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "diff-missing",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "diff-large",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "plan",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "approval",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "plan-approval",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "tasks",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "subagents",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "child",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "browser",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "browser-auth",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "browser-stale",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "terminal",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 716,
+      "panel": 470
+    },
+    {
+      "scene": "markdown",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "error",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "stopped",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "worktree",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "folder-conflict",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "models-picker",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "runtime-switch",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "reasoning",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "permissions",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "context",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "directories",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "agents",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "agent-edit",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "models",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "provider-edit",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "subscriptions",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "runtime",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "runtime-login",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "capabilities",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "mcp",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "mcp-detail",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "mcp-auth",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "mcp-error",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "plugins",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "plugin-detail",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "plugin-install",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "hook-auth",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "skills",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "skill-detail",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "memory",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "memory-edit",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "files",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "appearance",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "computer",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "browser-settings",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "search-settings",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "data",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "import",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "export",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "exit",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "search",
+      "theme": "dark",
+      "rootOverflow": false,
+      "mainWidth": 1186,
+      "panel": 0
+    },
+    {
+      "scene": "home",
+      "width": 1366,
+      "height": 768,
+      "rootOverflow": false,
+      "mainWidth": 1112
+    },
+    {
+      "scene": "diff",
+      "width": 1366,
+      "height": 768,
+      "rootOverflow": false,
+      "mainWidth": 642
+    },
+    {
+      "scene": "approval",
+      "width": 1366,
+      "height": 768,
+      "rootOverflow": false,
+      "mainWidth": 1112
+    },
+    {
+      "scene": "home",
+      "width": 1024,
+      "height": 768,
+      "rootOverflow": false,
+      "mainWidth": 794
+    },
+    {
+      "scene": "plan-approval",
+      "width": 1024,
+      "height": 768,
+      "rootOverflow": false,
+      "mainWidth": 567
+    },
+    {
+      "scene": "diff",
+      "width": 1024,
+      "height": 768,
+      "rootOverflow": false,
+      "mainWidth": 567
+    },
+    {
+      "scene": "home",
+      "width": 800,
+      "height": 900,
+      "rootOverflow": false,
+      "mainWidth": 570
+    },
+    {
+      "scene": "diff",
+      "width": 800,
+      "height": 900,
+      "rootOverflow": false,
+      "mainWidth": 359
+    },
+    {
+      "scene": "diff",
+      "width": 1920,
+      "height": 1080,
+      "rootOverflow": false,
+      "mainWidth": 1196
+    },
+    {
+      "scene": "browser",
+      "width": 1920,
+      "height": 1080,
+      "rootOverflow": false,
+      "mainWidth": 1196
+    }
+  ]
+}

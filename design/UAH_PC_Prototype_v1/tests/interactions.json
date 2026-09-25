@@ -1,0 +1,295 @@
+{
+  "checks": [
+    {
+      "name": "Draft does not create an empty history entry",
+      "pass": true
+    },
+    {
+      "name": "New-chat composer stays at the bottom after first send",
+      "pass": true
+    },
+    {
+      "name": "First draft requires an explicitly selected model",
+      "pass": true
+    },
+    {
+      "name": "Stopped/history-only directory does not show concurrency warning",
+      "pass": true
+    },
+    {
+      "name": "First valid send commits exactly one session",
+      "pass": true
+    },
+    {
+      "name": "Folder picker adds session-only directories without typed paths",
+      "pass": true
+    },
+    {
+      "name": "Main directory picker unlocks extra-directory management",
+      "pass": true
+    },
+    {
+      "name": "Simulated streaming continues in background and cancellation stops it",
+      "pass": true
+    },
+    {
+      "name": "Active Git directory requires an explicit worktree decision",
+      "pass": true
+    },
+    {
+      "name": "Ordinary folders never offer Git worktree",
+      "pass": true
+    },
+    {
+      "name": "Command disclosure expands actual sample command/output inline",
+      "pass": true
+    },
+    {
+      "name": "Editing disclosure uses an inline diff, not a tool modal",
+      "pass": true
+    },
+    {
+      "name": "Disclosure state survives panel and session changes",
+      "pass": true
+    },
+    {
+      "name": "Each session retains its panel and selected diff file",
+      "pass": true
+    },
+    {
+      "name": "Plan, tasks and two-level subagents stay in the current session",
+      "pass": true
+    },
+    {
+      "name": "Current file navigation does not overwrite historical diff",
+      "pass": true
+    },
+    {
+      "name": "A no-change round still displays its changes section",
+      "pass": true
+    },
+    {
+      "name": "Binary, missing, large and uncertain diff states are explicit",
+      "pass": true
+    },
+    {
+      "name": "Reading a tool is not approval; Allow is an explicit action",
+      "pass": true
+    },
+    {
+      "name": "Plan viewing remains separate from execution approval",
+      "pass": true
+    },
+    {
+      "name": "Denied approval is recorded without execution",
+      "pass": true
+    },
+    {
+      "name": "Cross-runtime selection creates a branch draft with migration boundaries",
+      "pass": true
+    },
+    {
+      "name": "Changing a model within UAH does not fabricate a runtime branch",
+      "pass": true
+    },
+    {
+      "name": "Compact context is one-color percent; detail keeps categories and unknown stays unknown",
+      "pass": true
+    },
+    {
+      "name": "Unsupported reasoning does not display a fabricated slider",
+      "pass": true
+    },
+    {
+      "name": "Unknown model efforts use provisional protocol defaults",
+      "pass": true
+    },
+    {
+      "name": "Reasoning changes use discrete declared efforts",
+      "pass": true
+    },
+    {
+      "name": "Ultra combines runtime orchestration with reasoning and stays unavailable to API-only models",
+      "pass": true
+    },
+    {
+      "name": "Effort card has one slider and a help icon",
+      "pass": true
+    },
+    {
+      "name": "Collapsed sidebar can reopen after the transition",
+      "pass": true
+    },
+    {
+      "name": "Readonly mode blocks browser writes even with global toggle enabled",
+      "pass": true
+    },
+    {
+      "name": "Global computer/browser controls default off",
+      "pass": true
+    },
+    {
+      "name": "Target authorization is explicit, logged and revocable by Stop",
+      "pass": true
+    },
+    {
+      "name": "Stale observations cannot be used for actions",
+      "pass": true
+    },
+    {
+      "name": "A second parent cannot steal the screen lease",
+      "pass": true
+    },
+    {
+      "name": "MCP project switches are scoped independently",
+      "pass": true
+    },
+    {
+      "name": "Remote MCP authentication gates its declared tools",
+      "pass": true
+    },
+    {
+      "name": "Structured MCP form switches transport and omits secret values",
+      "pass": true
+    },
+    {
+      "name": "MCP working directory uses the folder picker and preserves form values",
+      "pass": true
+    },
+    {
+      "name": "Official runtime adapter explains mode and tool event mapping",
+      "pass": true
+    },
+    {
+      "name": "Provider editing never puts API secrets in prototype state",
+      "pass": true
+    },
+    {
+      "name": "A newly added provider starts disabled",
+      "pass": true
+    },
+    {
+      "name": "Official login UI manages one sample account without password capture",
+      "pass": true
+    },
+    {
+      "name": "Each executable hook requires a separate explicit grant",
+      "pass": true
+    },
+    {
+      "name": "Installing a plugin neither enables its hooks nor silently activates it",
+      "pass": true
+    },
+    {
+      "name": "Plugin uninstall has a restore path without retained execution grants",
+      "pass": true
+    },
+    {
+      "name": "Memory CRUD safely renders text without executing HTML",
+      "pass": true
+    },
+    {
+      "name": "Project file preview and source are separate views",
+      "pass": true
+    },
+    {
+      "name": "Import preview can skip every conflicting item without writes",
+      "pass": true
+    },
+    {
+      "name": "Import copies are stopped and the previous state is recoverable",
+      "pass": true
+    },
+    {
+      "name": "Malformed import files are rejected before mutation",
+      "pass": true
+    },
+    {
+      "name": "Export serializer omits API keys, headers and runtime credentials",
+      "pass": true
+    },
+    {
+      "name": "Sensitive export requests a second explicit confirmation",
+      "pass": true
+    },
+    {
+      "name": "Theme and reduced-motion changes preserve tool state",
+      "pass": true
+    },
+    {
+      "name": "Keyboard search and Escape close their overlays",
+      "pass": true
+    },
+    {
+      "name": "The right column is draggable",
+      "pass": true
+    },
+    {
+      "name": "Narrow three-column layout keeps approval and Stop reachable",
+      "pass": true
+    },
+    {
+      "name": "The demo terminal never executes arbitrary commands",
+      "pass": true
+    },
+    {
+      "name": "Exit stops active sessions and reopen does not auto-resume",
+      "pass": true
+    },
+    {
+      "name": "Management pages return to their originating draft",
+      "pass": true
+    },
+    {
+      "name": "Deleting the last session keeps an empty usable workspace",
+      "pass": true
+    },
+    {
+      "name": "Cancelled directory decisions cannot mutate another session",
+      "pass": true
+    },
+    {
+      "name": "First send rechecks a newly active directory conflict",
+      "pass": true
+    },
+    {
+      "name": "Context compaction belongs to one session",
+      "pass": true
+    },
+    {
+      "name": "Narrow split view stays readable and left navigation reopens",
+      "pass": true
+    },
+    {
+      "name": "Unchecked Agent tools never silently grant all tools",
+      "pass": true
+    },
+    {
+      "name": "Plan approval, changed file and diff refer to the same session plan",
+      "pass": true
+    },
+    {
+      "name": "Project file attachment returns to its originating draft",
+      "pass": true
+    },
+    {
+      "name": "Failures remain explicit until the user manually resumes",
+      "pass": true
+    },
+    {
+      "name": "No page-level JavaScript errors",
+      "pass": true
+    },
+    {
+      "name": "Prototype makes no external network requests",
+      "pass": true
+    }
+  ],
+  "pageErrors": [],
+  "requests": [],
+  "environment": "Chromium, injected standalone HTML on about:blank; file/http navigation restricted by execution environment",
+  "browserVersion": "153.0.4234.48",
+  "passed": 71,
+  "failed": 0,
+  "total": 71
+}

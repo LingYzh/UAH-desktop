@@ -1,0 +1,312 @@
+[
+  {
+    "id": "home",
+    "title": "新对话",
+    "description": "Claude 式欢迎页 · 首次发送才保存"
+  },
+  {
+    "id": "home-ready",
+    "title": "已选择项目的草稿",
+    "description": "项目、Agent、模型与输入"
+  },
+  {
+    "id": "chat",
+    "title": "对话与工具",
+    "description": "无气泡助手正文 · 每轮改动"
+  },
+  {
+    "id": "command",
+    "title": "命令原地展开",
+    "description": "真实调用对应输出的展示样本"
+  },
+  {
+    "id": "inline-diff",
+    "title": "文件编辑原地展开",
+    "description": "无外层工具组卡片"
+  },
+  {
+    "id": "diff",
+    "title": "三栏与历史 Diff",
+    "description": "保存快照与当前文件分开"
+  },
+  {
+    "id": "diff-uncertain",
+    "title": "归属不确定",
+    "description": "并发 / 外部编辑的边界"
+  },
+  {
+    "id": "diff-binary",
+    "title": "二进制改动",
+    "description": "元数据与降级原因"
+  },
+  {
+    "id": "diff-renamed",
+    "title": "重命名与删除",
+    "description": "多文件历史标签"
+  },
+  {
+    "id": "diff-missing",
+    "title": "历史快照缺失",
+    "description": "不以当前文件冒充历史"
+  },
+  {
+    "id": "diff-large",
+    "title": "大文件降级",
+    "description": "元数据与预览预算"
+  },
+  {
+    "id": "plan",
+    "title": "计划侧栏",
+    "description": "步骤、状态和执行记录"
+  },
+  {
+    "id": "approval",
+    "title": "命令审批",
+    "description": "保持可见的明确授权入口"
+  },
+  {
+    "id": "plan-approval",
+    "title": "计划执行审批",
+    "description": "阅读计划不等于批准执行"
+  },
+  {
+    "id": "tasks",
+    "title": "后台任务",
+    "description": "多个项目的并发与状态"
+  },
+  {
+    "id": "subagents",
+    "title": "子代理树",
+    "description": "单层委派 · 父子关系"
+  },
+  {
+    "id": "child",
+    "title": "子会话正文",
+    "description": "只读记录与父会话授权边界"
+  },
+  {
+    "id": "browser",
+    "title": "内置浏览器",
+    "description": "独立配置文件与动作日志"
+  },
+  {
+    "id": "browser-auth",
+    "title": "浏览器目标授权",
+    "description": "总开关之上的显式授权"
+  },
+  {
+    "id": "browser-stale",
+    "title": "观察已过期",
+    "description": "目标变化后重新观察"
+  },
+  {
+    "id": "terminal",
+    "title": "项目终端",
+    "description": "手动终端与模型记录分开"
+  },
+  {
+    "id": "markdown",
+    "title": "Markdown 阅读",
+    "description": "公式、表格与流程图样本"
+  },
+  {
+    "id": "error",
+    "title": "失败与恢复",
+    "description": "保留错误，不伪装为完成"
+  },
+  {
+    "id": "stopped",
+    "title": "退出后中止",
+    "description": "不会自动续跑"
+  },
+  {
+    "id": "worktree",
+    "title": "Git 并发提示",
+    "description": "隔离 worktree / 共享目录"
+  },
+  {
+    "id": "folder-conflict",
+    "title": "普通目录并发",
+    "description": "不可创建 worktree"
+  },
+  {
+    "id": "models-picker",
+    "title": "分组模型选择器",
+    "description": "API / 官方运行时"
+  },
+  {
+    "id": "runtime-switch",
+    "title": "跨运行时切换",
+    "description": "分支与迁移范围确认"
+  },
+  {
+    "id": "reasoning",
+    "title": "思考档位",
+    "description": "独立离散滑块"
+  },
+  {
+    "id": "permissions",
+    "title": "权限模式",
+    "description": "只读、计划、需审批、自动"
+  },
+  {
+    "id": "context",
+    "title": "上下文组成",
+    "description": "本地估算与未上报数据分开"
+  },
+  {
+    "id": "directories",
+    "title": "目录范围",
+    "description": "文件工具范围不冒充 Shell 沙箱"
+  },
+  {
+    "id": "agents",
+    "title": "Agent 列表",
+    "description": "管理任务角色与设定"
+  },
+  {
+    "id": "agent-edit",
+    "title": "Agent 编辑",
+    "description": "系统提示词与工具白名单"
+  },
+  {
+    "id": "models",
+    "title": "API 供应商",
+    "description": "协议、状态与模型目录"
+  },
+  {
+    "id": "provider-edit",
+    "title": "供应商编辑",
+    "description": "配置、能力、测试与高级参数"
+  },
+  {
+    "id": "subscriptions",
+    "title": "订阅运行时",
+    "description": "安装、官方登录与账号状态"
+  },
+  {
+    "id": "runtime",
+    "title": "运行时详情",
+    "description": "单账号、模型与真实能力"
+  },
+  {
+    "id": "runtime-login",
+    "title": "官方登录流程",
+    "description": "不接收或复制凭据"
+  },
+  {
+    "id": "capabilities",
+    "title": "运行时能力对照",
+    "description": "未验证 / 未上报诚实显示"
+  },
+  {
+    "id": "mcp",
+    "title": "MCP 连接器",
+    "description": "全局添加 · 项目启用"
+  },
+  {
+    "id": "mcp-detail",
+    "title": "MCP 工具与资源",
+    "description": "stdio / HTTP 与调用记录"
+  },
+  {
+    "id": "mcp-auth",
+    "title": "MCP 认证状态",
+    "description": "服务器授权与错误独立"
+  },
+  {
+    "id": "mcp-error",
+    "title": "MCP 连接失败",
+    "description": "错误留在发生位置"
+  },
+  {
+    "id": "plugins",
+    "title": "插件管理",
+    "description": "本地导入与项目启停"
+  },
+  {
+    "id": "plugin-detail",
+    "title": "插件详情",
+    "description": "清单、规则与单项 hooks"
+  },
+  {
+    "id": "plugin-install",
+    "title": "插件安装预览",
+    "description": "不在安装时执行脚本"
+  },
+  {
+    "id": "hook-auth",
+    "title": "Hook 独立授权",
+    "description": "逐项确认执行内容与范围"
+  },
+  {
+    "id": "skills",
+    "title": "Skills 列表",
+    "description": "技能与来源"
+  },
+  {
+    "id": "skill-detail",
+    "title": "Skill 阅读",
+    "description": "SKILL.md 与关联资源"
+  },
+  {
+    "id": "memory",
+    "title": "记忆管理",
+    "description": "全局 / 项目范围"
+  },
+  {
+    "id": "memory-edit",
+    "title": "记忆编辑",
+    "description": "原文保存与删除"
+  },
+  {
+    "id": "files",
+    "title": "项目文件",
+    "description": "预览 / 源码与当前文件"
+  },
+  {
+    "id": "appearance",
+    "title": "外观设置",
+    "description": "系统、浅色、深色与减少动效"
+  },
+  {
+    "id": "computer",
+    "title": "Windows 电脑控制",
+    "description": "默认关闭 · 屏幕租约"
+  },
+  {
+    "id": "browser-settings",
+    "title": "浏览器设置",
+    "description": "独立 Profile 与网站登录"
+  },
+  {
+    "id": "search-settings",
+    "title": "网络搜索设置",
+    "description": "单独服务与凭据边界"
+  },
+  {
+    "id": "data",
+    "title": "数据迁移设置",
+    "description": "显式交换 · 无实时同步"
+  },
+  {
+    "id": "import",
+    "title": "导入冲突预览",
+    "description": "更新、副本或跳过"
+  },
+  {
+    "id": "export",
+    "title": "导出与敏感预览",
+    "description": "范围选择与敏感二次确认"
+  },
+  {
+    "id": "exit",
+    "title": "退出应用",
+    "description": "活动任务中止与保存"
+  },
+  {
+    "id": "search",
+    "title": "搜索与快捷入口",
+    "description": "会话与管理页检索"
+  }
+]

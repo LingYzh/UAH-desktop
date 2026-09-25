@@ -1,0 +1,1422 @@
+[
+  {
+    "file": "screenshots/01-home-light.png",
+    "scene": "home",
+    "title": "新对话",
+    "description": "Claude 式欢迎页 · 首次发送才保存",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/02-home-ready-light.png",
+    "scene": "home-ready",
+    "title": "已选择项目的草稿",
+    "description": "项目、Agent、模型与输入",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/03-chat-light.png",
+    "scene": "chat",
+    "title": "对话与工具",
+    "description": "无气泡助手正文 · 每轮改动",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/04-command-light.png",
+    "scene": "command",
+    "title": "命令原地展开",
+    "description": "真实调用对应输出的展示样本",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/05-inline-diff-light.png",
+    "scene": "inline-diff",
+    "title": "文件编辑原地展开",
+    "description": "无外层工具组卡片",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/06-diff-light.png",
+    "scene": "diff",
+    "title": "三栏与历史 Diff",
+    "description": "保存快照与当前文件分开",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/07-diff-uncertain-light.png",
+    "scene": "diff-uncertain",
+    "title": "归属不确定",
+    "description": "并发 / 外部编辑的边界",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/08-diff-binary-light.png",
+    "scene": "diff-binary",
+    "title": "二进制改动",
+    "description": "元数据与降级原因",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/09-diff-renamed-light.png",
+    "scene": "diff-renamed",
+    "title": "重命名与删除",
+    "description": "多文件历史标签",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/10-diff-missing-light.png",
+    "scene": "diff-missing",
+    "title": "历史快照缺失",
+    "description": "不以当前文件冒充历史",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/11-diff-large-light.png",
+    "scene": "diff-large",
+    "title": "大文件降级",
+    "description": "元数据与预览预算",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/12-plan-light.png",
+    "scene": "plan",
+    "title": "计划侧栏",
+    "description": "步骤、状态和执行记录",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/13-approval-light.png",
+    "scene": "approval",
+    "title": "命令审批",
+    "description": "保持可见的明确授权入口",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/14-plan-approval-light.png",
+    "scene": "plan-approval",
+    "title": "计划执行审批",
+    "description": "阅读计划不等于批准执行",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/15-tasks-light.png",
+    "scene": "tasks",
+    "title": "后台任务",
+    "description": "多个项目的并发与状态",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/16-subagents-light.png",
+    "scene": "subagents",
+    "title": "子代理树",
+    "description": "单层委派 · 父子关系",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/17-child-light.png",
+    "scene": "child",
+    "title": "子会话正文",
+    "description": "只读记录与父会话授权边界",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/18-browser-light.png",
+    "scene": "browser",
+    "title": "内置浏览器",
+    "description": "独立配置文件与动作日志",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/19-browser-auth-light.png",
+    "scene": "browser-auth",
+    "title": "浏览器目标授权",
+    "description": "总开关之上的显式授权",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/20-browser-stale-light.png",
+    "scene": "browser-stale",
+    "title": "观察已过期",
+    "description": "目标变化后重新观察",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/21-terminal-light.png",
+    "scene": "terminal",
+    "title": "项目终端",
+    "description": "手动终端与模型记录分开",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/22-markdown-light.png",
+    "scene": "markdown",
+    "title": "Markdown 阅读",
+    "description": "公式、表格与流程图样本",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/23-error-light.png",
+    "scene": "error",
+    "title": "失败与恢复",
+    "description": "保留错误，不伪装为完成",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/24-stopped-light.png",
+    "scene": "stopped",
+    "title": "退出后中止",
+    "description": "不会自动续跑",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/25-worktree-light.png",
+    "scene": "worktree",
+    "title": "Git 并发提示",
+    "description": "隔离 worktree / 共享目录",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/26-folder-conflict-light.png",
+    "scene": "folder-conflict",
+    "title": "普通目录并发",
+    "description": "不可创建 worktree",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/27-models-picker-light.png",
+    "scene": "models-picker",
+    "title": "分组模型选择器",
+    "description": "API / 官方运行时",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/28-runtime-switch-light.png",
+    "scene": "runtime-switch",
+    "title": "跨运行时切换",
+    "description": "分支与迁移范围确认",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/29-reasoning-light.png",
+    "scene": "reasoning",
+    "title": "思考档位",
+    "description": "独立离散滑块",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/30-permissions-light.png",
+    "scene": "permissions",
+    "title": "权限模式",
+    "description": "只读、计划、需审批、自动",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/31-context-light.png",
+    "scene": "context",
+    "title": "上下文组成",
+    "description": "本地估算与未上报数据分开",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/32-directories-light.png",
+    "scene": "directories",
+    "title": "目录范围",
+    "description": "文件工具范围不冒充 Shell 沙箱",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/33-agents-light.png",
+    "scene": "agents",
+    "title": "Agent 列表",
+    "description": "管理任务角色与设定",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/34-agent-edit-light.png",
+    "scene": "agent-edit",
+    "title": "Agent 编辑",
+    "description": "系统提示词与工具白名单",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/35-models-light.png",
+    "scene": "models",
+    "title": "API 供应商",
+    "description": "协议、状态与模型目录",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/36-provider-edit-light.png",
+    "scene": "provider-edit",
+    "title": "供应商编辑",
+    "description": "配置、能力、测试与高级参数",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/37-subscriptions-light.png",
+    "scene": "subscriptions",
+    "title": "订阅运行时",
+    "description": "安装、官方登录与账号状态",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/38-runtime-light.png",
+    "scene": "runtime",
+    "title": "运行时详情",
+    "description": "单账号、模型与真实能力",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/39-runtime-login-light.png",
+    "scene": "runtime-login",
+    "title": "官方登录流程",
+    "description": "不接收或复制凭据",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/40-capabilities-light.png",
+    "scene": "capabilities",
+    "title": "运行时能力对照",
+    "description": "未验证 / 未上报诚实显示",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/41-mcp-light.png",
+    "scene": "mcp",
+    "title": "MCP 连接器",
+    "description": "全局添加 · 项目启用",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/42-mcp-detail-light.png",
+    "scene": "mcp-detail",
+    "title": "MCP 工具与资源",
+    "description": "stdio / HTTP 与调用记录",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/42-mcp-detail-light-bottom.png",
+    "scene": "mcp-detail",
+    "title": "MCP 工具与资源 · 下半页",
+    "description": "stdio / HTTP 与调用记录",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "bottom"
+  },
+  {
+    "file": "screenshots/43-mcp-auth-light.png",
+    "scene": "mcp-auth",
+    "title": "MCP 认证状态",
+    "description": "服务器授权与错误独立",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/44-mcp-error-light.png",
+    "scene": "mcp-error",
+    "title": "MCP 连接失败",
+    "description": "错误留在发生位置",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/45-plugins-light.png",
+    "scene": "plugins",
+    "title": "插件管理",
+    "description": "本地导入与项目启停",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/46-plugin-detail-light.png",
+    "scene": "plugin-detail",
+    "title": "插件详情",
+    "description": "清单、规则与单项 hooks",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/46-plugin-detail-light-bottom.png",
+    "scene": "plugin-detail",
+    "title": "插件详情 · 下半页",
+    "description": "清单、规则与单项 hooks",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "bottom"
+  },
+  {
+    "file": "screenshots/47-plugin-install-light.png",
+    "scene": "plugin-install",
+    "title": "插件安装预览",
+    "description": "不在安装时执行脚本",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/47-plugin-install-light-bottom.png",
+    "scene": "plugin-install",
+    "title": "插件安装预览 · 下半页",
+    "description": "不在安装时执行脚本",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "bottom"
+  },
+  {
+    "file": "screenshots/48-hook-auth-light.png",
+    "scene": "hook-auth",
+    "title": "Hook 独立授权",
+    "description": "逐项确认执行内容与范围",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/48-hook-auth-light-bottom.png",
+    "scene": "hook-auth",
+    "title": "Hook 独立授权 · 下半页",
+    "description": "逐项确认执行内容与范围",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "bottom"
+  },
+  {
+    "file": "screenshots/49-skills-light.png",
+    "scene": "skills",
+    "title": "Skills 列表",
+    "description": "技能与来源",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/50-skill-detail-light.png",
+    "scene": "skill-detail",
+    "title": "Skill 阅读",
+    "description": "SKILL.md 与关联资源",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/51-memory-light.png",
+    "scene": "memory",
+    "title": "记忆管理",
+    "description": "全局 / 项目范围",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/52-memory-edit-light.png",
+    "scene": "memory-edit",
+    "title": "记忆编辑",
+    "description": "原文保存与删除",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/53-files-light.png",
+    "scene": "files",
+    "title": "项目文件",
+    "description": "预览 / 源码与当前文件",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/54-appearance-light.png",
+    "scene": "appearance",
+    "title": "外观设置",
+    "description": "系统、浅色、深色与减少动效",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/55-computer-light.png",
+    "scene": "computer",
+    "title": "Windows 电脑控制",
+    "description": "默认关闭 · 屏幕租约",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/56-browser-settings-light.png",
+    "scene": "browser-settings",
+    "title": "浏览器设置",
+    "description": "独立 Profile 与网站登录",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/57-search-settings-light.png",
+    "scene": "search-settings",
+    "title": "网络搜索设置",
+    "description": "单独服务与凭据边界",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/58-data-light.png",
+    "scene": "data",
+    "title": "数据迁移设置",
+    "description": "显式交换 · 无实时同步",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/59-import-light.png",
+    "scene": "import",
+    "title": "导入冲突预览",
+    "description": "更新、副本或跳过",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/60-export-light.png",
+    "scene": "export",
+    "title": "导出与敏感预览",
+    "description": "范围选择与敏感二次确认",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/61-exit-light.png",
+    "scene": "exit",
+    "title": "退出应用",
+    "description": "活动任务中止与保存",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/62-search-light.png",
+    "scene": "search",
+    "title": "搜索与快捷入口",
+    "description": "会话与管理页检索",
+    "theme": "light",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/01-home-dark.png",
+    "scene": "home",
+    "title": "新对话",
+    "description": "Claude 式欢迎页 · 首次发送才保存",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/02-home-ready-dark.png",
+    "scene": "home-ready",
+    "title": "已选择项目的草稿",
+    "description": "项目、Agent、模型与输入",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/03-chat-dark.png",
+    "scene": "chat",
+    "title": "对话与工具",
+    "description": "无气泡助手正文 · 每轮改动",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/04-command-dark.png",
+    "scene": "command",
+    "title": "命令原地展开",
+    "description": "真实调用对应输出的展示样本",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/05-inline-diff-dark.png",
+    "scene": "inline-diff",
+    "title": "文件编辑原地展开",
+    "description": "无外层工具组卡片",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/06-diff-dark.png",
+    "scene": "diff",
+    "title": "三栏与历史 Diff",
+    "description": "保存快照与当前文件分开",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/07-diff-uncertain-dark.png",
+    "scene": "diff-uncertain",
+    "title": "归属不确定",
+    "description": "并发 / 外部编辑的边界",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/08-diff-binary-dark.png",
+    "scene": "diff-binary",
+    "title": "二进制改动",
+    "description": "元数据与降级原因",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/09-diff-renamed-dark.png",
+    "scene": "diff-renamed",
+    "title": "重命名与删除",
+    "description": "多文件历史标签",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/10-diff-missing-dark.png",
+    "scene": "diff-missing",
+    "title": "历史快照缺失",
+    "description": "不以当前文件冒充历史",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/11-diff-large-dark.png",
+    "scene": "diff-large",
+    "title": "大文件降级",
+    "description": "元数据与预览预算",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/12-plan-dark.png",
+    "scene": "plan",
+    "title": "计划侧栏",
+    "description": "步骤、状态和执行记录",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/13-approval-dark.png",
+    "scene": "approval",
+    "title": "命令审批",
+    "description": "保持可见的明确授权入口",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/14-plan-approval-dark.png",
+    "scene": "plan-approval",
+    "title": "计划执行审批",
+    "description": "阅读计划不等于批准执行",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/15-tasks-dark.png",
+    "scene": "tasks",
+    "title": "后台任务",
+    "description": "多个项目的并发与状态",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/16-subagents-dark.png",
+    "scene": "subagents",
+    "title": "子代理树",
+    "description": "单层委派 · 父子关系",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/17-child-dark.png",
+    "scene": "child",
+    "title": "子会话正文",
+    "description": "只读记录与父会话授权边界",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/18-browser-dark.png",
+    "scene": "browser",
+    "title": "内置浏览器",
+    "description": "独立配置文件与动作日志",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/19-browser-auth-dark.png",
+    "scene": "browser-auth",
+    "title": "浏览器目标授权",
+    "description": "总开关之上的显式授权",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/20-browser-stale-dark.png",
+    "scene": "browser-stale",
+    "title": "观察已过期",
+    "description": "目标变化后重新观察",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/21-terminal-dark.png",
+    "scene": "terminal",
+    "title": "项目终端",
+    "description": "手动终端与模型记录分开",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/22-markdown-dark.png",
+    "scene": "markdown",
+    "title": "Markdown 阅读",
+    "description": "公式、表格与流程图样本",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/23-error-dark.png",
+    "scene": "error",
+    "title": "失败与恢复",
+    "description": "保留错误，不伪装为完成",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/24-stopped-dark.png",
+    "scene": "stopped",
+    "title": "退出后中止",
+    "description": "不会自动续跑",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/25-worktree-dark.png",
+    "scene": "worktree",
+    "title": "Git 并发提示",
+    "description": "隔离 worktree / 共享目录",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/26-folder-conflict-dark.png",
+    "scene": "folder-conflict",
+    "title": "普通目录并发",
+    "description": "不可创建 worktree",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/27-models-picker-dark.png",
+    "scene": "models-picker",
+    "title": "分组模型选择器",
+    "description": "API / 官方运行时",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/28-runtime-switch-dark.png",
+    "scene": "runtime-switch",
+    "title": "跨运行时切换",
+    "description": "分支与迁移范围确认",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/29-reasoning-dark.png",
+    "scene": "reasoning",
+    "title": "思考档位",
+    "description": "独立离散滑块",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/30-permissions-dark.png",
+    "scene": "permissions",
+    "title": "权限模式",
+    "description": "只读、计划、需审批、自动",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/31-context-dark.png",
+    "scene": "context",
+    "title": "上下文组成",
+    "description": "本地估算与未上报数据分开",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/32-directories-dark.png",
+    "scene": "directories",
+    "title": "目录范围",
+    "description": "文件工具范围不冒充 Shell 沙箱",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/33-agents-dark.png",
+    "scene": "agents",
+    "title": "Agent 列表",
+    "description": "管理任务角色与设定",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/34-agent-edit-dark.png",
+    "scene": "agent-edit",
+    "title": "Agent 编辑",
+    "description": "系统提示词与工具白名单",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/35-models-dark.png",
+    "scene": "models",
+    "title": "API 供应商",
+    "description": "协议、状态与模型目录",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/36-provider-edit-dark.png",
+    "scene": "provider-edit",
+    "title": "供应商编辑",
+    "description": "配置、能力、测试与高级参数",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/37-subscriptions-dark.png",
+    "scene": "subscriptions",
+    "title": "订阅运行时",
+    "description": "安装、官方登录与账号状态",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/38-runtime-dark.png",
+    "scene": "runtime",
+    "title": "运行时详情",
+    "description": "单账号、模型与真实能力",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/39-runtime-login-dark.png",
+    "scene": "runtime-login",
+    "title": "官方登录流程",
+    "description": "不接收或复制凭据",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/40-capabilities-dark.png",
+    "scene": "capabilities",
+    "title": "运行时能力对照",
+    "description": "未验证 / 未上报诚实显示",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/41-mcp-dark.png",
+    "scene": "mcp",
+    "title": "MCP 连接器",
+    "description": "全局添加 · 项目启用",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/42-mcp-detail-dark.png",
+    "scene": "mcp-detail",
+    "title": "MCP 工具与资源",
+    "description": "stdio / HTTP 与调用记录",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/42-mcp-detail-dark-bottom.png",
+    "scene": "mcp-detail",
+    "title": "MCP 工具与资源 · 下半页",
+    "description": "stdio / HTTP 与调用记录",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "bottom"
+  },
+  {
+    "file": "screenshots/43-mcp-auth-dark.png",
+    "scene": "mcp-auth",
+    "title": "MCP 认证状态",
+    "description": "服务器授权与错误独立",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/44-mcp-error-dark.png",
+    "scene": "mcp-error",
+    "title": "MCP 连接失败",
+    "description": "错误留在发生位置",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/45-plugins-dark.png",
+    "scene": "plugins",
+    "title": "插件管理",
+    "description": "本地导入与项目启停",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/46-plugin-detail-dark.png",
+    "scene": "plugin-detail",
+    "title": "插件详情",
+    "description": "清单、规则与单项 hooks",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/46-plugin-detail-dark-bottom.png",
+    "scene": "plugin-detail",
+    "title": "插件详情 · 下半页",
+    "description": "清单、规则与单项 hooks",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "bottom"
+  },
+  {
+    "file": "screenshots/47-plugin-install-dark.png",
+    "scene": "plugin-install",
+    "title": "插件安装预览",
+    "description": "不在安装时执行脚本",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/47-plugin-install-dark-bottom.png",
+    "scene": "plugin-install",
+    "title": "插件安装预览 · 下半页",
+    "description": "不在安装时执行脚本",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "bottom"
+  },
+  {
+    "file": "screenshots/48-hook-auth-dark.png",
+    "scene": "hook-auth",
+    "title": "Hook 独立授权",
+    "description": "逐项确认执行内容与范围",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/48-hook-auth-dark-bottom.png",
+    "scene": "hook-auth",
+    "title": "Hook 独立授权 · 下半页",
+    "description": "逐项确认执行内容与范围",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "bottom"
+  },
+  {
+    "file": "screenshots/49-skills-dark.png",
+    "scene": "skills",
+    "title": "Skills 列表",
+    "description": "技能与来源",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/50-skill-detail-dark.png",
+    "scene": "skill-detail",
+    "title": "Skill 阅读",
+    "description": "SKILL.md 与关联资源",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/51-memory-dark.png",
+    "scene": "memory",
+    "title": "记忆管理",
+    "description": "全局 / 项目范围",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/52-memory-edit-dark.png",
+    "scene": "memory-edit",
+    "title": "记忆编辑",
+    "description": "原文保存与删除",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/53-files-dark.png",
+    "scene": "files",
+    "title": "项目文件",
+    "description": "预览 / 源码与当前文件",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/54-appearance-dark.png",
+    "scene": "appearance",
+    "title": "外观设置",
+    "description": "系统、浅色、深色与减少动效",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/55-computer-dark.png",
+    "scene": "computer",
+    "title": "Windows 电脑控制",
+    "description": "默认关闭 · 屏幕租约",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/56-browser-settings-dark.png",
+    "scene": "browser-settings",
+    "title": "浏览器设置",
+    "description": "独立 Profile 与网站登录",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/57-search-settings-dark.png",
+    "scene": "search-settings",
+    "title": "网络搜索设置",
+    "description": "单独服务与凭据边界",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/58-data-dark.png",
+    "scene": "data",
+    "title": "数据迁移设置",
+    "description": "显式交换 · 无实时同步",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/59-import-dark.png",
+    "scene": "import",
+    "title": "导入冲突预览",
+    "description": "更新、副本或跳过",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/60-export-dark.png",
+    "scene": "export",
+    "title": "导出与敏感预览",
+    "description": "范围选择与敏感二次确认",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/61-exit-dark.png",
+    "scene": "exit",
+    "title": "退出应用",
+    "description": "活动任务中止与保存",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/62-search-dark.png",
+    "scene": "search",
+    "title": "搜索与快捷入口",
+    "description": "会话与管理页检索",
+    "theme": "dark",
+    "width": 1440,
+    "height": 1000,
+    "variant": "default"
+  },
+  {
+    "file": "screenshots/responsive-1366x768-home.png",
+    "scene": "home",
+    "title": "新对话 · 1366×768",
+    "description": "响应式布局与占位分栏",
+    "theme": "light",
+    "width": 1366,
+    "height": 768,
+    "variant": "responsive"
+  },
+  {
+    "file": "screenshots/responsive-1366x768-diff.png",
+    "scene": "diff",
+    "title": "三栏与历史 Diff · 1366×768",
+    "description": "响应式布局与占位分栏",
+    "theme": "light",
+    "width": 1366,
+    "height": 768,
+    "variant": "responsive"
+  },
+  {
+    "file": "screenshots/responsive-1366x768-approval.png",
+    "scene": "approval",
+    "title": "命令审批 · 1366×768",
+    "description": "响应式布局与占位分栏",
+    "theme": "light",
+    "width": 1366,
+    "height": 768,
+    "variant": "responsive"
+  },
+  {
+    "file": "screenshots/responsive-1024x768-home.png",
+    "scene": "home",
+    "title": "新对话 · 1024×768",
+    "description": "响应式布局与占位分栏",
+    "theme": "light",
+    "width": 1024,
+    "height": 768,
+    "variant": "responsive"
+  },
+  {
+    "file": "screenshots/responsive-1024x768-plan-approval.png",
+    "scene": "plan-approval",
+    "title": "计划执行审批 · 1024×768",
+    "description": "响应式布局与占位分栏",
+    "theme": "light",
+    "width": 1024,
+    "height": 768,
+    "variant": "responsive"
+  },
+  {
+    "file": "screenshots/responsive-1024x768-diff.png",
+    "scene": "diff",
+    "title": "三栏与历史 Diff · 1024×768",
+    "description": "响应式布局与占位分栏",
+    "theme": "light",
+    "width": 1024,
+    "height": 768,
+    "variant": "responsive"
+  },
+  {
+    "file": "screenshots/responsive-800x900-home.png",
+    "scene": "home",
+    "title": "新对话 · 800×900",
+    "description": "响应式布局与占位分栏",
+    "theme": "light",
+    "width": 800,
+    "height": 900,
+    "variant": "responsive"
+  },
+  {
+    "file": "screenshots/responsive-800x900-diff.png",
+    "scene": "diff",
+    "title": "三栏与历史 Diff · 800×900",
+    "description": "响应式布局与占位分栏",
+    "theme": "light",
+    "width": 800,
+    "height": 900,
+    "variant": "responsive"
+  },
+  {
+    "file": "screenshots/responsive-1920x1080-diff.png",
+    "scene": "diff",
+    "title": "三栏与历史 Diff · 1920×1080",
+    "description": "响应式布局与占位分栏",
+    "theme": "light",
+    "width": 1920,
+    "height": 1080,
+    "variant": "responsive"
+  },
+  {
+    "file": "screenshots/responsive-1920x1080-browser.png",
+    "scene": "browser",
+    "title": "内置浏览器 · 1920×1080",
+    "description": "响应式布局与占位分栏",
+    "theme": "light",
+    "width": 1920,
+    "height": 1080,
+    "variant": "responsive"
+  }
+]

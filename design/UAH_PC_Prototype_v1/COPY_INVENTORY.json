@@ -1,0 +1,982 @@
+[
+  {
+    "file": "src/app.js",
+    "line": 19,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "terminalOutput: ['PowerShell · 项目终端（交互演示）', '目录：E:\\\\Projects\\\\AgentApp', '', '输入 help 查看此原型支持的示例命令。', '此处不会执行本机命令。'],"
+  },
+  {
+    "file": "src/app.js",
+    "line": 32,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "S.sessions = saved.sessions.map(session => ['running','approval'].includes(session.state) ? { ...session, state: 'stopped', kind: 'stopped', stoppedReason: '重新打开原型，之前的任务不会自动续跑。' } : session);"
+  },
+  {
+    "file": "src/app.js",
+    "line": 185,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "function prototypeNote(text) { return `<div class=\"prototype-note\" data-copy-scope=\"prototype\" data-copy-action=\"remove\"><strong data-copy-scope=\"mixed\" data-copy-action=\"split\">原型说明</strong><span>${text}</span></div>`; }"
+  },
+  {
+    "file": "src/app.js",
+    "line": 229,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "<div class=\"sidebar-footer\"><button class=\"user-menu\" data-menu=\"user\"><span class=\"avatar\">DD</span><span class=\"user-info\">本地工作区<br><span class=\"muted small\">Used AI Harness</span></span>${icon('down')}</button><div class=\"prototype-label\"><span data-copy-scope=\"mixed\" data-copy-action=\"split\">交互原型 · 本地演示</span><button data-action=\"guide\">原型导览 ↗</button></div></div>"
+  },
+  {
+    "file": "src/app.js",
+    "line": 234,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if (S.page !== 'chat') return `<header class=\"main-header\"><button class=\"btn ghost sm\" data-action=\"back-chat\">${icon('back')}返回对话</button><div class=\"header-actions\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${iconBtn('tasks','show-tasks','后台任务')}${iconBtn('keyboard','guide','原型导览与快捷键')}</div></header>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 261,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<div class=\"home\"><div class=\"home-scroll\"><div class=\"home-inner\"><div class=\"home-greeting\">${mark()}<h1>今天，我们一起做点什么？</h1></div><p class=\"home-sub\">从问题或项目出发，让想法在这里继续。</p>${S.draft.sourceSession?`<div class=\"branch-notice\">${icon('branch')}<span>分支草稿 · ${esc(S.draft.branchContext?.title||S.draft.sourceSession)}<br><span class=\"muted\">仅迁移可见上下文；首次发送后保存为新会话。</span></span></div>`:''}<div class=\"suggestions\">${[['code','梳理项目结构','请梳理这个项目的结构，说明主要模块及它们的关系。'],['diff','检查最近的改动','检查最近的代码改动，指出值得关注的风险。'],['plan','先做一个实施计划','先阅读项目规范，再为我的需求制定实施计划。']].map(([ico,label,prompt]) => `<button data-suggestion=\"${esc(prompt)}\">${icon(ico)}${label}</button>`).join('')}</div></div></div><div class=\"composer-dock home-composer-dock\"><div class=\"composer-dock-inner\">${composerHTML(true)}<div class=\"composer-foot\" data-copy-scope=\"prototype\" data-copy-action=\"remove\">草稿不会创建空会话；第一次有效发送后才保存。可以不选择目录开始。</div></div></div></div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 274,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if (fileId === 'large') return `<div class=\"empty-state\">${icon('file')}<h3>文件超出文本预览预算</h3><p>128 MB → 136 MB。仅显示可验证的文件元数据。<br>此原型未加载文件内容，也不伪造文本统计。</p></div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 283,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<div class=\"diff-content ${S.diffWrap ? 'wrap' : ''}\"><div class=\"diff-hunk\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${fileId==='tool'?'@@ -21,7 +21,21 @@':fileId==='state'?'@@ -11,4 +11,10 @@':fileId==='test'?'@@ -0,0 +1,10 @@':fileId==='deleted'?'@@ -1,4 +0,0 @@':fileId==='uncertain'?'@@ -1,3 +1,4 @@':'@@ -0,0 +1,5 @@'} · ${compact ? '节选' : '已保存的历史快照 · 示例'}</div>${lines.map(([type,oldLine,newLine,text]) => `<div class=\"diff-line ${type}\"><span class=\"ln\">${oldLine}</span><span class=\"ln\">${newLine}</span><span class=\"sign\">${type === 'add' ? '+' : type === 'remove' ? '−' : ' '}</span><span class=\"source\">${esc(text)}</span></div>`).join('')}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 286,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<div class=\"codebox\"><div class=\"codebox-head\"><span>PowerShell · E:\\\\Projects\\\\AgentApp</span><button class=\"icon-btn\" data-copy=\"${esc(command + '\\n\\n' + output)}\" aria-label=\"复制命令与输出\">${icon('copy')}</button></div><pre><code>${esc(command)}</code></pre><div class=\"command-output\"><div class=\"command-caption\" data-copy-scope=\"mixed\" data-copy-action=\"split\">本次命令输出 · 退出码 0 · 示例记录</div><pre><code>${esc(output)}</code></pre></div></div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 292,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<div class=\"message-actions\">${iconBtn('copy','copy-answer','复制回复')}${iconBtn('edit','edit-answer','编辑历史回复')}${iconBtn('branch','branch-session','从此回复创建分支')}${!isBusy() ? iconBtn('refresh','regenerate','重新生成最新回复') : ''}${iconBtn('trash','delete-message','删除消息')}<span class=\"duration\" data-copy-scope=\"mixed\" data-copy-action=\"split\">第 ${round} 轮 · 32 秒 · 示例</span></div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 298,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<div class=\"approval-card\" id=\"inline-approval\"><div class=\"approval-head\">${icon('shield')}<span>${plan ? '计划已准备好，等待你的批准' : '允许执行这条命令吗？'}</span><span class=\"grow\"></span>${pill('等待审批','warn')}</div><div class=\"approval-body\">${plan ? '将按当前会话保存的计划执行。阅读计划或展开记录不会批准执行。' : '代码搭档请求在当前项目执行测试。该操作可能运行项目中的脚本。'}<pre>${plan ? esc('计划文件：'+(sessionWorkspace().planFile?.path||'尚未保存')) : 'npm run test -- --runInBand\\n工作目录：E:\\\\Projects\\\\AgentApp'}</pre><span class=\"muted\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${model().source === 'api' ? '授权由 UAH 会话权限管理。' : '此审批来自官方运行时；由适配层转交，不绕过运行时权限。'}</span></div><div class=\"approval-actions\">${btn('拒绝','deny-approval','sm')}${btn(plan ? '修改计划' : '查看范围','approval-scope','sm')}${btn(plan ? '批准并执行' : '允许本次','approve','primary sm')}</div></div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 305,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "content += `<article class=\"assistant-message\" data-copy-scope=\"fixture\" data-copy-action=\"replace\">${assistantBrand()}${toolDetails('thinking','已思考 · 8 秒','我会先核对现有工具记录与历史快照的关联方式，保持权限入口不变，再调整呈现。这里仅展示供用户阅读的思考摘要。','spark')}<p>这次会保留完整的执行记录，但让它们退到正文之后。命令、文件编辑和每轮产物各自承担清晰的职责。</p>${toolDetails('read','已读取 3 个文件',`<div class=\"muted small\">src/ui/ToolCallRow.ts<br>src/state/useSessionState.ts<br>tests/tool-call.spec.ts</div>`,'folder')}${toolDetails('edit-tool','已编辑 <span class=\"mono\">ToolCallRow.ts</span> <span class=\"positive\">+16</span> <span class=\"negative\">−2</span>',`<div class=\"codebox\"><div class=\"codebox-head\"><span>src/ui/ToolCallRow.ts · 保存的快照</span><button class=\"small muted\" data-diff=\"tool\">在右栏查看 ${icon('external')}</button></div>${diffLinesHTML('tool',true)}</div>`,'file')}${toolDetails('command','运行了命令',commandBody(),'terminal')}<h3>现在的交互更接近阅读，而不是查看日志。</h3><p>工具摘要直接排列在对话中；点击后，就在原位置查看命令输出或 Diff。展开状态按会话与调用保存，不会因切换面板而丢失。</p><p>本轮改动已保存为历史快照。右侧查看的是<strong>这一轮的变化</strong>，与磁盘上的当前文件分开。</p>${changesHTML(S.diffVariant === 'all' ? FILES.map(f=>f.id) : ['tool','state','test'])}${actionsHTML()}</article>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 309,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "content += `<article class=\"assistant-message\" data-copy-scope=\"fixture\" data-copy-action=\"replace\">${assistantBrand()}<p>${isPlan ? '已经保存当前会话的实施计划，请查看计划文件后决定是否执行。' : '已完成测试范围检查，接下来需要运行已有测试，确认当前基线。'}</p>${toolDetails('approval-read','已读取测试目录和项目规范','只读检查已完成，未执行任何待审批命令。','folder')}${isPlan ? toolDetails('plan-file','已保存实施计划',esc('计划保存在 '+(sessionWorkspace().planFile?.path||'尚未保存')+'；等待显式执行批准。'),'plan') : ''}${approvalHTML(isPlan ? 'plan' : 'command')}${changesHTML(isPlan ? ['planfile'] : [],1)}</article>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 312,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "content += `<article class=\"assistant-message\" data-copy-scope=\"fixture\" data-copy-action=\"replace\">${assistantBrand()}<p class=\"stream-target\">${esc(t.generatedText || (t.project ? '我会先核对主题变量和组件对它们的使用，再逐项验证深色下的对比度与状态。' : '我会先理解你的问题。当前会话没有绑定目录，文件和项目命令需在绑定目录后使用。'))}</p>${t.project?toolDetails('running-read','已读取主题文件','读取成功，已保存本次只读工具结果。','folder'):''}${t.state === 'running' ? `<div class=\"status-inline\">${mark()}<span>${t.project?'正在检查组件与主题变量…':'正在整理回复…'}</span></div><p class=\"small muted\">这是可停止的模拟任务。切换其他会话后，任务状态仍保留。 <button class=\"accent\" data-action=\"complete-demo\">完成模拟任务 →</button></p>` : `<p data-copy-scope=\"mixed\" data-copy-action=\"split\">演示任务已完成。此原型不连接真实模型，也没有修改本机文件。</p>`}${changesHTML(t.project && t.state === 'done' && t.demoChanges ? ['uncertain'] : [], t.round || 1)}${t.state !== 'running' ? actionsHTML(1) : ''}</article>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 316,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "content += `<article class=\"assistant-message\" data-copy-scope=\"fixture\" data-copy-action=\"replace\">${assistantBrand()}<p>已读取项目权限配置，并保存了本轮已完成的工具记录。</p>${toolDetails('saved-read','已读取权限配置','保存的只读结果仍可查看。停止不会删除已完成记录。','folder')}<div class=\"notice ${error ? 'error' : ''}\">${icon(error ? 'warning' : 'stop')}<div><strong>${error ? '运行时连接中断' : '任务已中止'}</strong><br>${error ? '示例错误：连接关闭，尚未收到完整回复。未将本轮标记为完成。' : esc(t.stoppedReason || 'UAH 退出时取消了后续网络、工具和屏幕动作。重新启动后不会自动续跑。')}<div style=\"margin-top:10px\">${btn(error ? '重试连接' : '手动继续','resume','sm')}${btn('查看记录','diagnostics','ghost sm')}</div></div></div>${changesHTML([],1)}${actionsHTML(1)}</article>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 319,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "content += `<article class=\"assistant-message\" data-copy-scope=\"fixture\" data-copy-action=\"replace\">${assistantBrand()}<h2>一次任务，从意图到可复核的结果</h2><p>UAH 将<strong>项目、对话和执行记录</strong>放在同一个工作台。开始时是草稿，首次有效发送后才建立会话。</p><blockquote>查看记录不是授权；停止任务也不等于撤销已经完成的文件修改。</blockquote><h3>三个明确的边界</h3><ol><li>以本地目录定义项目，以会话保存上下文。</li><li>以实际运行时决定工具与权限，不伪装跨运行时续跑。</li><li>以保存的快照呈现历史 Diff，而不是重读当前文件。</li></ol><div class=\"table-wrap\"><table><thead><tr><th>状态</th><th>写入</th><th>恢复</th></tr></thead><tbody><tr><td>只读 / 计划</td><td>禁止执行写入动作</td><td>保留已完成记录</td></tr><tr><td>等待审批</td><td>显式批准后执行</td><td>审批持续可见</td></tr><tr><td>已中止</td><td>取消后续动作</td><td>用户手动继续</td></tr></tbody></table></div><h3>上下文使用率</h3><p><math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mi>r</mi><mo>=</mo><mfrac><mi>T</mi><mrow><mi>max</mi><mo>(</mo><mi>C</mi><mo>,</mo><mi>T</mi><mo>,</mo><mn>1</mn><mo>)</mo></mrow></mfrac></math><span class=\"muted small\">　T 为已用 tokens，C 为已知容量。</span></p><div class=\"subtle-box\"><div class=\"flex\" style=\"justify-content:center;padding:12px;flex-wrap:wrap\">${pill('草稿')}${icon('arrowRight')}${pill('绑定项目')}${icon('arrowRight')}${pill('执行 / 审批')}${icon('arrowRight')}${pill('历史快照')}</div><div class=\"small muted\">Mermaid 类流程图的离线静态样本；生产实现需沿用安全渲染器。</div></div>${changesHTML([],1)}${actionsHTML(1)}</article>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 321,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(t.editedReply) content = userHTML(t.userText||'已保存的用户消息') + `<article class=\"assistant-message\" data-copy-scope=\"fixture\" data-copy-action=\"replace\">${assistantBrand()}<p>${esc(t.editedReply)}</p><p class=\"small muted\">历史正文已由用户编辑，工具没有重新执行。</p>${changesHTML([],t.round||1)}${actionsHTML(t.round||1)}</article>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 322,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(t.hideReply) content = userHTML(t.userText||'已保存的用户消息') + '<div class=\"notice\" data-copy-scope=\"mixed\" data-copy-action=\"split\">这组回复已从原型中删除。删除记录不会撤销文件修改。</div>';"
+  },
+  {
+    "file": "src/app.js",
+    "line": 323,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if (t.followUps) content += t.followUps.map((text,index) => userHTML(text,t.followUpAttachments?.[index] || []) + `<article class=\"assistant-message\" data-copy-scope=\"fixture\" data-copy-action=\"replace\">${assistantBrand()}<p data-copy-scope=\"mixed\" data-copy-action=\"split\">已收到这条补充。这是交互原型的本地演示回复，不会调用任何模型。</p>${changesHTML([],index+3)}${actionsHTML(index+3)}</article>`).join('');"
+  },
+  {
+    "file": "src/app.js",
+    "line": 326,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `${alert}<div class=\"chat-scroll\" id=\"chat-scroll\"><div class=\"transcript\">${content}</div></div><div class=\"composer-dock\"><div class=\"composer-dock-inner\">${composerHTML()}<div class=\"composer-foot\" data-copy-scope=\"mixed\" data-copy-action=\"split\">本地演示数据 · 工具记录不代表真实执行 · 请核实重要信息</div></div></div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 357,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<div class=\"diff-files\">${S.browserTabs.map((tab,i)=>`<button class=\"${S.browserTab===i?'active':''}\" data-browser-tab=\"${i}\">${esc(tab.name)}</button>`).join('')}<button data-action=\"browser-new-tab\" aria-label=\"新增浏览器标签\">＋</button></div><div class=\"browser-nav\">${iconBtn('back','browser-back','后退')}${iconBtn('arrowRight','browser-forward','前进')}${iconBtn('refresh','browser-refresh','刷新')}<input class=\"browser-address\" id=\"browser-address\" aria-label=\"浏览器地址\" value=\"${esc(S.browserUrl)}\"></div><div class=\"panel-body no-pad\"><div style=\"padding:11px 14px 0\" class=\"between\">${pill('独立浏览器配置文件')}<button class=\"small accent\" data-action=\"browser-login\">${S.browserLogged?'已手动登录（示例）':'手动登录'}</button></div><div class=\"browser-preview\"><div class=\"between\"><span class=\"preview-logo\">${S.browserTab===1?'Example workspace':'UAH / components'}</span>${pill('离线页面样本')}</div><h2>${S.browserTab===1?'Welcome back.':'A quieter workspace.'}</h2><p>${S.browserTab===1?'账号只留在内置浏览器的独立配置文件中。':'轻量的组件，清晰的状态。为长时间专注设计。'}</p>${S.browserTab===1?btn(S.browserLogged?'已登录示例账号':'在浏览器中登录','browser-login','sm'): `<div class=\"preview-grid\"><div class=\"preview-tile\">${icon('chat')}　对话与工具</div><div class=\"preview-tile\">${icon('shield')}　权限与控制</div></div>`}</div><div style=\"padding:0 14px 15px\"><div class=\"between\"><span class=\"small\">允许 Agent 使用浏览器</span>${switchButton('browser',S.switches.browser,'允许 Agent 使用浏览器')}</div>${S.lease ? `<div class=\"lease-banner\">${icon('monitor')}屏幕租约：${esc(S.lease==='s1'?'当前父会话':S.sessions.find(t=>t.id===S.lease)?.title||S.lease)}<span class=\"grow\"></span><button data-action=\"release-lease\">停止</button></div>`:''}<div class=\"flex\" style=\"margin-top:13px;flex-wrap:wrap\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${btn('观察页面','browser-observe','sm','eye')}${btn('点击页面按钮','browser-action','sm','cursor')}${btn('模拟目标变化','target-change','ghost sm')}</div>${S.targetChanged?'<div class=\"notice warn\" style=\"margin-top:12px\">目标已变化，旧观察失效。写入前必须重新观察。</div>':''}</div><div class=\"browser-log\"><div class=\"between\"><strong>Agent 操作记录</strong><span class=\"muted\">不会向模型暴露登录态</span></div>${(S.browserLogs.length?S.browserLogs:[{time:'10:42:13',text:'浏览器已准备好，等待目标授权。'}]).map(log=>`<div class=\"log-item\"><time>${typeof log==='string'?'当前':esc(log.time)}</time><span>${esc(typeof log==='string'?log:log.text)}</span></div>`).join('')}</div></div><div class=\"panel-footer\" data-copy-scope=\"mixed\" data-copy-action=\"split\">原型不会浏览外部网页。系统浏览器与此配置文件相互独立。</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 360,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "const t=session();if(!t.manualTerminals)t.manualTerminals=[{name:'PowerShell 1',lines:['PowerShell · 手动终端（本地演示）','目录：'+(t.worktree||project(t.project)?.path),'输入 help 查看示例命令。不会执行本机命令。']}];"
+  },
+  {
+    "file": "src/app.js",
+    "line": 362,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<div class=\"diff-files\">${t.manualTerminals.map((term,i)=>`<button class=\"${S.terminalTab===0&&t.activeTerminal===i?'active':''}\" data-manual-terminal=\"${i}\">${esc(term.name)} · 用户手动</button>`).join('')}<button class=\"${S.terminalTab===1?'active':''}\" data-terminal-tab=\"1\">模型命令 · 只读记录</button><button data-action=\"terminal-new\" aria-label=\"新建终端标签\">＋</button></div><div class=\"terminal\" id=\"terminal-output\">${S.terminalTab===1?`<span class=\"prompt\">模型工具调用 #shell-03</span><pre>PS E:\\\\Projects\\\\AgentApp&gt; npm run test -- tool-call\\n\\n✓ 7 tests passed\\n\\nProcess exited with code 0.\\n\\n该命令记录仅供查看；不会自动重跑。</pre>`:`<pre>${esc(S.terminalOutput.join('\\n'))}</pre><div class=\"terminal-input\"><span class=\"prompt\">PS&gt;</span><input id=\"terminal-input\" aria-label=\"演示终端命令\" autocomplete=\"off\" spellcheck=\"false\"></div>`}</div><div class=\"panel-footer\" data-copy-scope=\"mixed\" data-copy-action=\"split\">演示终端 · 不执行本机命令 · 手动终端与模型工具记录分开</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 375,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<div class=\"field\"><label for=\"${id}\">${label}</label>${type==='textarea'?`<textarea id=\"${id}\" spellcheck=\"false\">${esc(value)}</textarea>`:type==='select'?`<select id=\"${id}\">${options}</select>`:`<input id=\"${id}\" type=\"${type}\" value=\"${esc(value)}\" autocomplete=\"off\" ${type==='password'?'placeholder=\"仅使用虚构密钥演示\"':''}>`}${hint?`<div class=\"hint\">${hint}</div>`:''}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 378,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<div class=\"field\"><label>工作目录</label><div class=\"directory-field\"><span class=\"directory-field-value mono\" title=\"${esc(d.cwd||'跟随当前项目目录')}\">${esc(d.cwd||'跟随当前项目目录')}</span>${btn('选择文件夹','pick-mcp-cwd','sm','folder')}${d.cwd?btn('清除','clear-mcp-cwd','ghost sm'):''}</div><div class=\"hint\" data-copy-scope=\"mixed\" data-copy-action=\"split\">使用 Windows 文件夹选择器；留空时跟随当前项目目录。${d.cwdPickerOnly?'网页原型仅取得名称，正式客户端保存完整路径。':''}</div></div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 407,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `${pageHeader(a.id==='new'?'创建 Agent':a.name,'名称、指令和工具，在这里定义。',btn('返回 Agent','nav-agents','ghost','back'))}<div class=\"form-grid\">${field('名称','agent-name',a.name)}${field('默认模型','agent-model',a.model,'','select',['跟随会话','Sonnet 4.6','DeepSeek Chat'].map(m=>`<option ${m===a.model?'selected':''}>${m}</option>`).join(''))}</div>${field('描述','agent-desc',a.desc)}${field('系统提示词','agent-prompt',a.prompt,'订阅运行时通过适配层传入其支持的指令；不保证所有字段一一对应。','textarea')}<div class=\"section-heading\"><h3>可用工具</h3>${btn('全选 / 取消全选','toggle-all-tools','ghost sm')}</div><div class=\"permissions-grid\">${[['read','读取文件'],['write','写入与编辑'],['shell','Shell 命令'],['search','网络搜索'],['mcp','项目 MCP'],['skill','插件与 Skills'],['memory','记忆'],['delegate','单层子代理'],['computer','电脑与浏览器']].map(([id,label])=>`<label class=\"checkbox-row\"><input type=\"checkbox\" name=\"agent-tool\" value=\"${id}\" ${Array.isArray(a.toolIds)?(!a.toolIds.length||a.toolIds.includes(id)?'checked':''):(a.id==='reviewer'&&!['read','search'].includes(id)?'':'checked')}>${label}</label>`).join('')}</div>${prototypeNote('数据约定：空工具列表表示全部工具可用；正式实现须区分全选与全部禁用，不能将全不选保存为空列表。')}<div class=\"form-actions\">${a.id!=='new'?btn('删除 Agent','delete-agent','danger left','trash'):''}${btn('取消','nav-agents')}${btn('保存 Agent','save-agent','primary')}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 410,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `${pageHeader('模型与账号','一个工作台，两种接入方式。运行能力始终由真实来源决定。',S.modelTab==='api'?btn('添加供应商','provider-new','primary','plus'):btn('能力对照','runtime-capabilities','','models'))}<div class=\"page-tabs\"><button class=\"${S.modelTab==='api'?'active':''}\" data-model-tab=\"api\">自配 API</button><button class=\"${S.modelTab==='subscriptions'?'active':''}\" data-model-tab=\"subscriptions\">订阅运行时</button><button class=\"${S.modelTab==='capabilities'?'active':''}\" data-model-tab=\"capabilities\">能力与兼容性</button></div>${S.modelTab==='api'?`<div class=\"between\" style=\"margin-bottom:13px\"><span class=\"small muted\">${S.providers.length} 个供应商 · 模型 ID 可手动配置</span>${btn('导入 / 导出','provider-transfer','ghost sm','more')}</div><div class=\"list\">${S.providers.map(p=>`<div class=\"list-row\"><div class=\"row-main clickable\" data-provider=\"${p.id}\"><h3>${esc(p.name)}</h3><p>${p.protocol} <span style=\"margin:0 6px\">·</span> ${p.models} 个模型</p></div>${switchButton('provider:'+p.id,p.enabled,'启用 '+p.name)}<button class=\"icon-btn\" data-provider=\"${p.id}\" aria-label=\"编辑 ${esc(p.name)}\">${icon('chevron')}</button></div>`).join('')}</div><div class=\"notice\" style=\"margin-top:23px\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${icon('lock')}此原型只保存非敏感演示配置。不要输入真实 API Key；输入的密钥不会持久化或导出。</div>`:S.modelTab==='subscriptions'?`<div class=\"notice\" style=\"margin-bottom:18px\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${icon('info')}下列安装、账号与模型均为演示状态，并非读取你的电脑。每个官方服务仅管理当前登录的一个账号。</div><div class=\"list\">${S.runtimes.map(r=>`<div class=\"list-row\"><span class=\"entity-icon ${r.id==='claude'?'terra':''}\">${icon(r.icon)}</span><div class=\"row-main clickable\" data-runtime=\"${r.id}\"><h3>${r.name}</h3><p>${r.label}</p><p style=\"margin-top:5px\">${r.logged?`<span class=\"positive\">${esc(r.account)}</span>`:r.installed?'已检测到客户端 · 尚未登录':'尚未检测到客户端'}</p></div>${pill(r.logged?'已连接':r.installed?'待登录':'未安装',r.logged?'good':'')}<button class=\"icon-btn\" data-runtime=\"${r.id}\" aria-label=\"打开 ${r.name}\">${icon('chevron')}</button></div>`).join('')}</div>`:runtimeCapabilitiesHTML()}`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 413,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<div class=\"notice\" style=\"margin-bottom:22px\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${icon('info')}能力列表由适配层逐项探测。未返回数据时显示“未上报”，不是 0、无额度或自动认定支持。</div><div class=\"table-wrap\"><table><thead><tr><th>能力</th><th>UAH 引擎</th><th>Codex</th><th>Claude Code</th><th>Antigravity</th></tr></thead><tbody>${[['对话 / 停止','支持','待连接验证','待连接验证','待连接验证'],['工具与审批','UAH 管理','运行时管理','运行时管理','运行时管理'],['思考档位','按模型声明','按实际返回','未上报','未上报'],['MCP / Skills','直接使用','适配后验证','适配后验证','适配后验证'],['子代理层级','单层委派','原始结果','原始结果','原始结果'],['电脑控制桥接','UAH 权限链','待验证','待验证','待验证'],['订阅用量','不适用','未上报','未上报','未上报']].map(row=>`<tr>${row.map((cell,index)=>`<td class=\"${index?'muted':''}\">${cell}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class=\"small muted\" style=\"margin-top:17px\">本表展示产品如何表达未知状态，不是对官方运行时当前能力的技术认证。</p>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 418,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `${pageHeader(p.id==='new'?'添加供应商':p.name,'配置保存在应用层，项目和会话按需选择模型。',btn('返回','nav-models','ghost','back'))}<div class=\"form-grid\">${field('显示名称','provider-name',p.name)}${field('协议','provider-protocol',p.protocol,'','select',protocols.map(protocol=>`<option ${p.protocol===protocol?'selected':''}>${protocol}</option>`).join(''))}</div>${field('接口地址','provider-endpoint',p.endpoint,'请使用完整的服务基础地址。地址修改不会自动改变协议。')}${field('API Key','provider-key','','原型不保存此字段；正式实现使用 Windows 安全存储。','password')}<div class=\"section-heading\"><h3>模型目录</h3><div class=\"flex\">${btn('获取模型列表','fetch-models','sm','refresh')}${btn('手动添加','model-add','sm','plus')}</div></div><div class=\"list\">${(p.id==='deepseek'?[MODELS[1]]:[MODELS[0],MODELS[2]]).map(m=>`<div class=\"list-row\" style=\"padding:12px 0\"><div class=\"grow\"><h3>${m.name}</h3><p class=\"mono\">${m.wire}</p></div><span class=\"small muted\">${m.media}</span><button class=\"icon-btn\" data-model-edit=\"${m.id}\" aria-label=\"编辑模型能力\">${icon('chevron')}</button></div>`).join('')}</div><details class=\"tool\" style=\"margin-top:20px\"><summary>${icon('settings')}<span>高级参数、请求头与自定义模板</span>${icon('chevron','chevron')}</summary><div class=\"tool-body\"><div class=\"form-grid\">${field('附加请求头','provider-headers','{}','无密钥导出也排除附加请求头。','textarea')}${field('自定义请求模板','provider-template','{\\n    \"model\": \"{{model}}\",\\n    \"messages\": \"{{messages}}\"\\n}','仅用于自定义模板协议；UI 不自动注入未声明的能力。','textarea')}</div></div></details><div class=\"between\" style=\"margin-top:22px\"><div class=\"flex\">${btn('测试连接','test-provider','','plug')}<span class=\"small muted\" data-copy-scope=\"mixed\" data-copy-action=\"split\">仅模拟测试，不产生 API 费用</span></div>${S.transientResult?pill(esc(S.transientResult),'good'):''}</div><div class=\"form-actions\">${p.id!=='new'?btn('删除供应商','delete-provider','danger left','trash'):''}${btn('取消','nav-models')}${btn('保存配置','save-provider','primary')}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 422,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `${pageHeader(r.name,r.label,btn('返回账号列表','nav-subscriptions','ghost','back'))}<div class=\"notice\" style=\"margin-bottom:25px\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${icon('info')}这是官方运行时连接流程的 UI 演示，不会安装客户端、打开外部登录或读取真实凭据。</div><div class=\"section-heading\"><h3>运行时连接</h3>${pill('示例状态')}</div><div class=\"setting-row\"><div><h4>官方客户端</h4><p>${r.engine}</p></div><div class=\"flex\">${pill(r.installed?'已检测到':'未安装',r.installed?'good':'warn')}${btn(r.installed?'重新检测':'安装说明','runtime-detect','sm','refresh')}</div></div><div class=\"setting-row\"><div><h4>当前账号</h4><p>${r.logged?esc(r.account):'未登录。UAH 不接收或保存官方账号密码。'}</p></div>${btn(r.logged?'退出账号':'官方登录',r.logged?'runtime-logout':'runtime-login',r.logged?'sm':'primary sm',r.logged?'logout':'external')}</div><div class=\"setting-row\"><div><h4>模型列表</h4><p data-copy-scope=\"mixed\" data-copy-action=\"split\">${r.logged?'仅显示官方运行时实际返回的模型；原型使用示例项。':'完成官方登录后查询。'}</p></div>${btn('查询模型','runtime-models','sm','refresh')}</div>${r.logged?`<div class=\"subtle-box\" style=\"margin-top:15px\"><div class=\"between\"><span>${r.model}</span>${pill('示例返回','tint')}</div></div>`:''}<div class=\"setting-row\"><div><h4>额度与重置时间</h4><p>仅在运行时提供数据时展示；缺失不推算。</p></div><span class=\"muted small\">未上报</span></div><div class=\"setting-row\"><div><h4>电脑控制与 MCP 桥接</h4><p>总开关、目标授权和屏幕租约仍由 UAH 管理。</p></div>${pill('待逐项验证')}</div><div class=\"notice ${r.id==='gemini-cli'?'warn':''}\" style=\"margin-top:22px\">${icon('shield')}<span>${r.id==='gemini-cli'?'这里仅保留受支持的 API Key / 企业认证入口，不把 Google 订阅额度标为 Gemini CLI 可用。':'每个服务只管理当前登录的一个账号。UAH 不复制、改写官方凭据，也不把订阅凭据当作通用 API Key。'}</span></div><div class=\"form-actions\">${btn('查看能力差异','runtime-capabilities')}${btn('在新对话中使用','runtime-use','primary')}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 428,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<section data-copy-scope=\"prototype\" data-copy-action=\"remove\">${prototypeNote('以下为运行时适配设计与待验证假设，开发时迁入技术文档；正式界面只保留真实能力和权限状态。')}${pageHeader(runtime.name+' · 运行时适配','UAH 负责界面与会话索引，官方运行时负责执行；以下是接入规则设计和待验证边界。',btn('返回账号','runtime-adapter-back','ghost','back'))}<div class=\"notice\">${icon('info')}这是产品适配方案，不是已连接本机客户端的检测结果。有效状态必须由官方运行时事件、当前配置和 UAH 授权共同确认。</div><div class=\"section-heading\"><h3>权限模式映射</h3>${pill(runtime.engine)}</div><div class=\"adapter-mode-grid\">${Object.entries(PERMISSIONS).map(([key,item])=>`<button class=\"adapter-mode ${mode===key?'selected':''}\" data-adapter-mode=\"${key}\"><strong>${item[0]}</strong><span>${adapter.modes[key][0]}</span></button>`).join('')}</div><div class=\"adapter-mapping\"><div class=\"between\"><h3>${PERMISSIONS[mode][0]}</h3>${pill(mapping[0],mapping[0]==='暂不可用'?'warn':mapping[0]==='可映射'?'good':'')}</div><p><strong>官方执行方式：</strong>${esc(mapping[1])}</p><p><strong>UAH 显示与校验：</strong>${esc(mapping[2])}</p></div><div class=\"section-heading\"><h3>状态同步</h3></div><div class=\"adapter-flow\"><div><strong>UAH 请求</strong><span>会话选择模型、模式和目录</span></div>${icon('arrowRight')}<div><strong>官方有效状态</strong><span>读取实际模型、工具和权限</span></div>${icon('arrowRight')}<div><strong>UAH 呈现</strong><span>事件流更新工具、审批与停止</span></div></div><p class=\"small muted\">事件来源：${esc(adapter.events)}。请求模式和有效模式不一致时，以有效状态为准并在输入区提示；不静默放宽权限。</p><div class=\"section-heading\"><h3>Ultra 档位适配</h3></div><div class=\"subtle-box\"><p>${runtime.id==='claude'?'Claude Code ultracode 将 xhigh 推理与动态工作流组合；仅在当前模型支持 xhigh、工作流已开启且没有更低的强度上限时开放。' : runtime.id==='codex'?'Codex Ultra 将当前模型最高推理档位与主动子代理编排组合；底层档位不固定写成 xhigh，依官方运行时和模型能力为准。' : '该运行时未确认 Ultra 组合能力，档位保持隐藏。'}</p><p class=\"small muted\">UAH 分别同步模型有效推理档位、工作流 / 子代理能力和实际子会话事件；任一条件不满足时不显示已启用 Ultra。停止、审批与工具权限仍受当前会话约束。</p></div><div class=\"section-heading\"><h3>事件映射预览</h3></div><div class=\"adapter-event-tabs\">${Object.entries(eventMap).map(([key,item])=>`<button class=\"${event===key?'active':''}\" data-adapter-event=\"${key}\">${item[0]}</button>`).join('')}</div><div class=\"subtle-box adapter-event-detail\"><h4>${eventMap[event][0]}</h4><p>${eventMap[event][1]}</p></div>${runtime.id==='antigravity'?`<div class=\"notice warn\" style=\"margin-top:20px\">${icon('shield')}<span>Antigravity CLI 的 headless 模式无法交互式弹出审批。若当前官方接口不能把审批请求回传 UAH，“需审批”模式必须标记不可用，不能自动放行。</span></div>`:''}</section>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 456,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `${pageHeader(d.id?'编辑 MCP 连接器':'添加 MCP 连接器','结构化配置启动、传输、认证和可用能力。',btn('返回连接器','nav-mcp','ghost','back'))}<div class=\"mcp-form-section\"><div class=\"section-heading\"><h3>基本信息</h3>${pill('全局安装')}</div><div class=\"form-grid\">${field('显示名称','mcp-form-name',d.name,'在项目和工具记录中显示。')}${field('传输方式','mcp-form-transport',d.transport,'切换时保留已填写的草稿。','select',options([['stdio','本机 stdio'],['Streamable HTTP','远端 Streamable HTTP']],d.transport))}</div></div>${d.transport==='stdio'?`<div class=\"mcp-form-section\"><div class=\"section-heading\"><h3>本机进程</h3>${pill('stdio')}</div>${field('可执行文件或程序路径','mcp-form-executable',d.executable,'命令与参数分别保存；Windows 路径可以包含空格。')}${field('启动参数','mcp-form-args',d.args,'每行一个参数，不通过 Shell 拼接整条命令。','textarea')}<div class=\"form-grid\">${mcpCwdField(d)}${field('启动超时','mcp-form-timeout',d.timeout,'单位：秒。','select',options([['5','5 秒'],['15','15 秒'],['30','30 秒'],['60','60 秒']],d.timeout))}</div>${field('环境变量','mcp-form-env',d.envText,'每行 KEY=VALUE；敏感值仅在此页暂存，演示存档只记录变量名。','textarea')}</div>`:`<div class=\"mcp-form-section\"><div class=\"section-heading\"><h3>远端连接</h3>${pill('Streamable HTTP')}</div>${field('服务器 URL','mcp-form-url',d.url,'使用 HTTPS；本机 localhost 可用 HTTP。')}<div class=\"form-grid\">${field('认证方式','mcp-form-auth',d.auth,'以服务器要求为准。','select',options([['none','无需认证'],['oauth','OAuth 登录'],['bearer','Bearer Token'],['header','自定义请求头']],d.auth))}${field('请求超时','mcp-form-timeout',d.timeout,'单位：秒。','select',options([['5','5 秒'],['15','15 秒'],['30','30 秒'],['60','60 秒']],d.timeout))}</div>${d.auth==='oauth'?field('OAuth Scopes','mcp-form-scopes',d.scopes,'可选；以服务器发现的范围为准。'):d.auth==='bearer'?field('Bearer Token','mcp-form-secret','','原型不保存密钥；正式应用交给 Windows 安全存储。','password'):d.auth==='header'?field('附加请求头','mcp-form-headers',d.headersText,'每行 Header: Value；原型存档只保留名称，不保存值。','textarea'):''}</div>`}<div class=\"mcp-form-section\"><div class=\"section-heading\"><h3>能力与调用权限</h3></div><div class=\"mcp-capability-grid\"><label class=\"checkbox-row\"><input id=\"mcp-form-tools\" type=\"checkbox\" ${d.tools?'checked':''}>发现并使用工具</label><label class=\"checkbox-row\"><input id=\"mcp-form-resources\" type=\"checkbox\" ${d.resources?'checked':''}>读取资源</label><label class=\"checkbox-row\"><input id=\"mcp-form-prompts\" type=\"checkbox\" ${d.prompts?'checked':''}>使用提示词</label></div>${field('工具调用默认审批','mcp-form-approval',d.approval,'只影响 UAH 的默认展示；官方运行时仍以其真实审批机制为准。','select',options([['ask','写入和外部动作询问'],['all','所有工具都询问'],['runtime','跟随运行时规则']],d.approval))}</div><div class=\"mcp-form-section\"><div class=\"section-heading\"><h3>项目范围</h3></div><label class=\"checkbox-row\"><input id=\"mcp-form-project\" type=\"checkbox\" ${d.enabled?'checked':''}>保存后在 ${esc(project(S.mcpProject)?.name)} 项目启用</label><p class=\"small muted\">未启用的项目不可调用此连接器。Agent 工具列表与会话权限仍会进一步收窄。</p></div>${prototypeNote('此页只演示配置结构；不会启动本机进程或连接远端服务器。敏感环境变量、请求头和 Token 不写入原型存档。')}<div class=\"form-actions\">${btn('取消','nav-mcp')}${btn(d.id?'保存配置':'添加连接器','mcp-add-confirm','primary')}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 467,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "? `<div class=\"list\"><div class=\"list-row\"><div class=\"grow\"><h3>read_file</h3><p data-copy-scope=\"mixed\" data-copy-action=\"split\">已完成 · 演示事件</p></div>${btn('查看记录','mcp-call','ghost sm','chevron')}</div></div>`"
+  },
+  {
+    "file": "src/app.js",
+    "line": 473,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `${pageHeader(m.name,m.desc,btn('返回连接器','nav-mcp','ghost','back'))}${m.status === 'error' ? `<div class=\"notice error\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${icon('alert')}示例连接启动失败；没有检查你的电脑。${btn('重试','mcp-retry','sm')}</div>` : ''}${m.status === 'auth' ? `<div class=\"notice warn\">${icon('lock')}远端服务器要求认证。${btn('登录授权','mcp-auth','primary sm')}</div>` : ''}<div class=\"section-heading\"><h3>连接配置</h3>${btn('编辑完整配置','mcp-edit','sm','settings')}</div><div class=\"mcp-detail-grid\"><div><span>传输方式</span><strong>${esc(m.transport)}</strong></div>${summary.map(([label,value])=>`<div><span>${label}</span><strong class=\"mono\">${esc(value)}</strong></div>`).join('')}<div><span>超时</span><strong>${esc(m.timeout || '30')} 秒</strong></div></div><div class=\"between\" style=\"margin:22px 0\"><div class=\"flex\">${scopeSelect('mcp-project',S.mcpProject)}<span class=\"small\">在此项目启用</span>${switchButton('mcp:'+m.id,projectEnabled(m,S.mcpProject),'在当前项目启用')}</div>${btn('测试连接','mcp-test','sm','refresh')}</div><div class=\"page-tabs\">${tabs.map(([id,label])=>`<button class=\"${S.mcpTab === id ? 'active' : ''}\" data-mcp-tab=\"${id}\">${label}</button>`).join('')}</div>${inventory}<div class=\"form-actions\">${btn('移除连接器','mcp-remove','danger left','trash')}${btn('编辑完整配置','mcp-edit','primary','settings')}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 492,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(variants[S.editId]){const [name,source,title,text]=variants[S.editId];return `${pageHeader(name,'SKILL.md · 来源：'+source,btn('返回 Skills','nav-skills','ghost','back'))}<div class=\"subtle-box\"><span class=\"mono\">${esc(S.editId)} / SKILL.md</span></div><article class=\"prose\" style=\"margin-top:30px\"><h2>${title}</h2><p>${text}</p><blockquote>技能阅读示例。实施时使用项目中真实的 SKILL.md，而不是复制这段样本文本。</blockquote><h3>执行边界</h3><p>读取技能不会自动授权 Shell、文件写入或设备控制。所有动作继续受当前会话权限约束。</p></article>`;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 493,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `${pageHeader('Vue 组件规范','SKILL.md · 来源：Vue 开发规范',btn('返回 Skills','nav-skills','ghost','back'))}<div class=\"subtle-box\"><div class=\"between\"><span class=\"mono small\">vue-component / SKILL.md</span>${pill('只读预览')}</div></div><article class=\"prose\" style=\"margin:30px 0\"><h2>编写清晰、可维护的 Vue 组件</h2><p>当任务涉及 Vue 页面、组件或相关状态逻辑时，先阅读现有项目规范，再应用这些约定。</p><h3>语言与格式</h3><p>业务页面和业务组件使用 JavaScript；稳定复用模块使用 TypeScript。统一使用四空格缩进，修改旧代码时保持同一文件风格一致。</p><h3>异步交互</h3><p>用户触发的异步动作具有 loading 锁。明确展示失败状态，结束 loading 后再显示提示，不让重复点击产生并发提交。</p><pre><code>if (loading.value) return;\\nloading.value = true;\\nrequest().then(handleResult).catch(handleError)\\n    .finally(() =&gt; { loading.value = false; });</code></pre><blockquote>这是技能内容的排版示例，不替代仓库中的真实 SKILL.md。</blockquote><h3>关联资源</h3><div class=\"flex\">${btn('references / components.md','skill-reference','sm','file')}${btn('查看来源插件','skill-parent','sm','puzzle')}</div></article>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 496,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `${pageHeader('记忆','保留值得再次使用的约定，而不是重复整个对话。',btn('添加记忆','memory-new','primary','plus'))}<div class=\"between\" style=\"margin-bottom:18px\"><div class=\"searchbox\" style=\"width:330px\">${icon('search')}<input data-filter=\"memories\" placeholder=\"搜索记忆\" aria-label=\"搜索记忆\"></div><select class=\"select\" id=\"memory-filter\" aria-label=\"记忆范围\">${['全部','全局','AgentApp'].map(x=>`<option ${x===S.memoryFilter?'selected':''}>${x}</option>`).join('')}</select></div><div class=\"list\">${S.memories.filter(m=>S.memoryFilter==='全部'||m.scope===S.memoryFilter).map(m=>`<button class=\"list-row\" style=\"width:100%;text-align:left\" data-memory=\"${m.id}\" data-filter-item=\"memories\" data-filter-value=\"${esc(m.title+m.body)}\"><span class=\"entity-icon\">${icon('memory')}</span><div class=\"grow\"><h3>${esc(m.title)} <span class=\"pill\">${esc(m.scope)}</span></h3><p>${esc(m.body)}</p><p style=\"margin-top:7px\">${esc(m.updated)}</p></div>${icon('chevron')}</button>`).join('')}</div><div class=\"notice\" style=\"margin-top:22px\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${icon('info')}这里的条目是可编辑的演示数据。删除记忆不会删除会话历史；是否注入上下文由项目与运行时能力决定。</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 503,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "const content = ['binary','missing','large'].includes(S.fileId)?`<h1>${esc(FILES.find(f=>f.id===S.fileId)?.name)}</h1><p>当前文件的元数据预览。没有可供文本渲染的内容；此处不重建历史。</p><p>${esc(FILES.find(f=>f.id===S.fileId)?.size)}</p>`:S.fileId==='readme'?`<h1>Used AI Harness</h1><p>一个围绕本地项目展开的 AI 工作台。</p><h2>先理解，再行动</h2><p>从对话开始，将计划、工具与文件改动留在同一个上下文中。</p><blockquote>当前文件与历史 Diff 分开。这里展示当前工作区的示例文件，不替换对话中保存的快照。</blockquote><h3>项目结构</h3><pre>src/\\n    ui/\\n    state/\\ntests/\\ndesign/</pre>`:S.fileId==='agents'?`<h1>AGENTS.md</h1><p>先阅读项目需求，遵守目录范围与当前权限。</p><h3>开发约定</h3><p>统一四空格缩进。工具记录采用轻量展开行。子代理只读，不能再次委派。</p><h3>验收与交付</h3><p>保存改动与验证证据；本地验收后由用户决定提交、推送与发布。</p>`:`<pre><code>${esc(DIFF_LINES.filter(x=>x[0]!=='remove').map(x=>x[3]).join('\\n'))}</code></pre>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 505,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `${pageHeader('项目文件','浏览当前工作区。历史版本请从对话中的本轮改动进入。',btn('项目目录','file-open-folder','','folder'))}<div class=\"between\" style=\"margin-bottom:18px\"><div class=\"flex\">${scopeSelect('files-project',S.project)}<span class=\"small muted\">${esc(project(S.project)?.path)}</span></div>${pill('示例文件')}</div><div class=\"file-layout\"><div class=\"file-tree\"><button>${icon('down')}${icon('folder')} ${esc(project(S.project)?.name)}</button>${[['readme','README.md'],['agents','AGENTS.md'],['tool','src / ToolCallRow.ts'],['state','src / useSessionState.ts'],['test','tests / tool-call.spec.ts']].map(([id,name])=>`<button class=\"indent ${S.fileId===id?'active':''}\" data-file=\"${id}\">${icon('file')}<span class=\"ellipsis\">${name}</span></button>`).join('')}</div><div class=\"file-preview\"><div class=\"file-preview-header\"><span>${S.fileId==='readme'?'README.md':S.fileId==='agents'?'AGENTS.md':FILES.find(f=>f.id===S.fileId)?.name||'文件'}</span><div class=\"flex\">${btn(S.fileSource?'预览':'源码','file-source','ghost sm',S.fileSource?'eye':'code')}${iconBtn('copy','file-copy','复制文件内容')}</div></div><div class=\"file-preview-content prose\" data-copy-scope=\"fixture\" data-copy-action=\"replace\">${S.fileSource?`<pre><code>${esc(source)}</code></pre>`:content}</div></div></div><div class=\"flex\" style=\"margin-top:17px\">${btn('查看最近改动','file-changes','ghost sm','diff')}${btn('添加至对话','file-attach','ghost sm','plus')}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 518,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "name: 'UAH 自有引擎', status: 'Windows 命令隔离待实现',"
+  },
+  {
+    "file": "src/app.js",
+    "line": 527,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "return `<h2 class=\"settings-title\">项目目录</h2><p class=\"muted\">管理本机项目及其工作目录。会话的附加目录从输入区的主目录菜单中管理，只作用于那段会话。</p><div class=\"list\">${S.projects.map(item=>`<div class=\"list-row\">${icon('folder')}<div class=\"grow\"><h3>${esc(item.name)}</h3><p class=\"mono\">${esc(item.path)}</p></div>${pill(item.git?'Git 仓库':'普通目录')}<button class=\"icon-btn\" data-project-menu=\"${item.id}\" aria-label=\"管理项目目录\">${icon('more')}</button></div>`).join('')}</div><div class=\"setting-row\"><div><h4>添加目录</h4><p>普通目录和 Git 仓库都可以作为项目，使用系统文件夹选择器添加。</p></div>${btn('添加项目','add-project','sm','plus')}</div><div class=\"setting-row\"><div><h4>项目并发</h4><p>同目录存在活动会话时，Git 项目可选 worktree；普通目录需要确认共享。</p></div>${btn('查看并发示例','demo-worktree','sm')}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 533,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(S.settingsTab==='computer') content=`<h2 class=\"settings-title\">电脑控制</h2><p class=\"muted\">可见、可授权、可随时停止的本地操作。</p><div class=\"setting-row\"><div><h4>允许 Windows 电脑控制</h4><p>默认关闭。开启总开关不会自动授权任意应用。</p></div>${switchButton('computer',S.switches.computer,'允许 Windows 电脑控制')}</div><div class=\"screen-preview\" data-copy-scope=\"fixture\" data-copy-action=\"replace\"><div class=\"screen-window\"><div class=\"screen-title\">${icon('monitor')} 记事本 · 当前桌面示意</div><div class=\"screen-body\">UAH Windows 11 computer use<br><br>观察应用 → 检查目标 → 请求授权 → 操作<br><br><span class=\"muted\" data-copy-scope=\"mixed\" data-copy-action=\"split\">此图不是你电脑的屏幕截图。</span></div></div><div class=\"screen-taskbar\" data-copy-scope=\"mixed\" data-copy-action=\"split\">Windows 11 · 独立演示环境</div></div><div class=\"flex\" style=\"margin-top:13px\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${btn('观察桌面','computer-observe','','eye')}${btn('演示输入动作','computer-action','','cursor')}${btn('立即停止','release-lease','danger','stop')}</div><div class=\"setting-row\"><div><h4>屏幕操作权</h4><p>同一时刻仅一个父会话持有，子代理共享。</p></div>${pill(S.lease?`${S.lease} 持有`:'空闲',S.lease?'warn':'good')}</div><div class=\"setting-row\"><div><h4>目标应用授权</h4><p>${S.computerTargets.length?S.computerTargets.map(esc).join('、'):'尚未授权任何应用。首次操作时单独确认。'}</p></div>${btn('管理授权','target-management','sm')}</div><div class=\"notice\">${icon('shield')}开启电脑控制后，还需允许当前 Agent 使用该工具并授权目标应用。只读 / 计划模式不会执行写入动作；操作前会重新确认目标。</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 534,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(S.settingsTab==='browser') content=`<h2 class=\"settings-title\">内置浏览器</h2><p class=\"muted\">工作与登录状态，都留在独立的浏览器配置文件里。</p><div class=\"setting-row\"><div><h4>允许 Agent 操作内置浏览器</h4><p>默认关闭。手动浏览和模型操作分开。</p></div>${switchButton('browser',S.switches.browser,'允许操作浏览器')}</div><div class=\"setting-row\"><div><h4>独立配置文件</h4><p class=\"mono\">UAH / WebView2 / isolated-profile</p></div>${pill('与系统浏览器分离')}</div><div class=\"setting-row\"><div><h4>网站登录</h4><p>由你在浏览器内完成；登录态不会提供给模型 API 或搜索服务。</p></div>${btn('打开浏览器','show-browser','sm','globe')}</div><div class=\"setting-row\"><div><h4>网站授权</h4><p>${S.browserAllowed?'localhost:5173 · 已授权当前会话':'尚未授予 Agent 网站操作权限。'}</p></div>${btn('管理授权','target-management','sm')}</div><div class=\"setting-row\"><div><h4>浏览器数据</h4><p>清除后，网站需要重新手动登录。不会影响系统浏览器。</p></div>${btn('清除示例登录态','clear-browser','sm danger')}</div><div class=\"notice\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${icon('lock')}原型中的浏览器是本地 UI 模拟，不加载任意网页，也不收集网站凭据。</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 535,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(S.settingsTab==='search') content=`<h2 class=\"settings-title\">网络搜索</h2><p class=\"muted\">搜索服务独立于模型接口与浏览器登录态。</p><div class=\"setting-row\"><div><h4>启用网络搜索</h4><p>只调用当前选择的服务，不自动回退。</p></div>${switchButton('search',S.switches.search,'启用网络搜索')}</div>${field('当前服务','search-service','SearXNG','','select',['SearXNG','Brave','Tavily','Exa','SerpApi','Google Custom Search'].map(x=>`<option>${x}</option>`).join(''))}${field('服务地址','search-endpoint','https://search.example.com')}${field('服务密钥','search-key','','独立配置；不借用模型密钥或浏览器登录态。原型不会存储密钥。','password')}<div class=\"form-actions\">${btn('测试配置','test-search')}${btn('保存配置','save-search','primary')}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 537,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(S.settingsTab==='data') content=`<h2 class=\"settings-title\">数据与迁移</h2><p class=\"muted\">明确导入、明确导出。不做跨设备实时同步。</p><div class=\"setting-row\"><div><h4>从 Android / UAH 导入</h4><p>先验证、预览冲突，再选择更新、副本或跳过。</p></div>${btn('导入数据','import-data','sm','download')}</div><div class=\"setting-row\"><div><h4>导出配置与会话</h4><p>逐项选择范围，提前展示敏感内容。</p></div>${btn('导出数据','export-data','sm','upload')}</div><div class=\"setting-row\"><div><h4 data-copy-scope=\"mixed\" data-copy-action=\"split\">导入预览示例</h4><p>无需准备文件，体验完整的冲突处理流程。</p></div>${btn('查看冲突预览','demo-import','sm')}</div><div class=\"setting-row\"><div><h4>本地安全存储</h4><p data-copy-scope=\"mixed\" data-copy-action=\"split\">正式版本使用 Windows 安全存储保护密钥。原型不持久化密钥、请求头或官方凭据。</p></div>${icon('lock')}</div><div class=\"notice warn\">${icon('shield')}Android 专属的设备控制配置不会转换为 Windows 授权。导入会话不意味着恢复后台任务或继续执行。</div><div class=\"setting-row\"><div><h4 data-copy-scope=\"mixed\" data-copy-action=\"split\">清除原型数据</h4><p data-copy-scope=\"mixed\" data-copy-action=\"split\">恢复这份 UI 原型的演示数据，不会影响你的任何真实文件。</p></div>${btn('重置原型','reset-prototype','sm danger')}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 538,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(S.settingsTab==='diagnostics') content=`<h2 class=\"settings-title\">诊断与关于</h2><div class=\"about-brand\">${mark()}<div><h3>Used AI Harness</h3><p class=\"muted small\" data-copy-scope=\"mixed\" data-copy-action=\"split\">PC 交互原型 · v1.0</p></div></div><div class=\"setting-row\"><div><h4>设计依据</h4><p class=\"mono\">UAH_PC_HARNESS_FUNCTIONAL_DESIGN.md</p></div>${pill(SOURCE_COMMIT.slice(0,8))}</div><div class=\"setting-row\"><div><h4>运行环境</h4><p data-copy-scope=\"mixed\" data-copy-action=\"split\">浏览器本地演示。没有连接模型、Shell、MCP 或 Windows 控制。</p></div>${pill('离线可打开','good')}</div><div class=\"setting-row\"><div><h4>故障诊断</h4><p>连接错误应保留在所属运行时 / 供应商 / MCP 页面。</p></div>${btn('查看错误状态','demo-error','sm')}</div><div class=\"setting-row\"><div><h4>退出行为</h4><p>中止 UAH 管理的活动任务，保留原因；重新打开不自动续跑。</p></div>${btn('演示退出','exit-app','sm')}</div><div class=\"form-actions\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${btn('原型导览与验收场景','guide','primary','keyboard')}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 554,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "$('#app').innerHTML=`<div class=\"titlebar\"><div class=\"titlebar-brand\">${mark()}<span>Used AI Harness</span></div><div class=\"titlebar-center\">${S.page==='chat'?esc(project(session().project)?.name||'无目录会话'):'本地工作区'}</div><div class=\"window-actions\"><button data-action=\"window-min\" aria-label=\"最小化窗口（演示）\">${icon('minus')}</button><button data-action=\"window-max\" aria-label=\"最大化窗口（演示）\">${icon('maximize')}</button><button data-action=\"exit-app\" aria-label=\"退出 UAH\">${icon('close')}</button></div></div><div class=\"workspace\">${sidebarHTML()}<main class=\"main ${viewKey!==lastViewKey?'view-enter':''}\">${headerHTML()}${S.page==='home'?homeHTML():S.page==='chat'?chatHTML():`<div class=\"page-scroll\"><div class=\"page\">${pagesHTML()}</div></div>`}</main>${panel}</div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 565,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "const root=$('#toast-root');root.innerHTML=`<div class=\"toast\" data-copy-scope=\"${copyScope}\" data-copy-action=\"${copyScope==='product'?'keep':'split'}\">${icon(type==='error'?'alert':type==='success'?'check':'info')}<span>${esc(text)}</span><button aria-label=\"关闭提示\" data-action=\"toast-close\">${icon('close')}</button></div>`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 601,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "wide=true;html=`<div class=\"searchbox\">${icon('search')}<input id=\"model-search\" placeholder=\"搜索模型、供应商或运行时\" aria-label=\"搜索模型\"></div><div class=\"pop-label\">自配 API · UAH 自有引擎</div>${MODELS.filter(m=>m.source==='api').map(m=>`<div data-filter-item=\"models\" data-filter-value=\"${esc(m.name+m.provider+m.wire)}\">${menuItem(m.name,`data-select-model=\"${m.id}\"`,'models',`${m.provider} · ${m.media}`,config().model===m.id)}</div>`).join('')}<div class=\"divider\"></div><div class=\"pop-label\">官方订阅运行时</div>${MODELS.filter(m=>m.source!=='api'&&m.id!=='gemini-cli').map(m=>`<div data-filter-item=\"models\" data-filter-value=\"${esc(m.name+m.provider)}\">${menuItem(m.name,`data-select-model=\"${m.id}\"`,'terminal',m.provider,config().model===m.id)}</div>`).join('')}<div class=\"pop-label\">其他官方 CLI</div>${menuItem('Gemini CLI','data-select-model=\"gemini-cli\"','terminal','API Key / 企业认证 · 非 Google 订阅',config().model==='gemini-cli')}${prototypeNote('模型目录使用示例数据；跨运行时切换的分支确认用于验收交互。')}`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 615,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(name==='project')html=`<div class=\"pop-label\">${esc(project(S.projectMenu)?.name)}</div>${menuItem('在此项目新建对话','data-action=\"project-chat\"','edit')}${menuItem('重命名项目','data-action=\"rename-project\"','edit')}${menuItem('查看项目文件','data-action=\"project-files\"','folder')}<div class=\"divider\"></div>${menuItem('从工作区移除','data-action=\"remove-project\"','trash','只移除原型记录，不删除本地目录')}`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 616,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(name==='user')html=`<div class=\"pop-title\">本地工作区</div><div class=\"notice\">无 UAH 云端账号；订阅运行时账号分别管理。</div>${menuItem('设置','data-nav=\"settings\"','settings')}${menuItem('数据导入 / 导出','data-action=\"settings-data\"','database')}${menuItem(S.theme==='dark'?'切换浅色':'切换深色','data-action=\"theme-toggle\"','sun')}${menuItem('原型导览','data-action=\"guide\"','keyboard')}${menuItem('退出应用','data-action=\"exit-app\"','logout')}`;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 649,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "modal(p.git?'这个目录中已有活动会话':'这个目录正在被其他会话使用',`<p>${esc(p.name)} 中有 ${active.length} 个正在执行或等待审批的会话。选择新会话如何使用目录。</p><div class=\"subtle-box\"><div class=\"flex\">${statusDot(active[0]?.state||'running')}<span>${esc(active[0]?.title||'活动会话')}</span></div><p class=\"mono small muted\" style=\"margin:8px 0 0\">${esc(p.path)}</p></div>${p.git?`<button class=\"option-card ${S.worktreeChoice==='isolated'?'selected':''}\" data-worktree=\"isolated\">${icon('branch')}<span><h4>新建独立 Git worktree</h4><p>为新会话分离文件目录，降低并发改动冲突。<br>示例路径：${esc(p.path)}-worktrees\\\\session-new</p></span><i class=\"radio-circle\"></i></button>`:''}<button class=\"option-card ${S.worktreeChoice==='shared'?'selected':''}\" data-worktree=\"shared\">${icon('folder')}<span><h4>直接使用当前目录</h4><p>多个会话可能同时修改文件。改动归属不明确时标记为“归属不确定”，不伪造精确归因。</p></span><i class=\"radio-circle\"></i></button>${p.git?'':`<div class=\"notice warn\">${icon('alert')}普通目录不能创建 Git worktree。继续即确认并发文件冲突风险。</div>`}${prototypeNote('仅模拟目录选择，不执行 git worktree，也不创建本机文件夹。')}`,`${btn('取消','close-modal')}${btn('使用此目录方案','worktree-confirm','primary')}`);"
+  },
+  {
+    "file": "src/app.js",
+    "line": 698,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "modal('上下文',`<div class=\"between\"><h3 style=\"margin:0\">${known?`${(used/1000).toFixed(1)}K / 200K`:'容量未上报'}</h3>${pill(known?'本地估算 · 示例':'不可计算使用率')}</div><p class=\"small muted\" style=\"margin:10px 0\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${known?'分类用量是原型样本，不是实际服务端 token 用量。':'缺少容量时只展示已知信息，不将“未上报”解释为 0 或无限。'}</p>${known?`<div class=\"context-bar\">${parts.map(([label,num,color])=>`<i style=\"width:${num*(used/24800)/200000*100}%;background:${color}\" title=\"${label}\"></i>`).join('')}</div><div class=\"context-legend\">${parts.map(([label,num,color])=>`<span><i style=\"background:${color}\"></i>${label}<strong style=\"margin-left:auto;font-weight:500\">${(num*(used/24800)/1000).toFixed(1)}K</strong></span>`).join('')}</div>`:''}<div class=\"divider\"></div><div class=\"list\"><div class=\"setting-row\"><div><h4>服务端上一轮输入 / 输出</h4></div><span class=\"muted small\">未上报</span></div><div class=\"setting-row\"><div><h4>缓存 / 思考用量</h4></div><span class=\"muted small\">未上报</span></div></div><div class=\"notice\">${icon('history')}压缩只改变后续发送的上下文，原始历史、工具记录和历史 Diff 保留。仅允许空闲的 UAH 主会话主动压缩。</div>`,`${btn('关闭','close-modal')}${!isBusy()&&model().source==='api'&&S.page==='chat'?btn('压缩上下文','compact-confirm','primary'):''}`);"
+  },
+  {
+    "file": "src/app.js",
+    "line": 726,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "render(true);prototypeToast('已选择 MCP 工作目录；网页原型只取得文件夹名称。');return;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 735,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "prototypeToast('已选择文件夹；网页原型只取得名称，正式客户端会保存完整 Windows 路径。');"
+  },
+  {
+    "file": "src/app.js",
+    "line": 758,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(!preview){modal('导入数据',`<p>从 Android / UAH 导入配置与会话。先校验再预览，不立即写入。</p><div class=\"drop-zone\">${icon('download')}<h3>选择一个导出文件</h3><p class=\"small muted\">原型支持读取自身导出的 JSON，或使用内置冲突样本。<br>ZIP 解包流程只演示，不执行真实归档恢复。</p>${btn('选择 JSON / ZIP','choose-import-file','','folder')}</div><div class=\"notice\">${icon('shield')}设备控制授权不跨平台继承，导入后任务不会自动执行。</div>`,`${btn('取消','close-modal')}${btn('使用冲突样本','demo-import','primary')}`);return;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 760,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "modal('预览导入与冲突',`<div class=\"stepper\"><span>1 选择文件</span><span class=\"active\">2 校验与冲突</span><span>3 确认导入</span></div><p data-copy-scope=\"mixed\" data-copy-action=\"split\">已读取 ${rows.length} 项${S.importRows?'原型 JSON':'演示样本'}。选择如何处理每个冲突，确认后再更改本地原型数据。</p><div class=\"list\">${rows.map(r=>`<div class=\"list-row\"><div class=\"grow\"><h3>${esc(r.name)} <span class=\"pill\">${esc(r.type)}</span></h3><p>${esc(r.status)}</p></div><select class=\"select\" data-import-key=\"${esc(r.key)}\" aria-label=\"${esc(r.name)} 冲突处理\">${[['copy','导入为副本'],['update','更新现有项'],['skip','跳过']].map(([id,label])=>`<option value=\"${id}\" ${(S.importChoices[r.key]||'copy')===id?'selected':''}>${label}</option>`).join('')}</select></div>`).join('')}</div><div class=\"field\" style=\"margin-top:20px\"><label>导入会话绑定到项目</label>${scopeSelect('import-project','agentapp')}</div><div class=\"notice warn\">${icon('shield')}将跳过 Android 专属设备配置、所有执行授权和真实凭据。已有数据保留一份恢复快照，不启动任何任务。</div>`,`${btn('取消','close-modal')}${btn('确认导入选中内容','apply-import','primary')}`,'wide');"
+  },
+  {
+    "file": "src/app.js",
+    "line": 763,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "modal('导出配置与会话',`<p data-copy-scope=\"mixed\" data-copy-action=\"split\">选择要带走的数据。此原型生成 JSON，不包含真实文件、密钥或登录信息。</p><div class=\"permissions-grid\">${[['providers','模型配置'],['agents','Agent'],['memories','记忆'],['sessions','会话记录'],['mcps','MCP 配置'],['plugins','插件启用关系']].map(([id,label])=>`<label class=\"checkbox-row\"><input type=\"checkbox\" name=\"export-section\" value=\"${id}\" checked>${label}</label>`).join('')}</div><div class=\"divider\"></div><label class=\"checkbox-row\"><input type=\"checkbox\" id=\"export-sensitive\">包含密钥与敏感请求头</label><div class=\"notice warn\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${icon('lock')}正式产品必须对敏感导出再次确认。本原型没有存储密钥，即使选择此项，也只能导出明确标记的演示占位说明，不能导出订阅凭据。</div><div class=\"setting-row\"><div><h4>当前导出范围</h4><p>会话文本可能包含个人或项目内容，分享前请检查。</p></div>${pill('本地 JSON')}</div>`,`${btn('取消','close-modal')}${btn('生成导出文件','perform-export','primary','download')}`);"
+  },
+  {
+    "file": "src/app.js",
+    "line": 767,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "modal(update?'预览插件更新':'预览插件安装',`<div class=\"stepper\"><span class=\"active\">1 检查清单</span><span>2 项目启用</span><span>3 独立授权</span></div><div class=\"between\"><h3>${update?'Vue 开发规范 1.1.0':'代码质量工具箱'}</h3>${pill('本地包 · 示例')}</div><p class=\"mono small muted\">E:\\\\Plugins\\\\${update?'vue-best-practices-1.1.0':'code-quality-1.0.0'}.zip</p><div class=\"list\">${[['Skills','2 项技能与参考资源'],['Agent','1 项只读审查 Agent'],['MCP','1 项本地 stdio 连接器'],['规则','1 份 AGENTS 补充规则'],['Hooks','1 项 after-file-edit · 默认关闭']].map(([label,val])=>`<div class=\"list-row\" style=\"padding:11px 0\"><strong style=\"min-width:65px;font-size:12px\">${label}</strong><span class=\"small muted\">${val}</span></div>`).join('')}</div><div class=\"notice warn\" style=\"margin-top:18px\">${icon('shield')}${update?'发现同名 Skill，将保留原包和旧版配置以便恢复。':'安装只识别内容，不立即运行脚本。'}每个可执行 hook 必须在插件详情中单独启用并授权。</div><label class=\"checkbox-row\" style=\"margin-top:12px\"><input type=\"checkbox\" id=\"enable-imported-plugin\">安装后在 AgentApp 项目启用（不启用 hooks）</label>`,`${btn('取消','close-modal')}${btn(update?'确认更新并备份旧版':'确认安装','plugin-install','primary')}`);"
+  },
+  {
+    "file": "src/app.js",
+    "line": 770,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "modal('允许这个 hook 执行吗？',`<p>来自 <strong>${esc(p.name)}</strong> 的 <strong>after-file-edit</strong> 将在编辑后执行。插件安装与启用本身没有授予这项权限。</p><div class=\"codebox\"><div class=\"codebox-head\">执行内容</div><pre>node ./hooks/format-check.mjs</pre></div><div class=\"list\"><div class=\"list-row\"><span class=\"small muted\">工作目录</span><span class=\"mono small\">${esc(project(S.pluginProject)?.path)}</span></div><div class=\"list-row\"><span class=\"small muted\">申请范围</span><span class=\"small\">当前项目的文件与 Shell 能力</span></div></div><div class=\"notice warn\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${icon('shield')}不能绕过会话的只读 / 计划模式或系统权限。此处仅演示授权，不运行脚本。</div>`,`${btn('不允许','close-modal')}${btn('为此 hook 单独授权','allow-hook','primary')}`);"
+  },
+  {
+    "file": "src/app.js",
+    "line": 774,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "modal(`${r.name} · 官方登录`,S.loginStage===0?`<p>UAH 只启动未修改的官方客户端认证流程，不接收账号密码、不复制令牌。</p><div class=\"subtle-box\"><div class=\"flex\">${icon('external')}<span>在官方客户端完成登录</span></div><p class=\"small muted\" style=\"margin:12px 0 0\" data-copy-scope=\"mixed\" data-copy-action=\"split\">实际应用会将控制权交给官方运行时；本原型不会打开浏览器或发送认证请求。</p></div><div class=\"notice\" style=\"margin-top:16px\">${icon('lock')}同一服务只管理当前登录的一个账号。</div>`:`<div class=\"empty-state\" style=\"padding:25px 0\">${icon('check')}<h3 data-copy-scope=\"mixed\" data-copy-action=\"split\">已模拟完成官方登录</h3><p>demo@example.com<br>接下来由适配层读取当前连接状态与可用模型。</p></div>`,`${btn('取消','close-modal')}${btn(S.loginStage===0?'模拟官方登录完成':'返回运行时详情',S.loginStage===0?'login-complete':'login-return','primary')}`);"
+  },
+  {
+    "file": "src/app.js",
+    "line": 779,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(!enabled){confirmDialog('控制总开关尚未打开',`${kind==='browser'?'内置浏览器':'Windows 电脑'}控制默认关闭。开启后仍然需要会话模式和目标授权；本原型不操作真实设备。`,kind==='browser'?'enable-browser':'enable-computer','开启演示总开关');return;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 787,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "modal(authorized?'批准这一次操作？':'允许操作这个目标吗？',`<div class=\"subtle-box\"><div class=\"flex\">${icon(kind==='browser'?'globe':'monitor')}<strong>${kind==='browser'?esc(browserTarget()):'记事本 · Windows 11'}</strong></div><p class=\"small muted\" style=\"margin:10px 0 0\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${write?kind==='browser'?'动作：点击「查看项目」按钮':'动作：向已观察的文本编辑区输入示例内容':'动作：只读观察当前控件与页面结构'}</p></div><div class=\"list\"><div class=\"list-row\"><span class=\"small muted\">父会话</span><span class=\"small\">${esc(session().title)}</span></div><div class=\"list-row\"><span class=\"small muted\">权限模式</span>${pill(PERMISSIONS[config().mode||'accept'][0])}</div><div class=\"list-row\"><span class=\"small muted\">观察快照</span><span class=\"mono small\">snapshot-${S.observation} · 目标匹配</span></div></div><label class=\"checkbox-row\"><input type=\"checkbox\" id=\"remember-target\">记住这个目标（不会自动切换会话权限）</label><div class=\"notice\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${icon('lock')}不会传出浏览器 Cookie 或登录凭据。目标变化后仍需重新观察；停止随时有效。此原型只改变本地示例状态。</div>`,`${btn('不允许','close-modal')}${btn(write?'仅批准这次动作':'允许本次观察','control-approve','primary')}`);"
+  },
+  {
+    "file": "src/app.js",
+    "line": 794,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "S.browserLogs.unshift(`${write?'已执行示例动作':'已读取示例观察'} · ${kind==='browser'?browserTarget():'记事本'} · snapshot-${S.observation}`);"
+  },
+  {
+    "file": "src/app.js",
+    "line": 795,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "closeModal();render(true);toast(write?'演示动作已完成，未操作你的电脑。':'已获得新的示例观察快照。','success');"
+  },
+  {
+    "file": "src/app.js",
+    "line": 798,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "const result={format:'uah-pc-ui-prototype',version:1,createdAt:new Date().toISOString(),notice:'仅为交互原型数据，不是正式 UAH 备份。无真实凭据或本机文件。',data:{}};"
+  },
+  {
+    "file": "src/app.js",
+    "line": 805,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(sensitive)result.sensitiveExport='用户确认敏感导出的 UI 流程；此原型没有保存或导出任何真实密钥。';"
+  },
+  {
+    "file": "src/app.js",
+    "line": 806,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "downloadJSON(result,'UAH_Prototype_Export.json');closeModal();prototypeToast('已生成原型 JSON。密钥、请求头与执行授权未导出。','success');"
+  },
+  {
+    "file": "src/app.js",
+    "line": 822,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "closeModal();render();modal('导入已完成',`<div class=\"empty-state\" style=\"padding:20px 0\">${icon('check')}<h3 data-copy-scope=\"mixed\" data-copy-action=\"split\">已处理 ${count} 项原型数据</h3><p>被跳过的项目保持不变，所有导入任务处于中止状态。<br>设备授权、hooks 执行权限和凭据未继承。</p></div>`,`${btn('恢复导入前数据','undo-import')}${btn('完成','close-modal','primary')}`);S.importRows=null;S.importData=null;S.importChoices={};"
+  },
+  {
+    "file": "src/app.js",
+    "line": 825,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "modal('搜索',`<div class=\"searchbox\">${icon('search')}<input id=\"global-search\" value=\"${esc(query)}\" placeholder=\"搜索会话、项目与设置\" aria-label=\"搜索会话、项目与设置\"></div><div id=\"search-results\" style=\"margin-top:15px\">${searchResults(query)}</div><p class=\"small muted\" style=\"margin-top:20px\" data-copy-scope=\"mixed\" data-copy-action=\"split\">只搜索这份原型中的示例数据，不访问你的磁盘。</p>`,'','wide');"
+  },
+  {
+    "file": "src/app.js",
+    "line": 835,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(action.startsWith('copy-round-')){copyText('已完成工具展开交互设计。所有记录均为本地演示。');return;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 838,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(action.startsWith('edit-round-')){modal('编辑已保存回复',`${field('正文','edit-message-text','已完成轻量工具行与历史 Diff 的示例设计。','编辑历史不会自动调用模型或重新运行工具。','textarea')}`,`${btn('取消','close-modal')}${btn('仅保存历史修改','save-message','primary')}`);return;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 839,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(action.startsWith('delete-round-')){confirmDialog('删除这组回复记录？','删除正文与其工具展示记录，不会撤销本地文件改动。此原型仅隐藏样例正文。','delete-message-confirm','删除记录',true);return;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 859,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'resume':session().state='running';session().kind='running';sessionWorkspace().backgroundTasks.push({id:'resume-'+Date.now(),title:'手动继续任务',state:'running',detail:'本地模拟任务正在运行',time:'刚刚'});render(true);prototypeToast('已由用户手动继续模拟任务；没有连接模型。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 860,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'approve-command':session().state='running';session().kind='running';session().generatedText='本次命令已获明确批准。正在模拟运行测试，记录将保留在这一轮。';render(true);prototypeToast('仅批准了这一次示例命令。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 869,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'open-folder':case 'file-open-folder':prototypeToast('正式桌面版将在系统文件管理器打开目录；原型不会访问本机文件。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 870,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'current-file':S.fileId=S.diffFile;S.project=session().project;navigate('files');prototypeToast('已切换到当前文件示例，不是历史快照。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 874,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'branch-details':{const p=project(config().project),label=p?.git?(config().worktree?'独立 Git worktree':p.branch||'当前分支未上报'):'没有仓库';modal('目录与仓库',`<div class=\"list\"><div class=\"setting-row\"><div><h4>工作目录</h4><p class=\"mono\">${esc(config().worktree||p?.path||'未选择目录')}</p></div></div><div class=\"setting-row\"><div><h4>仓库分支</h4><p>${esc(label)}</p></div></div></div><p class=\"small muted\" data-copy-scope=\"mixed\" data-copy-action=\"split\">此原型只展示会话配置，不读取本机 Git 状态。</p>`,btn('关闭','close-modal'));break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 877,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'compact-confirm':confirmDialog('压缩后续上下文？','将生成用于下一轮的摘要，原始历史和工具结果保留。此原型用固定样本演示完成状态，不执行模型压缩。','compact-do','确认压缩');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 893,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'delete-session':confirmDialog('删除会话？','删除这份原型中的会话记录。活动任务会先中止，删除不会撤销本机文件改动。','delete-session-confirm','删除会话',true);break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 895,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'export-session':downloadJSON({format:'uah-pc-prototype-session',notice:'演示数据',session:session()},'UAH_Session_Demo.json');closeMenu();break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 904,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'remove-project':confirmDialog('从工作区移除项目？','仅移除原型中的项目与会话记录，不会删除真实目录。活动任务会先中止。','remove-project-confirm','移除项目',true);break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 908,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'attach-project':if(!config().project){closeMenu();toast('当前没有绑定目录。可以先引用本地会话或上传文件。');break;}closeMenu();modal('添加项目文件',`<p data-copy-scope=\"mixed\" data-copy-action=\"split\">选择用于演示的项目文件。附件只绑定当前消息，不复制到下一个新对话。</p>${['README.md','AGENTS.md','src/ui/ToolCallRow.ts'].map(name=>menuItem(name,`data-attach-name=\"${name}\"`,'file')).join('')}`,btn('取消','close-modal'));break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 913,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'save-agent':{if(!$$('input[name=\"agent-tool\"]:checked').length){toast('请至少选择一种工具；当前版本不支持保存全部禁用的 Agent。','error');return;}const name=$('#agent-name').value.trim();if(!name){toast('Agent 名称不能为空。','error');return;}const old=S.agents.find(x=>x.id===S.editId);const a={id:old?.id||'agent-'+Date.now(),name,desc:$('#agent-desc').value,prompt:$('#agent-prompt').value,model:$('#agent-model').value,icon:old?.icon||'agent',tools:'自定义工具',toolIds:$$('input[name=\"agent-tool\"]:checked').map(x=>x.value)};if(old)Object.assign(old,a);else S.agents.push(a);navigate('agents');prototypeToast('Agent 已保存到原型。');break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 918,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'test-provider':case 'mcp-test':case 'test-search':{const old=el?.innerHTML;if(el){el.disabled=true;el.innerHTML=`${icon('refresh')}测试中…`;}setTimeout(()=>{if(el?.isConnected){el.disabled=false;el.innerHTML=old;}S.transientResult='模拟连接通过';prototypeToast('示例连接通过。未发送网络请求，也未产生费用。','success');},650);break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 919,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'fetch-models':modal('模型目录 · 示例返回',`<p data-copy-scope=\"mixed\" data-copy-action=\"split\">这里演示“接口获取 / 手动添加”的工作流。并未向供应商接口发起请求。</p><div class=\"list\">${MODELS.filter(x=>x.source==='api').map(m=>`<div class=\"list-row\"><div class=\"grow\"><h3>${m.name}</h3><p class=\"mono\">${m.wire}</p></div>${pill(m.media)}</div>`).join('')}</div><div class=\"notice\" style=\"margin-top:15px\">${icon('info')}目录变化先进入供应商草稿，由供应商页“保存配置”统一持久化。</div>`,btn('添加到配置草稿','close-modal','primary'));break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 925,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'delete-provider':confirmDialog('删除供应商？','只删除原型中的非敏感配置，相关历史记录保留。','delete-provider-confirm','删除供应商',true);break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 928,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'runtime-detect':{const r=S.runtimes.find(x=>x.id===S.editId);if(!r.installed){modal('官方客户端安装',`<p data-copy-scope=\"mixed\" data-copy-action=\"split\">正式桌面版会提供官方安装说明及安装状态检测，不修改官方客户端。原型仅演示未安装 → 已检测状态。</p><div class=\"subtle-box\">${esc(r.engine)}</div>`,`${btn('取消','close-modal')}${btn('模拟已安装','runtime-installed','primary')}`);}else prototypeToast('已模拟重新检测到官方客户端。');break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 931,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'login-complete':{const r=S.runtimes.find(x=>x.id===S.editId);r.logged=true;r.account='demo@example.com';r.model='由官方运行时返回的模型 · 示例';S.loginStage=1;loginModal();break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 933,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'runtime-logout':confirmDialog('退出当前官方账号？','正式应用将调用官方退出流程，不私自复制或删除令牌。本原型只清空示例连接状态。','runtime-logout-confirm','退出账号');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 935,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'runtime-models':{const r=S.runtimes.find(x=>x.id===S.editId);if(!r.logged){prototypeToast('请先完成官方登录的演示流程。');break;}modal('运行时模型返回',`<div class=\"subtle-box\">${esc(r.model)}</div><div class=\"notice\" style=\"margin-top:15px\">${icon('info')}未上报的上下文容量和额度显示“未上报”。未声明思考档位时，按协议提供默认档位并注明临时值；上游不接受时显示原始错误。</div>`,btn('完成','close-modal','primary'));break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 954,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "const item={id:d.id||'mcp-'+Date.now(),name:d.name,transport:d.transport,command:d.transport==='stdio'?`${d.executable} ${d.args.split('\\n').filter(Boolean).join(' ')}`.trim():d.url,executable:d.executable,args:d.args,cwd:d.cwd,cwdPickerOnly:d.cwdPickerOnly,url:d.url,envKeys:envLines.map(line=>line.split('=')[0]),headerKeys:headerLines.map(line=>line.split(':')[0].trim()),auth:d.auth,scopes:d.scopes,timeout:d.timeout,capabilities:{tools:d.tools,resources:d.resources,prompts:d.prompts},approval:d.approval,projectEnabled:{...(old?.projectEnabled||{}),[S.mcpProject]:d.enabled},desc:'用户保存的示例配置 · 未连接',status:'configured',tools:0,resources:0,prompts:0,enabled:d.enabled};"
+  },
+  {
+    "file": "src/app.js",
+    "line": 956,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "S.mcpDraft=null;navigate('mcp-detail',item.id);prototypeToast('已保存配置。凭据值没有写入原型存档；连接仍需单独测试。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 958,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'mcp-auth':modal('服务器登录授权',`<p data-copy-scope=\"mixed\" data-copy-action=\"split\">正式应用将遵循服务器要求完成认证；原型只模拟授权结果。</p><div class=\"notice\">${icon('lock')}只为这个 MCP 服务器建立认证，不共享模型密钥或内置浏览器登录态。</div>`,`${btn('取消','close-modal')}${btn('模拟授权完成','mcp-auth-complete','primary')}`);break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 960,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'mcp-retry':{const m=S.mcps.find(x=>x.id===S.editId);m.status='connected';m.desc='模拟重试连接成功';m.tools=8;render(true);prototypeToast('示例重试成功，未启动真实进程。');break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 962,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'mcp-remove':confirmDialog('移除连接器？','从原型的全局配置中移除，并清除项目启用关系。','mcp-remove-confirm','移除',true);break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 964,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'mcp-call':modal('read_file · 调用记录',commandBody('read_file({ path: \"AGENTS.md\" })','读取成功 · 只读示例结果 · 未访问真实文件。'),btn('关闭','close-modal'));break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 965,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'mcp-resource':modal('project://readme',`<article class=\"prose\"><h2>Used AI Harness</h2><p data-copy-scope=\"mixed\" data-copy-action=\"split\">示例 MCP 只读资源。以实际服务器返回的资源内容和类型为准。</p></article>`,btn('关闭','close-modal'));break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 970,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'plugin-install':{const enabled=$('#enable-imported-plugin')?.checked;if(S.pluginUpdate){const p=S.plugins.find(x=>x.id===S.editId)||S.plugins[0];p.previousVersion=p.version;p.version='1.1.0';p.hookEnabled=false;}else{S.plugins.push({id:'plugin-'+Date.now(),name:'代码质量工具箱',slug:'code-quality',version:'1.0.0',format:'Agent Plugin',skills:2,agents:1,mcp:1,hooks:1,enabled:!!enabled,icon:'shield',hookEnabled:false});}closeModal();navigate('plugins');prototypeToast('已保存示例插件清单。hooks 保持关闭。');break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 971,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'allow-hook':{const p=S.plugins.find(x=>x.id===S.pendingHook);p.hookEnabled=true;closeModal();render(true);prototypeToast('已单独授权此示例 hook，不会执行真实脚本。');break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 972,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'plugin-manifest':modal('插件原始清单',`<div class=\"codebox\"><pre>${esc(JSON.stringify({name:'vue-best-practices',version:'1.0.0',skills:['vue-component','vue-theme'],agents:['reviewer'],rules:['AGENTS.md'],hooks:{'after-file-edit':{command:'node ./hooks/format-check.mjs',enabled:false}}},null,4))}</pre></div><p class=\"small muted\" style=\"margin-top:13px\" data-copy-scope=\"mixed\" data-copy-action=\"split\">原始包与来源保留；此处为结构示例。</p>`,btn('关闭','close-modal'));break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 974,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'plugin-uninstall-confirm':S.lastUninstalled=clone(S.plugins.find(x=>x.id===S.editId));S.plugins=S.plugins.filter(x=>x.id!==S.editId);navigate('plugins');prototypeToast('插件已从原型卸载，源包与恢复记录保留。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 976,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'plugin-restore':{const p=S.plugins.find(x=>x.id===S.editId);if(p?.previousVersion){p.version=p.previousVersion;delete p.previousVersion;p.hookEnabled=false;render(true);toast('已恢复旧版，hooks 需重新授权。');}else prototypeToast('当前插件没有上一版本备份。先预览更新以演示恢复。');break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 994,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'enable-computer':S.switches.computer=true;closeModal();render(true);prototypeToast('已打开演示开关，尚未授予目标应用权限。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 995,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'enable-browser':S.switches.browser=true;closeModal();render(true);prototypeToast('已打开演示开关，尚未授权网站操作。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 999,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'refresh-observation':S.targetChanged=false;S.observation++;closeModal();render(true);prototypeToast('已获取新的示例观察；请重新请求动作。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1004,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'clear-browser':S.browserLogged=false;S.browserAllowed=false;S.lease=null;render(true);prototypeToast('已清除示例浏览器状态，系统浏览器不受影响。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1005,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'browser-login':modal('手动网站登录',`<p>网站登录由用户在内置浏览器完成。Agent 不接触密码，浏览器登录态不共享给模型接口。</p><div class=\"subtle-box\" data-copy-scope=\"mixed\" data-copy-action=\"split\">localhost:5173 · 演示网站</div><p class=\"small muted\" style=\"margin-top:15px\" data-copy-scope=\"mixed\" data-copy-action=\"split\">原型不提供密码输入框，避免收集任何真实凭据。</p>`,`${btn('取消','close-modal')}${btn('模拟手动登录完成','browser-login-complete','primary')}`);break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1006,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'browser-login-complete':S.browserLogged=true;closeModal();render(true);prototypeToast('示例网站已登录。Agent 操作权限仍需单独授权。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1010,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'browser-refresh':S.targetChanged=true;render(true);prototypeToast('示例页面已刷新，旧观察快照失效。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1011,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'terminal-new':{const t=session();t.manualTerminals=t.manualTerminals||[];t.manualTerminals.push({name:'PowerShell '+(t.manualTerminals.length+1),lines:['新建的独立手动终端（演示）','目录：'+(t.worktree||project(t.project)?.path),'输入 help 查看示例命令。']});t.activeTerminal=t.manualTerminals.length-1;S.terminalTab=0;render(true);prototypeToast('已创建独立的示例终端标签。');break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1018,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'undo-import':if(S.importBackup){Object.assign(S,S.importBackup);S.importBackup=null;closeModal();render();prototypeToast('已恢复导入前的原型数据。');}break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1020,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'perform-export':{const sections=$$('input[name=\"export-section\"]:checked').map(x=>x.value);if(!sections.length){toast('请至少选择一类数据。','error');return;}S.exportSections=sections;if($('#export-sensitive').checked){confirmDialog('再次确认敏感导出','真实应用中此选项可能包含密钥和附加请求头，请勿随意分享。原型没有存储凭据，只导出明确的演示说明。','sensitive-export-confirm','确认导出演示文件');}else performExport(sections);break;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1022,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'reset-prototype':confirmDialog('重置原型数据？','清除浏览器为这份原型保存的演示配置，恢复初始样本。不会影响你的 GitHub 或电脑文件。','reset-confirm','重置原型',true);break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1026,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'exit-app':modal('退出 Used AI Harness？',`<p>当前有 <strong>${activeCount()} 个</strong>活动任务。退出会中止由 UAH 管理的任务，保存中止原因与已完成记录，下次启动不自动续跑。</p><div class=\"list\">${S.sessions.filter(isBusy).map(t=>`<div class=\"list-row\">${statusDot(t.state)}<span class=\"grow\">${esc(t.title)}</span>${pill(STATE_NAMES[t.state],t.state==='approval'?'warn':'good')}</div>`).join('')}</div><div class=\"notice\" style=\"margin-top:15px\" data-copy-scope=\"mixed\" data-copy-action=\"split\">${icon('info')}这里演示应用退出，不会关闭你的浏览器标签页。</div>`,`${btn('继续工作','close-modal')}${btn('中止任务并退出','exit-confirm','danger')}`);break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1029,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "case 'window-min':prototypeToast('窗口控制仅作样式演示；不会最小化浏览器。');break;"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1032,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "default:prototypeToast('此入口为原型展示项，未连接外部服务。');console.info('Unimplemented prototype action:',action);"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1138,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "function runDemoTerminal(value){const command=value.trim();if(!command)return;S.terminalOutput.push('PS> '+command);const outputs={help:'支持的演示命令：help、pwd、dir、git status、npm test、clear。其他输入不会执行。',pwd:session().worktree||project(session().project)?.path||'未选择目录',dir:'src/    tests/    design/    README.md    AGENTS.md','git status':'On branch master\\nChanges not staged for commit (演示):\\n    modified: src/ui/ToolCallRow.ts','npm test':'[模拟输出，不执行测试]\\n✓ 7 tests passed · exit 0'};if(command==='clear')S.terminalOutput=[];else S.terminalOutput.push(outputs[command]||'未执行：此处不是系统终端。输入 help 查看可用示例。');if(session().manualTerminals)session().manualTerminals[session().activeTerminal||0].lines=S.terminalOutput;render(true);$('#terminal-input')?.focus();if($('#terminal-output'))$('#terminal-output').scrollTop=$('#terminal-output').scrollHeight;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1139,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "$('#attachment-input').addEventListener('change',event=>{const c=config();c.attachments=c.attachments||[];for(const file of event.target.files)c.attachments.push({name:file.name,size:file.size,type:file.type,source:'user-selected'});event.target.value='';render(true);prototypeToast('已添加附件元数据；原型不会上传或解析内容。');});"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1160,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(file.size>2*1024*1024){prototypeToast('原型只接受小于 2 MB 的 JSON 演示数据。','error');return;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1161,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "if(!file.name.toLowerCase().endsWith('.json')){prototypeToast('ZIP 恢复只提供流程演示，请使用内置冲突样本。');return;}"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1162,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "try{const raw=JSON.parse(await file.text());if(raw.format!=='uah-pc-ui-prototype'||!raw.data||typeof raw.data!=='object')throw new Error('不是这份原型的 JSON 导出格式');"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1173,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "const sample=task.project?'我会先读取项目说明，明确这次任务的范围，再拆成可检查的步骤。工具调用采用轻量展开行，保存的历史 Diff 与当前文件分开。每个需要写入或外部操作的步骤，都遵循当前会话权限。这是本地模拟的流式回复，没有调用模型或执行工具。':'我会先理解你的问题，再给出可检查的步骤。当前会话没有绑定目录，可以正常对话；如需访问项目文件或运行命令，可稍后在输入框上方选择目录。这是本地模拟的流式回复，没有调用模型或执行工具。';"
+  },
+  {
+    "file": "src/app.js",
+    "line": 1251,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "function guideModal(){modal('原型导览',`<p data-copy-scope=\"mixed\" data-copy-action=\"split\">全部 ${SCENES.length} 个场景均可从实际界面进入，也可在这里跳转。跳转恢复固定样本，不修改你的真实项目。</p><div class=\"flex small muted\" style=\"margin-bottom:18px;flex-wrap:wrap\"><kbd>Ctrl K</kbd>搜索 <kbd>Ctrl N</kbd>新草稿 <kbd>Ctrl B</kbd>侧栏 <kbd>Ctrl /</kbd>导览 <kbd>Esc</kbd>关闭</div><div class=\"scene-grid\" data-copy-scope=\"prototype\" data-copy-action=\"remove\">${SCENES.map(([id,name,desc],i)=>`<button class=\"scene-button\" data-scene=\"${id}\"><span class=\"scene-num\">${String(i+1).padStart(2,'0')}</span><span>${name}<small>${desc}</small></span></button>`).join('')}</div>`,btn('关闭','close-modal'),'wide');}"
+  },
+  {
+    "file": "src/data.js",
+    "line": 5,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const PROJECTS = ["
+  },
+  {
+    "file": "src/data.js",
+    "line": 10,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const MODELS = ["
+  },
+  {
+    "file": "src/data.js",
+    "line": 11,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "{ id: 'sonnet-api', name: 'Sonnet 4.6', wire: 'claude-sonnet-4-6', source: 'api', runtime: 'UAH 自有引擎', provider: 'Anthropic API', efforts: ['low','medium','high','max'], media: '文本 · 图像 · PDF', context: '200K（示例）' },"
+  },
+  {
+    "file": "src/data.js",
+    "line": 19,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const AGENTS = ["
+  },
+  {
+    "file": "src/data.js",
+    "line": 25,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const SESSIONS = ["
+  },
+  {
+    "file": "src/data.js",
+    "line": 33,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const SESSION_WORKSPACE = {"
+  },
+  {
+    "file": "src/data.js",
+    "line": 80,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const FILES = ["
+  },
+  {
+    "file": "src/data.js",
+    "line": 91,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const DIFF_LINES = ["
+  },
+  {
+    "file": "src/data.js",
+    "line": 116,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const PROVIDERS = ["
+  },
+  {
+    "file": "src/data.js",
+    "line": 122,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const RUNTIMES = ["
+  },
+  {
+    "file": "src/data.js",
+    "line": 129,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const RUNTIME_ADAPTERS = {"
+  },
+  {
+    "file": "src/data.js",
+    "line": 154,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "auto: ['需核对', '明确的 permissions.allow 规则', '不使用 --dangerously-skip-permissions 来模拟 UAH 自动模式'],"
+  },
+  {
+    "file": "src/data.js",
+    "line": 167,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const MCPS = ["
+  },
+  {
+    "file": "src/data.js",
+    "line": 173,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const PLUGINS = ["
+  },
+  {
+    "file": "src/data.js",
+    "line": 178,
+    "scope": "fixture",
+    "action": "替换该常量的全部样本值，保留真实数据结构",
+    "source": "const MEMORIES = ["
+  },
+  {
+    "file": "src/index.template.html",
+    "line": 7,
+    "scope": "mixed",
+    "action": "按行内 DOM 标记清理；混合行只移除开发/演示部分，保留真实操作与权限文案",
+    "source": "<meta name=\"description\" content=\"Used AI Harness PC UI 交互原型。根据 AgentApp 功能设计制作，所有运行时与工具操作均为本地演示。\">"
+  }
+]
