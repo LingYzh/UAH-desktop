@@ -1,5 +1,7 @@
 # UAH Desktop
 
+新会话先读 [开发交接](docs/HANDOFF.md) 和 [项目规则](AGENTS.md)。
+
 UAH Windows 桌面底座：**Electron + Vue 3 + Vite + Pinia + TypeScript 核心 + .NET 10 辅助进程**（方案 A）。视觉以 `design/UAH_PC_Prototype_v1` 为准。
 
 ## 启动

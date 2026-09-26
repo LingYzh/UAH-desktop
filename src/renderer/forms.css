@@ -1,2 +1,2 @@
 /* Compatibility entry point. Shared control styling belongs to the UI library. */
-@import "./ui/styles.css";
+@import "@lingyzh/ui/styles.css";
