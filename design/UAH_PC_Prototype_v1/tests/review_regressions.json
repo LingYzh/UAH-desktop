@@ -1,0 +1,47 @@
+{
+  "checks": [
+    {
+      "name": "UAH-01 keyed DOM, cross-form draft isolation and dirty save/discard/cancel",
+      "pass": true
+    },
+    {
+      "name": "UAH-02 reopening a panel cancels the stale per-session close generation",
+      "pass": true
+    },
+    {
+      "name": "UAH-03 six-collection import rollback covers mid-transaction and storage failures",
+      "pass": true
+    },
+    {
+      "name": "UAH-04 session export/import round-trip preserves visible history and strips execution context",
+      "pass": true
+    },
+    {
+      "name": "UAH-05 provider/model drafts stay scoped and disabled, deleted or unknown models cannot send",
+      "pass": true
+    },
+    {
+      "name": "UAH-06 each session restores only its own existing chat scroll position",
+      "pass": true
+    },
+    {
+      "name": "UAH-07 toast text clicks pass through, hover/focus pause and close button dismisses",
+      "pass": true
+    },
+    {
+      "name": "UAH-08 system and app reduced-motion disable continuous animation and smooth scrolling",
+      "pass": true
+    },
+    {
+      "name": "UAH-09 font and search settings persist only after successful storage writes",
+      "pass": true
+    }
+  ],
+  "pageErrors": [],
+  "requests": [],
+  "environment": "Chromium, local HTTP prototype, isolated browser context per review regression",
+  "browserVersion": "153.0.8010.53",
+  "passed": 9,
+  "failed": 0,
+  "total": 9
+}

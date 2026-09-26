@@ -1,0 +1,42 @@
+{
+    "name": "uah-desktop",
+    "version": "0.1.0",
+    "private": true,
+    "description": "UAH desktop foundation: Electron, Vue and an isolated runtime supervisor",
+    "type": "module",
+    "main": "dist/main/index.cjs",
+    "engines": {
+        "node": ">=24.0.0"
+    },
+    "scripts": {
+        "dev": "node scripts/dev.mjs",
+        "dev:web": "vite --host 127.0.0.1",
+        "build": "node scripts/build.mjs",
+        "start": "electron .",
+        "typecheck": "tsc --noEmit && npm --prefix ../UI run typecheck",
+        "test": "tsx --test tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs",
+        "test:desktop": "node tests/desktop/smoke.mjs",
+        "test:browser": "node tests/desktop/browser.mjs",
+        "test:appearance": "node tests/desktop/appearance.mjs",
+        "test:search": "node tests/desktop/search.mjs",
+        "build:native": "dotnet build native/UAH.NativeHelper/UAH.NativeHelper.csproj -c Release",
+        "build:prototype": "python design/UAH_PC_Prototype_v1/build.py",
+        "test:ui": "npm run build:ui && node tests/desktop/ui.mjs",
+        "build:ui": "node scripts/build-ui.mjs"
+    },
+    "dependencies": {
+        "pinia": "4.0.3",
+        "vue": "3.5.43",
+        "@lingyzh/ui": "file:../UI"
+    },
+    "devDependencies": {
+        "@types/node": "^24.0.0",
+        "@vitejs/plugin-vue": "6.0.9",
+        "electron": "44.4.5",
+        "esbuild": "0.28.2",
+        "playwright": "1.63.0",
+        "tsx": "4.23.15",
+        "typescript": "7.0.2",
+        "vite": "8.3.1"
+    }
+}

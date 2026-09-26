@@ -8,7 +8,7 @@
 
 功能依据依次为本轮用户明确要求、仓库 `design/UAH_PC_HARNESS_FUNCTIONAL_DESIGN.md`、现有 `AGENTS.md`、本交付 `COVERAGE_MATRIX.md` 与 `DESIGN_SPEC.md`。当前 UI 视觉以 `src/styles.css` 和对应场景实拍为准。Android v3 的旧边界不应覆盖 PC 新文档；不得把 Android 实现中的设备配置或权限直接套到 Windows。
 
-读取仓库基线：`master` / `a149f2ef6f0a955cfd5f289601c5e122e533ab56`。实施前先检查仓库更新，不覆盖用户后续提交。功能设计文档已随本轮原型调整；本次没有创建分支或提交代码。技术栈尚未由这份 HTML 决定。
+本次修复基线：`main` / `30432fde35f71aad21eb2cdc42f85142d1089bf8`。2026-09-26 用户已选择方案 A，见仓库 `docs/ADR-001-electron-vue-foundation.md`。缺失功能基线已根据本提交的规格与 review 重建并注明来源；正式 Vue 实现必须复用本原型视觉与 SVG。未自动提交或推送。
 
 ## 交付中的代码如何使用
 
@@ -64,6 +64,6 @@ Markdown / 数学 / Mermaid 应使用正式安全渲染方案；不得把本交�
 
 ## 当前验收结论
 
-详见 `FINAL_AUDIT.md` 和 `TEST_REPORT.md`。当前 71 项交互测试通过，62 场景 / 142 张截图已重采，截图索引与画廊同步。原始结果在 `tests/interactions.json` 和 `tests/visual.json`。此前 49 项测试与旧截图只属于历史记录。没有进行真实 Windows、官方登录、模型请求、Shell、Git、MCP 或桌面控制验收。未自动推送或发布。
+`FINAL_AUDIT.md` 和 `TEST_REPORT.md` 是基线提交的历史结果。2026-09-26 已对修复后的构建重新运行 `tests/interactions.py`，71/71 通过且无页面异常；62 场景 / 142 张截图未整套重新生成。review 修复与专项记录见 `REVIEW_FIXES.md`；桌面底座本轮实际验证见仓库 `docs/VALIDATION.md`。官方登录、模型请求、Shell、Git、MCP、桌面动作和跨屏 DPI 仍须独立验收；没有自动推送或发布。
 
 正式实现前先处理 `COPY_GUIDE.md` / `COPY_INVENTORY.md` 的文案和样本迁移项，再按 `FINAL_AUDIT.md` 的剩余集成边界落地。运行时适配设计页是开发材料，不能当作已探测到的能力界面直接发布。

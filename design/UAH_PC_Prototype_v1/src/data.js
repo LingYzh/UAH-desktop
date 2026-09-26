@@ -8,9 +8,9 @@ const PROJECTS = [
     { id: 'notes', name: '本地文稿', path: 'E:\\Documents\\Notes', git: false, branch: null },
 ];
 const MODELS = [
-    { id: 'sonnet-api', name: 'Sonnet 4.6', wire: 'claude-sonnet-4-6', source: 'api', runtime: 'UAH 自有引擎', provider: 'Anthropic API', efforts: ['low','medium','high','max'], media: '文本 · 图像 · PDF', context: '200K（示例）' },
-    { id: 'ds-api', name: 'DeepSeek Chat', wire: 'deepseek-chat', source: 'api', runtime: 'UAH 自有引擎', provider: 'DeepSeek', efforts: [], media: '文本', context: '未声明' },
-    { id: 'custom-api', name: '自定义模型', wire: 'custom-model-id', source: 'api', runtime: 'UAH 自有引擎', provider: '自定义模板', efforts: null, media: '能力未声明', context: '未声明' },
+    { id: 'sonnet-api', providerId: 'anthropic', name: 'Sonnet 4.6', wire: 'claude-sonnet-4-6', source: 'api', runtime: 'UAH 自有引擎', provider: 'Anthropic API', efforts: ['low','medium','high','max'], media: '文本 · 图像 · PDF', context: '200K（示例）' },
+    { id: 'ds-api', providerId: 'deepseek', name: 'DeepSeek Chat', wire: 'deepseek-chat', source: 'api', runtime: 'UAH 自有引擎', provider: 'DeepSeek', efforts: [], media: '文本', context: '未声明' },
+    { id: 'custom-api', providerId: 'custom', name: '自定义模型', wire: 'custom-model-id', source: 'api', runtime: 'UAH 自有引擎', provider: '自定义接入', efforts: null, media: '能力未声明', context: '未声明' },
     { id: 'codex', name: 'GPT · Codex', wire: 'runtime-selected', source: 'codex', runtime: 'Codex App Server', provider: 'Codex 订阅运行时', efforts: ['low','medium','high','xhigh','max','ultra'], media: '由运行时上报', context: '由运行时上报' },
     { id: 'claude', name: 'Sonnet 5 · Claude Code', wire: 'sonnet', source: 'claude', runtime: 'Claude Code 官方客户端', provider: 'Claude Code 订阅运行时', efforts: ['low','medium','high','xhigh','max','ultra'], media: '由运行时上报', context: '由运行时上报' },
     { id: 'antigravity', name: 'Gemini · Antigravity', wire: 'runtime-selected', source: 'antigravity', runtime: 'Antigravity CLI', provider: 'Google 订阅运行时', efforts: null, media: '由运行时上报', context: '由运行时上报' },

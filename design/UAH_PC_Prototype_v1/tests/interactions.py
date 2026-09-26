@@ -1,9 +1,18 @@
 """UI-only deterministic checks; external integrations are intentionally not tested."""
-import json, os, shutil, time
+import json, os, shutil, time, threading, sys
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlparse
 from playwright.sync_api import sync_playwright
 ROOT=Path(__file__).resolve().parents[1]
-REPORT={'checks':[], 'pageErrors':[], 'requests':[], 'environment':'Chromium, injected standalone HTML on about:blank; file/http navigation restricted by execution environment'}
+REPORT={'checks':[], 'pageErrors':[], 'requests':[], 'environment':'Chromium, local HTTP served prototype; browser storage enabled; no external requests expected'}
+
+class QuietHandler(SimpleHTTPRequestHandler):
+    def log_message(self,format,*args): pass
+
+server=ThreadingHTTPServer(('127.0.0.1',0),partial(QuietHandler,directory=str(ROOT)))
+threading.Thread(target=server.serve_forever,daemon=True).start()
 
 def check(name,fn):
     try:
@@ -23,8 +32,8 @@ with sync_playwright() as pw:
     page=browser.new_page(viewport={'width':1440,'height':1000},device_scale_factor=1,accept_downloads=True)
     page.set_default_timeout(2500)
     page.on('pageerror',lambda e:REPORT['pageErrors'].append(str(e)))
-    page.on('request',lambda r:REPORT['requests'].append(r.url))
-    page.set_content((ROOT/'index.html').read_text(encoding='utf-8'),wait_until='load')
+    page.on('request',lambda r:REPORT['requests'].append(r.url) if urlparse(r.url).hostname not in ('127.0.0.1','localhost') else None)
+    page.goto(f'http://127.0.0.1:{server.server_port}/index.html',wait_until='load')
     page.emulate_media(reduced_motion='reduce')
     scene=lambda id:page.evaluate('(id)=>UAH.scene(id)',id)
     state=lambda expr:page.evaluate('UAH.getState().'+expr)
@@ -339,6 +348,9 @@ with sync_playwright() as pw:
     check('Prototype makes no external network requests',lambda:eq(REPORT['requests'],[]))
     REPORT['browserVersion']=browser.version
     browser.close()
+server.shutdown();server.server_close()
 REPORT['passed']=sum(x['pass'] for x in REPORT['checks']);REPORT['failed']=sum(not x['pass'] for x in REPORT['checks']);REPORT['total']=len(REPORT['checks'])
 (ROOT/'tests'/'interactions.json').write_text(json.dumps(REPORT,ensure_ascii=False,indent=2),encoding='utf-8')
 print(json.dumps({k:REPORT[k] for k in ['total','passed','failed','pageErrors']},ensure_ascii=False,indent=2))
+if REPORT['failed'] or REPORT['pageErrors'] or REPORT['requests']:
+    sys.exit(1)

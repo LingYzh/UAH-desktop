@@ -287,8 +287,8 @@
   ],
   "pageErrors": [],
   "requests": [],
-  "environment": "Chromium, injected standalone HTML on about:blank; file/http navigation restricted by execution environment",
-  "browserVersion": "153.0.4234.48",
+  "environment": "Chromium, local HTTP served prototype; browser storage enabled; no external requests expected",
+  "browserVersion": "153.0.8010.53",
   "passed": 71,
   "failed": 0,
   "total": 71

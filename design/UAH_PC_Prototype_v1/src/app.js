@@ -4,7 +4,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 const STORAGE_KEY = 'uah-pc-prototype-v1';
 let S = {
-    page: 'home', selected: 's1', project: 'agentapp', theme: 'light', reduced: false,
+    page: 'home', selected: 's1', project: 'agentapp', theme: 'light', reduced: false, fontChoice: 'system',
     collapsed: false, quickExpanded: false, sendShortcut: 'enter', projects: clone(PROJECTS), sessions: clone(SESSIONS), agents: clone(AGENTS),
     providers: clone(PROVIDERS), runtimes: clone(RUNTIMES), mcps: clone(MCPS), plugins: clone(PLUGINS), memories: clone(MEMORIES),
     draftDefaults: { project: null, model: null, agent: 'coder', mode: 'accept', effort: 'medium' },
@@ -21,12 +21,22 @@ let S = {
     modal: null, popover: null, pendingModel: null, pendingProject: null, pendingSessionProject: null, worktreeChoice: 'isolated',
     importStep: 0, importChoices: {}, importPreview: false, importDone: false, exportSecrets: false, loginStage: 0,
     scene: 'home', customMessage: null, newSessionCounter: 6, transientResult: '', compacted: false,
+    searchSettings: { service: 'SearXNG', endpoint: 'https://search.example.com' }, editableDrafts: {}, formBaselines: {}, pendingNavigation: null,
+    pendingProviderModels: [], pendingCapabilities: null, providerDraftOwner: null, providerDraftId: null, providerDraftIsNew: false,
 };
+const SEED_MODELS = clone(MODELS);
 try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if (saved) {
-        for (const key of ['theme','reduced','collapsed','sendShortcut','projects','providers','agents','memories','mcps','plugins','switches']) {
+        for (const key of ['theme','reduced','collapsed','sendShortcut','fontChoice','projects','providers','agents','memories','mcps','plugins','switches','searchSettings']) {
             if (saved[key] !== undefined) S[key] = saved[key];
+        }
+        if (Array.isArray(saved.models)) {
+            const byId = new Map(saved.models.filter(item => item && typeof item.id === 'string').map(item => [item.id, item]));
+            const merged = SEED_MODELS.map(item => ({ ...item, ...(byId.get(item.id) || {}) }));
+            const known = new Set(merged.map(item => item.id));
+            for (const item of saved.models) if (item && typeof item.id === 'string' && !known.has(item.id)) merged.push(item);
+            MODELS.splice(0, MODELS.length, ...merged);
         }
         if (Array.isArray(saved.sessions)) {
             S.sessions = saved.sessions.map(session => ['running','approval'].includes(session.state) ? { ...session, state: 'stopped', kind: 'stopped', stoppedReason: '重新打开原型，之前的任务不会自动续跑。' } : session);
@@ -36,17 +46,22 @@ try {
             S.draftDefaults = { ...S.draftDefaults, ...saved.draftDefaults };
             for (const key of ['readDirectories','writeDirectories','additionalDirectories','allowedDirectories']) delete S.draftDefaults[key];
             if (S.draftDefaults.project && !S.projects.some(item => item.id === S.draftDefaults.project)) S.draftDefaults.project = null;
-            if (S.draftDefaults.model && !MODELS.some(item => item.id === S.draftDefaults.model)) S.draftDefaults.model = null;
             S.draft = { ...clone(S.draftDefaults), extraDirectories: [], input: '', attachments: [] };
         }
     }
 } catch (_) { /* Storage may be disabled for file://. The prototype remains usable in memory. */ }
+for (const item of MODELS) {
+    if (item.source !== 'api' || item.providerId) continue;
+    const provider = S.providers.find(candidate => candidate.name === item.provider);
+    if (provider) item.providerId = provider.id;
+}
 function save() {
-    if (S.resetting) return;
+    if (S.resetting) return true;
     try {
-        const { theme, reduced, collapsed, sendShortcut, projects, sessions, providers, agents, memories, mcps, plugins, switches } = S;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme, reduced, collapsed, sendShortcut, projects, sessions, providers, agents, memories, mcps, plugins, switches, draftDefaults: S.draftDefaults }));
-    } catch (_) { /* Nonpersistent sandbox. */ }
+        const { theme, reduced, collapsed, sendShortcut, fontChoice, projects, sessions, providers, agents, memories, mcps, plugins, switches, searchSettings } = S;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ theme, reduced, collapsed, sendShortcut, fontChoice, projects, sessions, providers, models: MODELS, agents, memories, mcps, plugins, switches, searchSettings, draftDefaults: S.draftDefaults }));
+        return true;
+    } catch (_) { return false; /* Nonpersistent sandbox. */ }
 }
 function session() { return S.sessions.find(item => item.id === S.selected) || S.sessions[0]; }
 function sessionWorkspace(item = session()) {
@@ -54,13 +69,201 @@ function sessionWorkspace(item = session()) {
     return item.workspace;
 }
 function config() { return S.page === 'home' || (S.page !== 'chat' && S.conversationOwner === 'draft') || !session() ? S.draft : session(); }
+function formScope() {
+    if (S.page === 'agent-edit') return `agent:${S.editId || 'new'}`;
+    if (S.page === 'provider-edit') return `provider:${S.editId || 'new'}`;
+    if (S.page === 'memory-edit') return `memory:${S.editId || 'new'}`;
+    if (S.page === 'settings' && S.settingsTab === 'search') return 'settings:search';
+    return null;
+}
+function controlKey(control) {
+    return control.id || (control.name ? `${control.name}:${control.value}` : null);
+}
+function editableValues(root = document, includeSecrets = false) {
+    const values = {};
+    const container = root.querySelector?.('.page');
+    if (!container) return values;
+    for (const control of $$('input[id],input[name],textarea[id],select[id]', container)) {
+        if (!controlKey(control)) continue;
+        if (control.type === 'password' && !includeSecrets) continue;
+        if (control.type === 'checkbox' || control.type === 'radio') values[controlKey(control)] = control.checked;
+        else values[controlKey(control)] = control.value;
+    }
+    return values;
+}
+function captureEditableDrafts(root = document) {
+    const scope = root.querySelector?.('.page')?.dataset.formScope || null;
+    if (!scope) return;
+    const values = editableValues(root);
+    S.editableDrafts[scope] = { ...(S.editableDrafts[scope] || {}), ...values };
+}
+function formValues(scope = formScope()) {
+    const fromDom = renderedFormScope() === scope ? editableValues(document) : {};
+    return { ...(S.editableDrafts[scope] || {}), ...fromDom };
+}
+function formIsDirty(scope = formScope()) {
+    if (!scope) return false;
+    const baseline = S.formBaselines[scope] || {};
+    const fromDom = renderedFormScope() === scope ? editableValues(document, true) : {};
+    const draft = { ...(S.editableDrafts[scope] || {}), ...fromDom };
+    const keys = new Set([...Object.keys(baseline), ...Object.keys(draft)]);
+    const fieldChanged = Array.from(keys).some(key => JSON.stringify(baseline[key]) !== JSON.stringify(draft[key]));
+    const providerWorkPending = scope.startsWith('provider:') && S.providerDraftOwner === S.editId && (S.pendingProviderModels.length > 0 || !!S.pendingCapabilities);
+    return fieldChanged || providerWorkPending;
+}
+function renderedFormScope(root = document) { return root.querySelector?.('.page')?.dataset.formScope || null; }
+function applyEditableDrafts(nextRoot) {
+    const scope = formScope();
+    if (!scope) return;
+    const draft = S.editableDrafts[scope] || {};
+    const container = $('.page', nextRoot);
+    if (!container) return;
+    for (const control of $$('input[id],input[name],textarea[id],select[id]', container)) {
+        const key = controlKey(control);
+        if (!key || control.type === 'password' || !Object.prototype.hasOwnProperty.call(draft, key)) continue;
+        const value = draft[key];
+        if (control.type === 'checkbox' || control.type === 'radio') control.checked = Boolean(value);
+        else if (control.tagName === 'TEXTAREA') control.value = value;
+        else if (control.tagName === 'SELECT') control.value = value;
+        else control.value = value;
+    }
+}
+function clearEditableDraft(scope = formScope()) {
+    if (!scope) return;
+    delete S.editableDrafts[scope];
+    delete S.formBaselines[scope];
+    const page = $('.page');
+    if (page?.dataset.formScope === scope) page.dataset.formScope = '';
+}
+function formCommitter(scope) {
+    if (scope.startsWith('agent:')) return commitAgentForm;
+    if (scope.startsWith('provider:')) return commitProviderForm;
+    if (scope.startsWith('memory:')) return commitMemoryForm;
+    if (scope === 'settings:search') return commitSearchForm;
+    return null;
+}
+function commitAgentForm() {
+    const values = formValues(`agent:${S.editId || 'new'}`);
+    const toolIds = Object.keys(values).filter(key => key.startsWith('agent-tool:') && values[key]).map(key => key.slice('agent-tool:'.length));
+    const name = String(values['agent-name'] || '').trim();
+    if (!toolIds.length) { toast('请至少选择一种工具；当前版本不支持保存全部禁用的 Agent。','error'); return false; }
+    if (!name) { toast('Agent 名称不能为空。','error'); return false; }
+    const old = S.agents.find(item => item.id === S.editId);
+    const item = { id: old?.id || `agent-${Date.now()}`, name, desc: values['agent-desc'] || '', prompt: values['agent-prompt'] || '', model: values['agent-model'] || '跟随会话', icon: old?.icon || 'agent', tools: '自定义工具', toolIds };
+    const before = clone(S.agents);
+    if (old) Object.assign(old, item); else S.agents.push(item);
+    if (!save()) { S.agents.splice(0, S.agents.length, ...before); toast('Agent 未能保存；草稿仍保留。','error'); return false; }
+    clearEditableDraft(`agent:${S.editId || 'new'}`);
+    return true;
+}
+function commitProviderForm() {
+    const scope = `provider:${S.editId || 'new'}`;
+    const values = formValues(scope);
+    const name = String(values['provider-name'] || '').trim();
+    const endpoint = String(values['provider-endpoint'] || '').trim();
+    if (!name || !/^https?:\/\//i.test(endpoint)) { toast('请填写名称和有效的 HTTP(S) 接口地址。','error'); return false; }
+    const old = S.providers.find(item => item.id === S.editId);
+    const id = S.providerDraftOwner === S.editId && S.providerDraftId ? S.providerDraftId : old?.id || `provider-${Date.now()}`;
+    const pendingModels = S.providerDraftOwner === S.editId ? S.pendingProviderModels : [];
+    const provider = { id, name, endpoint, protocol: values['provider-protocol'] || 'OpenAI 兼容', models: MODELS.filter(item => item.providerId === id).length + pendingModels.length, enabled: old?.enabled || false };
+    const providersBefore = clone(S.providers), modelsBefore = clone(MODELS), pendingModelsBefore = clone(S.pendingProviderModels), pendingCapabilitiesBefore = clone(S.pendingCapabilities);
+    if (old) Object.assign(old, provider); else S.providers.push(provider);
+    for (const item of pendingModels) {
+        item.providerId = id;
+        item.provider = name;
+        MODELS.push(item);
+    }
+    if (S.providerDraftOwner === S.editId) S.pendingProviderModels = [];
+    if (S.pendingCapabilities) {
+        const item = MODELS.find(candidate => candidate.id === S.pendingCapabilities.modelId && candidate.providerId === id);
+        if (item) { item.contextOverride = S.pendingCapabilities.context; item.media = S.pendingCapabilities.supportsVision ? '文本 · 图像（手动覆盖）' : '文本（手动覆盖）'; }
+        S.pendingCapabilities = null;
+    }
+    if (!save()) {
+        S.providers.splice(0, S.providers.length, ...providersBefore);
+        MODELS.splice(0, MODELS.length, ...modelsBefore);
+        S.pendingProviderModels = pendingModelsBefore;
+        S.pendingCapabilities = pendingCapabilitiesBefore;
+        toast('供应商更改仅保留在草稿中；浏览器未能持久化。','error');
+        return false;
+    }
+    clearEditableDraft(scope);
+    return true;
+}
+function commitMemoryForm() {
+    const scope = `memory:${S.editId || 'new'}`;
+    const values = formValues(scope);
+    const title = String(values['memory-title'] || '').trim();
+    const body = String(values['memory-body'] || '').trim();
+    if (!title || !body) { toast('标题和内容不能为空。','error'); return false; }
+    const old = S.memories.find(item => item.id === S.editId);
+    const item = { id: old?.id || `memory-${Date.now()}`, title, scope: values['memory-scope'] || '全局', body, updated: '刚刚' };
+    const before = clone(S.memories);
+    if (old) Object.assign(old, item); else S.memories.unshift(item);
+    if (!save()) { S.memories.splice(0, S.memories.length, ...before); toast('记忆更改未能持久化；草稿仍保留。','error'); return false; }
+    clearEditableDraft(scope);
+    return true;
+}
+function commitSearchForm() {
+    const values = formValues('settings:search');
+    const before = clone(S.searchSettings);
+    S.searchSettings = { service: values['search-service'] || 'SearXNG', endpoint: String(values['search-endpoint'] || '').trim() };
+    if (!save()) { S.searchSettings = before; toast('搜索设置未能持久化；草稿仍保留。','error'); return false; }
+    clearEditableDraft('settings:search');
+    return true;
+}
+function requestDirtyNavigation(target) {
+    captureEditableDrafts();
+    const scope = formScope();
+    if (!scope || !formIsDirty(scope) || S.skipDirtyGuard) return false;
+    S.pendingNavigation = { target, scope };
+    modal('有未保存的更改', `<p>此表单还有未提交的编辑。选择保存后继续、放弃更改，或留在当前页面继续编辑。</p>${scope.startsWith('provider:') ? '<p class="small muted">API Key、请求头和认证值不会写入原型存档。</p>' : ''}`, `${btn('取消','close-modal')}${btn('放弃更改','dirty-discard-and-continue')}${btn('保存并继续','dirty-save-and-continue','primary')}`, 'small');
+    return true;
+}
+function continueNavigation(target) {
+    if (!target) return;
+    S.skipDirtyGuard = true;
+    try {
+        if (target.type === 'session') selectSession(target.id);
+        else if (target.type === 'new-chat') newChat(target.projectId || null);
+        else if (target.type === 'scene') applyScene(target.id);
+        else if (target.type === 'provider') { const id=beginProviderDraft(target.id);navigate('provider-edit',id); }
+        else if (target.type === 'settings-tab') { S.settingsTab=target.id;render(true); }
+        else navigate(target.page, target.id || null);
+    } finally { S.skipDirtyGuard = false; }
+}
+function beginProviderDraft(id) {
+    const provider = S.providers.find(item => item.id === id);
+    const draftId = provider?.id || `new-${Date.now()}`;
+    S.editId = draftId;
+    S.providerDraftOwner = draftId;
+    S.providerDraftId = provider?.id || `provider-${Date.now()}`;
+    S.providerDraftIsNew = !provider;
+    S.pendingProviderModels = [];
+    S.pendingCapabilities = null;
+    return draftId;
+}
 function rememberDraftChoices() {
     if (!(S.page === 'home' || (S.page === 'settings' && S.settingsOwner === 'draft')) || S.draft.sourceSession) return;
     const { project, model, agent, mode, effort } = S.draft;
     S.draftDefaults = { project, model, agent, mode, effort };
     save();
 }
-function model() { return MODELS.find(item => item.id === config().model) || MODELS[0]; }
+function model(c = config()) { return MODELS.find(item => item.id === c?.model) || null; }
+function providerForModel(item) {
+    if (!item || item.source !== 'api') return null;
+    const providerId = item.providerId || S.providers.find(provider => provider.name === item.provider)?.id;
+    return S.providers.find(provider => provider.id === providerId) || null;
+}
+function modelAvailability(item) {
+    if (!item) return { available: false, reason: '尚未选择模型' };
+    if (item.source !== 'api') return { available: true, reason: '' };
+    const provider = providerForModel(item);
+    if (!provider) return { available: false, reason: '供应商已删除' };
+    if (!provider.enabled) return { available: false, reason: '供应商已停用' };
+    return { available: true, reason: '' };
+}
+function selectedModelAvailable(c = config()) { return modelAvailability(model(c)).available; }
 const EFFORT_LABELS = { none:'None', minimal:'Minimal', low:'Low', medium:'Medium', high:'High', xhigh:'XHigh', max:'Max', ultra:'Ultra' };
 const PROTOCOL_EFFORTS = {
     'OpenAI 兼容': ['none','low','medium','high','xhigh','max'],
@@ -69,12 +272,14 @@ const PROTOCOL_EFFORTS = {
 };
 function effortLabel(value) { return EFFORT_LABELS[value] || value || 'Unavailable'; }
 function effortProtocol(selectedModel) {
+    if (!selectedModel) return '';
     if(selectedModel.source==='codex')return 'OpenAI 兼容';
     if(selectedModel.source==='claude')return 'Anthropic Messages';
     if(['antigravity','gemini-cli'].includes(selectedModel.source))return 'Gemini';
-    return selectedModel.protocol||S.providers.find(item=>item.name===selectedModel.provider)?.protocol||'自定义模板';
+    return selectedModel.protocol||providerForModel(selectedModel)?.protocol||'自定义模板';
 }
 function effortOptions(selectedModel) {
+    if (!selectedModel) return [];
     if(selectedModel.efforts!==null&&selectedModel.efforts!==undefined)return selectedModel.efforts;
     return PROTOCOL_EFFORTS[effortProtocol(selectedModel)]||[];
 }
@@ -83,12 +288,14 @@ function effectiveEffort(selectedModel,value) {
     return available.includes(value)?value:available.includes('medium')?'medium':available[0]||null;
 }
 function normalizeEffortConfig(item) {
-    item.effort=effectiveEffort(MODELS.find(model=>model.id===item.model)||MODELS[0],item.effort);
+    const selected = MODELS.find(candidate => candidate.id === item.model) || null;
+    item.effort = selected ? effectiveEffort(selected, item.effort) : null;
 }
 normalizeEffortConfig(S.draft);
 S.sessions.forEach(normalizeEffortConfig);
 function effortWire(selectedModel, value) {
     if (!value) return '当前未选择思考档位';
+    if (!selectedModel) return '请先选择可用模型';
     if (selectedModel.source === 'codex') return value === 'ultra' ? 'Codex Ultra · 最大推理 + 主动子代理编排' : `Codex 运行时档位：${value}`;
     if (selectedModel.source === 'claude') return value === 'ultra' ? 'Claude Code ultracode · xhigh + 动态工作流' : `Claude Code /effort ${value}`;
     if (effortProtocol(selectedModel)==='Anthropic Messages') return `output_config.effort = "${value}"`;
@@ -98,12 +305,14 @@ function effortWire(selectedModel, value) {
 }
 function effortModeCopy(selectedModel, value) {
     if (value !== 'ultra') return '';
+    if (!selectedModel) return '';
     if (selectedModel.source === 'claude') return 'Ultra = xhigh 推理 + 动态工作流；只有官方运行时确认模型与工作流均可用时才开放。';
     if (selectedModel.source === 'codex') return 'Ultra = 当前模型最高推理档位 + 主动子代理编排；以官方运行时的有效状态为准。';
     return '';
 }
 function updateEffortPreview(value) {
     const selectedModel=model(), available=effortOptions(selectedModel), index=available.indexOf(value), slider=$('#effort-slider');
+    if (!selectedModel) return;
     if(index<0||!slider)return;
     slider.value=String(index);
     const shell=$('.effort-slider-shell'), ratio=available.length>1?index/(available.length-1):1;
@@ -119,8 +328,8 @@ function updateEffortPreview(value) {
     if(note){note.textContent=effortModeCopy(selectedModel,value);note.hidden=value!=='ultra';}
 }
 function bindEffortSlider(selected) {
-    const slider=$('#effort-slider'), available=effortOptions(model());
-    if(!slider||!available.length)return;
+    const slider=$('#effort-slider'), selectedModel=model(), available=effortOptions(selectedModel);
+    if(!slider||!selectedModel||!available.length)return;
     updateEffortPreview(selected);
     let dragging=false, lastIndex=Number(slider.value);
     const pointerIndex=(clientX,initial=false)=>{
@@ -159,6 +368,7 @@ function commitEffort(value) {
     rememberDraftChoices();save();
 }
 function runtimeModeInfo(selectedModel = model(), mode = config().mode || 'accept') {
+    if (!selectedModel) return null;
     return selectedModel.source === 'api' ? null : RUNTIME_ADAPTERS[selectedModel.id]?.modes[mode] || ['需核对','尚无运行时映射','请先查看运行时适配说明'];
 }
 function project(id = config().project) { return S.projects.find(item => item.id === id) || null; }
@@ -188,15 +398,29 @@ function switchButton(key, value, label) { return `<button class="switch ${value
 function setTheme(value) {
     S.theme = value;
     document.documentElement.dataset.theme = value === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : value;
-    document.documentElement.dataset.reducedMotion = String(S.reduced);
+    syncReducedMotion();
     save();
 }
 function captureInput() {
     const input = $('#composer-input');
     if (input) config().input = input.value;
 }
+function captureSessionScroll(item = session()) {
+    const scroller = $('#chat-scroll');
+    if (!item || !scroller || S.page !== 'chat' || item.id !== S.selected || scroller.dataset.key !== `chat-scroll-${item.id}`) return false;
+    item.scrollTop = scroller.scrollTop;
+    return true;
+}
+function capturePanelScroll(item = session()) {
+    const scroller = $('.right-panel .panel-body');
+    if (!item || !scroller || S.page !== 'chat' || item.id !== S.selected || scroller.dataset.key !== `panel-scroll-${item.id}-${item.panel || 'plan'}`) return false;
+    item.panelScroll = item.panelScroll || {};
+    item.panelScroll[item.panel || 'plan'] = scroller.scrollTop;
+    return true;
+}
 function navigate(page, id = null) {
-    captureInput(); closeMenu(); closeModal();
+    if (requestDirtyNavigation({ page, id })) return;
+    captureInput(); captureEditableDrafts(); captureSessionScroll(); capturePanelScroll(); closeMenu(); closeModal();
     if (S.page === 'home' || S.page === 'chat') S.conversationOwner = S.page === 'home' ? 'draft' : 'session';
     if (page === 'settings' && S.page !== 'settings') S.settingsOwner = S.page === 'home' ? 'draft' : 'session';
     S.page = page; S.editId = id; S.transientResult = '';
@@ -205,13 +429,14 @@ function navigate(page, id = null) {
 const PANEL_STATE_KEYS=['diffFile','diffVariant','diffWrap','selectedChild','browserTab','terminalTab'];
 function selectSession(id) {
     if (!S.sessions.some(item => item.id === id)) { navigate('home'); return; }
-    captureInput(); closeMenu(); closeModal();
+    if ((id !== S.selected || S.page !== 'chat') && requestDirtyNavigation({ type: 'session', id })) return;
+    captureInput(); captureEditableDrafts(); captureSessionScroll(); capturePanelScroll(); closeMenu(); closeModal();
     const previous=session();
-    if(previous){previous.panelState=Object.fromEntries(PANEL_STATE_KEYS.map(key=>[key,S[key]]));previous.scrollTop=$('#chat-scroll')?.scrollTop||0;}
+    if(previous){previous.panelState=Object.fromEntries(PANEL_STATE_KEYS.map(key=>[key,S[key]]));cancelPanelTransition(previous,true);}
     S.selected=id;S.page='chat';S.conversationOwner='session';S.taskFilter='all';
     const current=session(), state=current.panelState||{diffFile:'tool',diffVariant:'normal',diffWrap:false,selectedChild:null,browserTab:0,terminalTab:0};
     for(const key of PANEL_STATE_KEYS)S[key]=state[key];
-    render();if($('#chat-scroll'))$('#chat-scroll').scrollTop=current.scrollTop||0;
+    render();if($('#chat-scroll'))$('#chat-scroll').scrollTo({top:current.scrollTop||0,behavior:'instant'});
 }
 function sidebarHTML() {
     const shortcuts = [['agents','Agent','agent'], ['models','模型与账号','models'], ['mcp','MCP 连接器','plug'], ['plugins','插件与技能','puzzle']];
@@ -219,7 +444,7 @@ function sidebarHTML() {
     const active = S.page.startsWith('agent') ? 'agents' : ['provider-edit','runtime','runtime-adapter'].includes(S.page) ? 'models' : S.page.startsWith('mcp') ? 'mcp' : ['plugin-detail','skills','skill-detail'].includes(S.page) ? 'plugins' : S.page.startsWith('memory') ? 'memory' : S.page;
     const item = ([id,label,ico]) => `<button class="nav-item ${active === id ? 'active' : ''}" data-nav="${id}" title="${label}" ${active === id ? 'aria-current="page"' : ''}>${icon(ico)}<span class="nav-label">${label}</span></button>`;
     const showMore = S.quickExpanded || more.some(([id]) => id === active);
-    return `<aside class="sidebar ${S.collapsed ? 'collapsed' : ''}" aria-label="主导航">
+    return `<aside class="sidebar ${S.collapsed ? 'collapsed' : ''}" data-key="sidebar" aria-label="主导航">
         <div class="sidebar-top"><button class="wordmark" data-action="new-chat" aria-label="UAH 新对话">${mark()}<span>UAH</span></button>${iconBtn('panel','toggle-sidebar','收起或展开侧栏')}</div>
         <nav aria-label="新对话和快捷功能"><button class="nav-item new-chat ${active==='home'?'active':''}" data-action="new-chat" title="新对话">${icon('edit')}<span class="nav-label">新对话</span><span class="nav-shortcut">Ctrl N</span></button><button class="nav-item" data-action="search" title="搜索">${icon('search')}<span class="nav-label">搜索</span><span class="nav-shortcut">Ctrl K</span></button><div class="nav-separator"></div><div class="sidebar-group-label">快捷功能</div>${shortcuts.map(item).join('')}<button class="nav-item more-shortcuts" data-action="toggle-shortcuts" aria-expanded="${showMore}" title="更多功能">${icon(showMore?'down':'chevron')}<span class="nav-label">更多功能</span></button><div class="shortcut-extra ${showMore?'expanded':''}">${more.map(item).join('')}</div></nav>
         <div class="sidebar-projects"><div class="sidebar-section-label"><span>项目</span><button class="icon-btn" style="width:22px;height:20px" data-action="add-project" aria-label="添加项目">${icon('plus')}</button></div>
@@ -230,10 +455,10 @@ function sidebarHTML() {
     </aside><div class="resize-handle left-resize" data-resize="left" role="separator" aria-orientation="vertical" tabindex="0" aria-label="调整侧栏宽度"></div>`;
 }
 function headerHTML() {
-    if (S.page === 'home') return `<header class="main-header"><span class="muted small">新对话</span><div class="header-actions">${iconBtn('more','home-menu','新对话选项')}</div></header>`;
-    if (S.page !== 'chat') return `<header class="main-header"><button class="btn ghost sm" data-action="back-chat">${icon('back')}返回对话</button><div class="header-actions" data-copy-scope="mixed" data-copy-action="split">${iconBtn('tasks','show-tasks','后台任务')}${iconBtn('keyboard','guide','原型导览与快捷键')}</div></header>`;
-    const t = session(), p = project(t.project), m = MODELS.find(item => item.id === t.model) || MODELS[0];
-    return `<header class="main-header"><div class="grow"><div class="header-title"><span class="ellipsis">${esc(t.title)}</span><button class="icon-btn" style="width:23px;height:23px" data-menu="session" aria-label="会话操作">${icon('down')}</button></div><div class="header-subtitle">${icon('folder')}<span>${esc(p?.name || '无目录会话')}</span><span>·</span><span>${esc(currentAgent().name)}</span><span>·</span><span class="cwd ellipsis" title="${esc(t.worktree || p?.path || '未选择目录')}">${esc(t.worktree || p?.path || '未选择目录')}</span>${t.worktree ? pill('worktree') : ''}<span>·</span><span>${esc(m.source === 'api' ? 'UAH 引擎' : m.runtime)}</span></div></div><div class="header-actions"><span class="header-status">${statusDot(t.state)}<span class="status-label">${STATE_NAMES[t.state]}</span></span>${isBusy(t) ? btn('停止','stop-current','sm danger','stop') : ''}${iconBtn('tasks','show-tasks','后台任务')}${iconBtn('panelRight','toggle-panel','打开或关闭扩展栏')}</div></header>`;
+    if (S.page === 'home') return `<header class="main-header" data-key="main-header"><span class="muted small">新对话</span><div class="header-actions">${iconBtn('more','home-menu','新对话选项')}</div></header>`;
+    if (S.page !== 'chat') return `<header class="main-header" data-key="main-header"><button class="btn ghost sm" data-action="back-chat">${icon('back')}返回对话</button><div class="header-actions" data-copy-scope="mixed" data-copy-action="split">${iconBtn('tasks','show-tasks','后台任务')}${iconBtn('keyboard','guide','原型导览与快捷键')}</div></header>`;
+    const t = session(), p = project(t.project), m = model(t);
+    return `<header class="main-header" data-key="main-header"><div class="grow"><div class="header-title"><span class="ellipsis">${esc(t.title)}</span><button class="icon-btn" style="width:23px;height:23px" data-menu="session" aria-label="会话操作">${icon('down')}</button></div><div class="header-subtitle">${icon('folder')}<span>${esc(p?.name || '无目录会话')}</span><span>·</span><span>${esc(currentAgent().name)}</span><span>·</span><span class="cwd ellipsis" title="${esc(t.worktree || p?.path || '未选择目录')}">${esc(t.worktree || p?.path || '未选择目录')}</span>${t.worktree ? pill('worktree') : ''}<span>·</span><span>${esc(m?.source === 'api' ? 'UAH 引擎' : m?.runtime || '未选择模型')}</span></div></div><div class="header-actions"><span class="header-status">${statusDot(t.state)}<span class="status-label">${STATE_NAMES[t.state]}</span></span>${isBusy(t) ? btn('停止','stop-current','sm danger','stop') : ''}${iconBtn('tasks','show-tasks','后台任务')}${iconBtn('panelRight','toggle-panel','打开或关闭扩展栏')}</div></header>`;
 }
 function contextIndicatorHTML(home, selectedModel) {
     const known = selectedModel?.source === 'api' && selectedModel.id === 'sonnet-api';
@@ -251,14 +476,15 @@ function composerLocationHTML(home = false) {
     return `<div class="composer-location project-picker-inline"><button class="location-chip directory-chip" data-menu="${home?'projects':'session-projects'}" title="${esc(directory)}" aria-label="选择主目录${extraCount?`，已添加 ${extraCount} 个附加目录`:''}">${icon('folder')}<span class="ellipsis">${esc(p?.name || (home ? '选择目录（可跳过）' : '未选择目录'))}${extraCount?` · +${extraCount}`:''}</span>${icon('down')}</button><button class="location-chip branch-chip" data-action="branch-details" title="${esc(branch)}">${icon('branch')}<span class="ellipsis">${esc(branch)}</span></button>${p ? `<span class="location-path ellipsis" title="${esc(directory)}">${esc(directory)}</span>` : '<span class="location-path muted">无目录对话可直接发送；项目文件与命令需先绑定目录</span>'}</div>`;
 }
 function composerHTML(home = false) {
-    const c = config(), m = c.model ? model() : null, agent = currentAgent(), permission = PERMISSIONS[c.mode || 'accept'];
+    const c = config(), m = c.model ? model() : null, missingModelId = c.model && !m ? String(c.model) : '', agent = currentAgent(), permission = PERMISSIONS[c.mode || 'accept'];
     const busy = !home && isBusy();
+    const modelAvailable = Boolean(m && modelAvailability(m).available);
     const attachments = c.attachments || [];
-    return `${composerLocationHTML(home)}<div class="composer" ${home ? '' : 'data-composer="chat"'}>${attachments.length ? `<div class="attachment-strip">${attachments.map((file,index) => `<span class="attachment ${file.source==='session'?'reference-attachment':''}">${icon(file.source==='session'?'chat':'file')}<span class="ellipsis">${esc(file.name || file)}</span>${file.source==='session'?`<button data-reference-index="${index}" aria-label="查看引用的会话">${icon('eye')}</button>`:''}<button data-remove-attachment="${index}" aria-label="移除附件">${icon('close')}</button></span>`).join('')}</div>` : ''}<div class="composer-main"><button class="icon-btn attach-trigger" data-menu="attach" aria-label="添加附件与上下文">${icon('plus')}</button><textarea id="composer-input" rows="1" aria-label="消息输入框" placeholder="${home ? '描述任务或提出问题…' : busy ? '补充想法，停止当前任务后发送…' : '继续这段对话…'}">${esc(c.input || '')}</textarea>${busy ? `<button class="send stop" data-action="stop-current" aria-label="停止当前任务">${icon('stop')}</button>` : `<button class="send" id="send-button" data-action="send" aria-label="发送消息" ${!c.input?.trim() || !c.model ? 'disabled' : ''}>${icon('arrow')}</button>`}</div></div>
-        <div class="composer-controls"><button class="composer-select" data-menu="agents">${icon(agent.icon)}<span class="agent-label">${esc(agent.name)}</span>${icon('down')}</button><button class="composer-select" data-menu="models">${esc(m?.name || '选择模型')}${icon('down')}</button><span class="control-divider"></span><button data-menu="permissions">${icon(permission[1])}${permission[0]}${icon('down')}</button><button class="composer-effort" ${m?'data-menu="effort"':'disabled title="先选择模型"'} aria-label="思考档位：${m?effortLabel(effectiveEffort(m,c.effort)):'未选择模型'}">${m?(effortOptions(m).length ? effortLabel(effectiveEffort(m,c.effort)) : 'Unavailable'):'Medium'}${icon('down')}</button>${contextIndicatorHTML(home,m)}</div>`;
+    return `${composerLocationHTML(home)}<div class="composer" ${home ? '' : 'data-composer="chat"'}>${attachments.length ? `<div class="attachment-strip">${attachments.map((file,index) => `<span class="attachment ${file.source==='session'?'reference-attachment':''}">${icon(file.source==='session'?'chat':'file')}<span class="ellipsis">${esc(file.name || file)}</span>${file.source==='session'?`<button data-reference-index="${index}" aria-label="查看引用的会话">${icon('eye')}</button>`:''}<button data-remove-attachment="${index}" aria-label="移除附件">${icon('close')}</button></span>`).join('')}</div>` : ''}<div class="composer-main"><button class="icon-btn attach-trigger" data-menu="attach" aria-label="添加附件与上下文">${icon('plus')}</button><textarea id="composer-input" rows="1" aria-label="消息输入框" placeholder="${home ? '描述任务或提出问题…' : busy ? '补充想法，停止当前任务后发送…' : '继续这段对话…'}">${esc(c.input || '')}</textarea>${busy ? `<button class="send stop" data-action="stop-current" aria-label="停止当前任务">${icon('stop')}</button>` : `<button class="send" id="send-button" data-action="send" aria-label="发送消息" ${!c.input?.trim() || !modelAvailable ? 'disabled' : ''}>${icon('arrow')}</button>`}</div></div>
+        <div class="composer-controls"><button class="composer-select" data-menu="agents">${icon(agent.icon)}<span class="agent-label">${esc(agent.name)}</span>${icon('down')}</button><button class="composer-select" data-menu="models" aria-label="模型：${esc(m?.name|| (missingModelId?'模型不可用':'未选择'))}${missingModelId?'，原模型 ID：'+esc(missingModelId):m&&!modelAvailable?'，'+esc(modelAvailability(m).reason):''}" title="${missingModelId?'找不到已保存的模型：'+esc(missingModelId):''}">${esc(m?.name || (missingModelId?'模型不可用':'选择模型'))}${icon('down')}${missingModelId?`<span class="sr-only">${esc(missingModelId)}</span>`:''}</button><span class="control-divider"></span><button data-menu="permissions">${icon(permission[1])}${permission[0]}${icon('down')}</button><button class="composer-effort" ${m&&modelAvailable?'data-menu="effort"':'disabled title="先选择可用模型"'} aria-label="思考档位：${m?effortLabel(effectiveEffort(m,c.effort)):missingModelId?'模型不可用':'未选择模型'}">${m?(effortOptions(m).length ? effortLabel(effectiveEffort(m,c.effort)) : 'Unavailable'):missingModelId?'Unavailable':'Medium'}${icon('down')}</button>${contextIndicatorHTML(home,m)}</div>`;
 }
 function homeHTML() {
-    return `<div class="home"><div class="home-scroll"><div class="home-inner"><div class="home-greeting">${mark()}<h1>今天，我们一起做点什么？</h1></div><p class="home-sub">从问题或项目出发，让想法在这里继续。</p>${S.draft.sourceSession?`<div class="branch-notice">${icon('branch')}<span>分支草稿 · ${esc(S.draft.branchContext?.title||S.draft.sourceSession)}<br><span class="muted">仅迁移可见上下文；首次发送后保存为新会话。</span></span></div>`:''}<div class="suggestions">${[['code','梳理项目结构','请梳理这个项目的结构，说明主要模块及它们的关系。'],['diff','检查最近的改动','检查最近的代码改动，指出值得关注的风险。'],['plan','先做一个实施计划','先阅读项目规范，再为我的需求制定实施计划。']].map(([ico,label,prompt]) => `<button data-suggestion="${esc(prompt)}">${icon(ico)}${label}</button>`).join('')}</div></div></div><div class="composer-dock home-composer-dock"><div class="composer-dock-inner">${composerHTML(true)}<div class="composer-foot" data-copy-scope="prototype" data-copy-action="remove">草稿不会创建空会话；第一次有效发送后才保存。可以不选择目录开始。</div></div></div></div>`;
+    return `<div class="home" data-key="home-view"><div class="home-scroll" data-key="home-scroll"><div class="home-inner"><div class="home-greeting">${mark()}<h1>今天，我们一起做点什么？</h1></div><p class="home-sub">从问题或项目出发，让想法在这里继续。</p>${S.draft.sourceSession?`<div class="branch-notice">${icon('branch')}<span>分支草稿 · ${esc(S.draft.branchContext?.title||S.draft.sourceSession)}<br><span class="muted">仅迁移可见上下文；首次发送后保存为新会话。</span></span></div>`:''}<div class="suggestions">${[['code','梳理项目结构','请梳理这个项目的结构，说明主要模块及它们的关系。'],['diff','检查最近的改动','检查最近的代码改动，指出值得关注的风险。'],['plan','先做一个实施计划','先阅读项目规范，再为我的需求制定实施计划。']].map(([ico,label,prompt]) => `<button data-suggestion="${esc(prompt)}">${icon(ico)}${label}</button>`).join('')}</div></div></div><div class="composer-dock home-composer-dock" data-key="composer-dock"><div class="composer-dock-inner">${composerHTML(true)}<div class="composer-foot" data-copy-scope="prototype" data-copy-action="remove">草稿不会创建空会话；第一次有效发送后才保存。可以不选择目录开始。</div></div></div></div>`;
 }
 function toolDetails(id, summary, body, ico = 'terminal') {
     const key = `${S.selected}/${id}`;
@@ -295,7 +521,7 @@ function userHTML(text, attachments = []) { return `<div class="user-message"><d
 function assistantBrand() { return `<div class="assistant-brand">${mark()}<span>${esc(currentAgent().name)}</span></div>`; }
 function approvalHTML(type = 'command') {
     const plan = type === 'plan';
-    return `<div class="approval-card" id="inline-approval"><div class="approval-head">${icon('shield')}<span>${plan ? '计划已准备好，等待你的批准' : '允许执行这条命令吗？'}</span><span class="grow"></span>${pill('等待审批','warn')}</div><div class="approval-body">${plan ? '将按当前会话保存的计划执行。阅读计划或展开记录不会批准执行。' : '代码搭档请求在当前项目执行测试。该操作可能运行项目中的脚本。'}<pre>${plan ? esc('计划文件：'+(sessionWorkspace().planFile?.path||'尚未保存')) : 'npm run test -- --runInBand\n工作目录：E:\\Projects\\AgentApp'}</pre><span class="muted" data-copy-scope="mixed" data-copy-action="split">${model().source === 'api' ? '授权由 UAH 会话权限管理。' : '此审批来自官方运行时；由适配层转交，不绕过运行时权限。'}</span></div><div class="approval-actions">${btn('拒绝','deny-approval','sm')}${btn(plan ? '修改计划' : '查看范围','approval-scope','sm')}${btn(plan ? '批准并执行' : '允许本次','approve','primary sm')}</div></div>`;
+    return `<div class="approval-card" id="inline-approval"><div class="approval-head">${icon('shield')}<span>${plan ? '计划已准备好，等待你的批准' : '允许执行这条命令吗？'}</span><span class="grow"></span>${pill('等待审批','warn')}</div><div class="approval-body">${plan ? '将按当前会话保存的计划执行。阅读计划或展开记录不会批准执行。' : '代码搭档请求在当前项目执行测试。该操作可能运行项目中的脚本。'}<pre>${plan ? esc('计划文件：'+(sessionWorkspace().planFile?.path||'尚未保存')) : 'npm run test -- --runInBand\n工作目录：E:\\Projects\\AgentApp'}</pre><span class="muted" data-copy-scope="mixed" data-copy-action="split">${model()?.source === 'api' ? '授权由 UAH 会话权限管理。' : '此审批来自官方运行时；由适配层转交，不绕过运行时权限。'}</span></div><div class="approval-actions">${btn('拒绝','deny-approval','sm')}${btn(plan ? '修改计划' : '查看范围','approval-scope','sm')}${btn(plan ? '批准并执行' : '允许本次','approve','primary sm')}</div></div>`;
 }
 function chatHTML() {
     const t = session();
@@ -323,7 +549,7 @@ function chatHTML() {
     if (t.followUps) content += t.followUps.map((text,index) => userHTML(text,t.followUpAttachments?.[index] || []) + `<article class="assistant-message" data-copy-scope="fixture" data-copy-action="replace">${assistantBrand()}<p data-copy-scope="mixed" data-copy-action="split">已收到这条补充。这是交互原型的本地演示回复，不会调用任何模型。</p>${changesHTML([],index+3)}${actionsHTML(index+3)}</article>`).join('');
     if(t.branchContext)content=`<div class="notice" style="margin-bottom:20px">${icon('branch')}<span>来自「${esc(t.branchContext.title)}」的分支。${esc(t.branchContext.summary)}</span></div>`+content;
     const alert = t.state === 'approval' ? `<div class="task-alert">${icon('shield')}<span>此任务正在等待你的批准</span>${btn('查看审批','scroll-approval','sm')}</div>` : t.state === 'failed' ? `<div class="task-alert error">${icon('warning')}<span>运行时连接中断，已保留完成记录</span>${btn('查看错误','scroll-bottom','sm')}</div>` : '';
-    return `${alert}<div class="chat-scroll" id="chat-scroll"><div class="transcript">${content}</div></div><div class="composer-dock"><div class="composer-dock-inner">${composerHTML()}<div class="composer-foot" data-copy-scope="mixed" data-copy-action="split">本地演示数据 · 工具记录不代表真实执行 · 请核实重要信息</div></div></div>`;
+    return `${alert}<div class="chat-scroll" id="chat-scroll" data-key="chat-scroll-${t.id}"><div class="transcript">${content}</div></div><div class="composer-dock" data-key="composer-dock"><div class="composer-dock-inner">${composerHTML()}<div class="composer-foot" data-copy-scope="mixed" data-copy-action="split">本地演示数据 · 工具记录不代表真实执行 · 请核实重要信息</div></div></div>`;
 }
 function planPanel() {
     const t = session(), file = sessionWorkspace(t).planFile;
@@ -368,7 +594,8 @@ function panelHTML(motion = '') {
     const tabs = t.tabs?.length ? t.tabs : [current];
     const [title] = PANEL_INFO[current];
     const renderer = { plan: planPanel, tasks: tasksPanel, agents: agentsPanel, diff: diffPanel, browser: browserPanel, terminal: terminalPanel }[current];
-    return `<div class="panel-scrim" data-action="close-panel"></div><div class="resize-handle right-resize" data-resize="right" role="separator" aria-orientation="vertical" tabindex="0" aria-label="调整扩展栏宽度"></div><aside class="right-panel ${motion}" aria-label="${title}"><div class="panel-tabs">${tabs.map(id=>`<button class="panel-tab ${current===id?'active':''}" data-panel="${id}">${icon(PANEL_INFO[id][1])}<span>${PANEL_INFO[id][0]}</span></button>`).join('')}<span class="grow"></span><button class="icon-btn" data-menu="panels" aria-label="添加扩展标签">${icon('plus')}</button></div><div class="panel-title between"><h3>${title}${current==='diff'?'<span class="muted small" style="font-weight:400;margin-left:8px">只读快照</span>':''}</h3><div class="panel-toolbar">${iconBtn('pin','pin-panel',t.pinned?'取消固定扩展栏':'固定扩展栏',t.pinned?'accent':'')}${iconBtn('close','close-panel-tab','关闭当前标签')}</div></div>${isBusy(t)||t.state==='failed'?`<div class="panel-safety-strip">${statusDot(t.state)}<span>${STATE_NAMES[t.state]}</span><span class="grow"></span>${t.state==='approval'?btn('查看审批','scroll-approval','sm'):''}${isBusy(t)?btn('停止','stop-current','danger sm','stop'):btn('查看错误','close-panel','sm')}</div>`:''}${renderer()}</aside>`;
+    const panelContent=renderer().replace(/<div class="panel-body([^"]*)"/,`<div class="panel-body$1" data-key="panel-scroll-${t.id}-${current}"`);
+    return `<div class="panel-scrim" data-action="close-panel"></div><div class="resize-handle right-resize" data-resize="right" role="separator" aria-orientation="vertical" tabindex="0" aria-label="调整扩展栏宽度"></div><aside class="right-panel ${t.panelDesired === false ? 'panel-closing' : motion}" data-key="panel-${t.id}-${current}" aria-label="${title}"><div class="panel-tabs">${tabs.map(id=>`<button class="panel-tab ${current===id?'active':''}" data-panel="${id}">${icon(PANEL_INFO[id][1])}<span>${PANEL_INFO[id][0]}</span></button>`).join('')}<span class="grow"></span><button class="icon-btn" data-menu="panels" aria-label="添加扩展标签">${icon('plus')}</button></div><div class="panel-title between"><h3>${title}${current==='diff'?'<span class="muted small" style="font-weight:400;margin-left:8px">只读快照</span>':''}</h3><div class="panel-toolbar">${iconBtn('pin','pin-panel',t.pinned?'取消固定扩展栏':'固定扩展栏',t.pinned?'accent':'')}${iconBtn('close','close-panel-tab','关闭当前标签')}</div></div>${isBusy(t)||t.state==='failed'?`<div class="panel-safety-strip">${statusDot(t.state)}<span>${STATE_NAMES[t.state]}</span><span class="grow"></span>${t.state==='approval'?btn('查看审批','scroll-approval','sm'):''}${isBusy(t)?btn('停止','stop-current','danger sm','stop'):btn('查看错误','close-panel','sm')}</div>`:''}${panelContent}</aside>`;
 }
 function pageHeader(title, desc, action = '') { return `<div class="page-heading between"><div><h1>${title}</h1><p>${desc}</p></div>${action}</div>`; }
 function field(label, id, value = '', hint = '', type = 'text', options = '') {
@@ -407,15 +634,17 @@ function agentEditPage() {
     return `${pageHeader(a.id==='new'?'创建 Agent':a.name,'名称、指令和工具，在这里定义。',btn('返回 Agent','nav-agents','ghost','back'))}<div class="form-grid">${field('名称','agent-name',a.name)}${field('默认模型','agent-model',a.model,'','select',['跟随会话','Sonnet 4.6','DeepSeek Chat'].map(m=>`<option ${m===a.model?'selected':''}>${m}</option>`).join(''))}</div>${field('描述','agent-desc',a.desc)}${field('系统提示词','agent-prompt',a.prompt,'订阅运行时通过适配层传入其支持的指令；不保证所有字段一一对应。','textarea')}<div class="section-heading"><h3>可用工具</h3>${btn('全选 / 取消全选','toggle-all-tools','ghost sm')}</div><div class="permissions-grid">${[['read','读取文件'],['write','写入与编辑'],['shell','Shell 命令'],['search','网络搜索'],['mcp','项目 MCP'],['skill','插件与 Skills'],['memory','记忆'],['delegate','单层子代理'],['computer','电脑与浏览器']].map(([id,label])=>`<label class="checkbox-row"><input type="checkbox" name="agent-tool" value="${id}" ${Array.isArray(a.toolIds)?(!a.toolIds.length||a.toolIds.includes(id)?'checked':''):(a.id==='reviewer'&&!['read','search'].includes(id)?'':'checked')}>${label}</label>`).join('')}</div>${prototypeNote('数据约定：空工具列表表示全部工具可用；正式实现须区分全选与全部禁用，不能将全不选保存为空列表。')}<div class="form-actions">${a.id!=='new'?btn('删除 Agent','delete-agent','danger left','trash'):''}${btn('取消','nav-agents')}${btn('保存 Agent','save-agent','primary')}</div>`;
 }
 function modelsPage() {
-    return `${pageHeader('模型与账号','一个工作台，两种接入方式。运行能力始终由真实来源决定。',S.modelTab==='api'?btn('添加供应商','provider-new','primary','plus'):btn('能力对照','runtime-capabilities','','models'))}<div class="page-tabs"><button class="${S.modelTab==='api'?'active':''}" data-model-tab="api">自配 API</button><button class="${S.modelTab==='subscriptions'?'active':''}" data-model-tab="subscriptions">订阅运行时</button><button class="${S.modelTab==='capabilities'?'active':''}" data-model-tab="capabilities">能力与兼容性</button></div>${S.modelTab==='api'?`<div class="between" style="margin-bottom:13px"><span class="small muted">${S.providers.length} 个供应商 · 模型 ID 可手动配置</span>${btn('导入 / 导出','provider-transfer','ghost sm','more')}</div><div class="list">${S.providers.map(p=>`<div class="list-row"><div class="row-main clickable" data-provider="${p.id}"><h3>${esc(p.name)}</h3><p>${p.protocol} <span style="margin:0 6px">·</span> ${p.models} 个模型</p></div>${switchButton('provider:'+p.id,p.enabled,'启用 '+p.name)}<button class="icon-btn" data-provider="${p.id}" aria-label="编辑 ${esc(p.name)}">${icon('chevron')}</button></div>`).join('')}</div><div class="notice" style="margin-top:23px" data-copy-scope="mixed" data-copy-action="split">${icon('lock')}此原型只保存非敏感演示配置。不要输入真实 API Key；输入的密钥不会持久化或导出。</div>`:S.modelTab==='subscriptions'?`<div class="notice" style="margin-bottom:18px" data-copy-scope="mixed" data-copy-action="split">${icon('info')}下列安装、账号与模型均为演示状态，并非读取你的电脑。每个官方服务仅管理当前登录的一个账号。</div><div class="list">${S.runtimes.map(r=>`<div class="list-row"><span class="entity-icon ${r.id==='claude'?'terra':''}">${icon(r.icon)}</span><div class="row-main clickable" data-runtime="${r.id}"><h3>${r.name}</h3><p>${r.label}</p><p style="margin-top:5px">${r.logged?`<span class="positive">${esc(r.account)}</span>`:r.installed?'已检测到客户端 · 尚未登录':'尚未检测到客户端'}</p></div>${pill(r.logged?'已连接':r.installed?'待登录':'未安装',r.logged?'good':'')}<button class="icon-btn" data-runtime="${r.id}" aria-label="打开 ${r.name}">${icon('chevron')}</button></div>`).join('')}</div>`:runtimeCapabilitiesHTML()}`;
+    return `${pageHeader('模型与账号','一个工作台，两种接入方式。运行能力始终由真实来源决定。',S.modelTab==='api'?btn('添加供应商','provider-new','primary','plus'):btn('能力对照','runtime-capabilities','','models'))}<div class="page-tabs"><button class="${S.modelTab==='api'?'active':''}" data-model-tab="api">自配 API</button><button class="${S.modelTab==='subscriptions'?'active':''}" data-model-tab="subscriptions">订阅运行时</button><button class="${S.modelTab==='capabilities'?'active':''}" data-model-tab="capabilities">能力与兼容性</button></div>${S.modelTab==='api'?`<div class="between" style="margin-bottom:13px"><span class="small muted">${S.providers.length} 个供应商 · 模型 ID 可手动配置</span>${btn('导入 / 导出','provider-transfer','ghost sm','more')}</div><div class="list">${S.providers.map(p=>`<div class="list-row"><div class="row-main clickable" data-provider="${p.id}"><h3>${esc(p.name)}</h3><p>${p.protocol} <span style="margin:0 6px">·</span> ${MODELS.filter(item=>item.source==='api'&&item.providerId===p.id).length} 个模型</p></div>${switchButton('provider:'+p.id,p.enabled,'启用 '+p.name)}<button class="icon-btn" data-provider="${p.id}" aria-label="编辑 ${esc(p.name)}">${icon('chevron')}</button></div>`).join('')}</div><div class="notice" style="margin-top:23px" data-copy-scope="mixed" data-copy-action="split">${icon('lock')}此原型只保存非敏感演示配置。不要输入真实 API Key；输入的密钥不会持久化或导出。</div>`:S.modelTab==='subscriptions'?`<div class="notice" style="margin-bottom:18px" data-copy-scope="mixed" data-copy-action="split">${icon('info')}下列安装、账号与模型均为演示状态，并非读取你的电脑。每个官方服务仅管理当前登录的一个账号。</div><div class="list">${S.runtimes.map(r=>`<div class="list-row"><span class="entity-icon ${r.id==='claude'?'terra':''}">${icon(r.icon)}</span><div class="row-main clickable" data-runtime="${r.id}"><h3>${r.name}</h3><p>${r.label}</p><p style="margin-top:5px">${r.logged?`<span class="positive">${esc(r.account)}</span>`:r.installed?'已检测到客户端 · 尚未登录':'尚未检测到客户端'}</p></div>${pill(r.logged?'已连接':r.installed?'待登录':'未安装',r.logged?'good':'')}<button class="icon-btn" data-runtime="${r.id}" aria-label="打开 ${r.name}">${icon('chevron')}</button></div>`).join('')}</div>`:runtimeCapabilitiesHTML()}`;
 }
 function runtimeCapabilitiesHTML() {
     return `<div class="notice" style="margin-bottom:22px" data-copy-scope="mixed" data-copy-action="split">${icon('info')}能力列表由适配层逐项探测。未返回数据时显示“未上报”，不是 0、无额度或自动认定支持。</div><div class="table-wrap"><table><thead><tr><th>能力</th><th>UAH 引擎</th><th>Codex</th><th>Claude Code</th><th>Antigravity</th></tr></thead><tbody>${[['对话 / 停止','支持','待连接验证','待连接验证','待连接验证'],['工具与审批','UAH 管理','运行时管理','运行时管理','运行时管理'],['思考档位','按模型声明','按实际返回','未上报','未上报'],['MCP / Skills','直接使用','适配后验证','适配后验证','适配后验证'],['子代理层级','单层委派','原始结果','原始结果','原始结果'],['电脑控制桥接','UAH 权限链','待验证','待验证','待验证'],['订阅用量','不适用','未上报','未上报','未上报']].map(row=>`<tr>${row.map((cell,index)=>`<td class="${index?'muted':''}">${cell}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="small muted" style="margin-top:17px">本表展示产品如何表达未知状态，不是对官方运行时当前能力的技术认证。</p>`;
 }
 function providerPage() {
-    const p = S.providers.find(p=>p.id===S.editId) || {id:'new',name:'',protocol:'OpenAI 兼容',endpoint:'',models:0,enabled:false};
+    const p = S.providers.find(p=>p.id===S.editId) || {id:S.providerDraftIsNew?'new':S.editId,name:'',protocol:'OpenAI 兼容',endpoint:'',models:0,enabled:false};
+    const providerId = p.id==='new' ? S.providerDraftId : p.id;
+    const models = [...MODELS.filter(item=>item.source==='api'&&item.providerId===providerId),...(S.providerDraftOwner===S.editId?S.pendingProviderModels:[])];
     const protocols = ['OpenAI 兼容','Anthropic Messages','Gemini','自定义模板'];
-    return `${pageHeader(p.id==='new'?'添加供应商':p.name,'配置保存在应用层，项目和会话按需选择模型。',btn('返回','nav-models','ghost','back'))}<div class="form-grid">${field('显示名称','provider-name',p.name)}${field('协议','provider-protocol',p.protocol,'','select',protocols.map(protocol=>`<option ${p.protocol===protocol?'selected':''}>${protocol}</option>`).join(''))}</div>${field('接口地址','provider-endpoint',p.endpoint,'请使用完整的服务基础地址。地址修改不会自动改变协议。')}${field('API Key','provider-key','','原型不保存此字段；正式实现使用 Windows 安全存储。','password')}<div class="section-heading"><h3>模型目录</h3><div class="flex">${btn('获取模型列表','fetch-models','sm','refresh')}${btn('手动添加','model-add','sm','plus')}</div></div><div class="list">${(p.id==='deepseek'?[MODELS[1]]:[MODELS[0],MODELS[2]]).map(m=>`<div class="list-row" style="padding:12px 0"><div class="grow"><h3>${m.name}</h3><p class="mono">${m.wire}</p></div><span class="small muted">${m.media}</span><button class="icon-btn" data-model-edit="${m.id}" aria-label="编辑模型能力">${icon('chevron')}</button></div>`).join('')}</div><details class="tool" style="margin-top:20px"><summary>${icon('settings')}<span>高级参数、请求头与自定义模板</span>${icon('chevron','chevron')}</summary><div class="tool-body"><div class="form-grid">${field('附加请求头','provider-headers','{}','无密钥导出也排除附加请求头。','textarea')}${field('自定义请求模板','provider-template','{\n    "model": "{{model}}",\n    "messages": "{{messages}}"\n}','仅用于自定义模板协议；UI 不自动注入未声明的能力。','textarea')}</div></div></details><div class="between" style="margin-top:22px"><div class="flex">${btn('测试连接','test-provider','','plug')}<span class="small muted" data-copy-scope="mixed" data-copy-action="split">仅模拟测试，不产生 API 费用</span></div>${S.transientResult?pill(esc(S.transientResult),'good'):''}</div><div class="form-actions">${p.id!=='new'?btn('删除供应商','delete-provider','danger left','trash'):''}${btn('取消','nav-models')}${btn('保存配置','save-provider','primary')}</div>`;
+    return `${pageHeader(p.id==='new'?'添加供应商':p.name,'配置保存在应用层，项目和会话按需选择模型。',btn('返回','nav-models','ghost','back'))}<div class="form-grid">${field('显示名称','provider-name',p.name)}${field('协议','provider-protocol',p.protocol,'','select',protocols.map(protocol=>`<option ${p.protocol===protocol?'selected':''}>${protocol}</option>`).join(''))}</div>${field('接口地址','provider-endpoint',p.endpoint,'请使用完整的服务基础地址。地址修改不会自动改变协议。')}${field('API Key','provider-key','','原型不保存此字段；正式实现使用 Windows 安全存储。','password')}<div class="section-heading"><h3>模型目录</h3><div class="flex">${btn('获取模型列表','fetch-models','sm','refresh')}${btn('手动添加','model-add','sm','plus')}</div></div><div class="list">${models.map(m=>`<div class="list-row" style="padding:12px 0"><div class="grow"><h3>${esc(m.name)}</h3><p class="mono">${esc(m.wire)}</p></div><span class="small muted">${esc(m.media)}</span><button class="icon-btn" data-model-edit="${m.id}" aria-label="编辑模型能力">${icon('chevron')}</button></div>`).join('')||'<div class="empty-state">此供应商尚未添加模型。</div>'}</div><details class="tool" style="margin-top:20px"><summary>${icon('settings')}<span>高级参数、请求头与自定义模板</span>${icon('chevron','chevron')}</summary><div class="tool-body"><div class="form-grid">${field('附加请求头','provider-headers','{}','无密钥导出也排除附加请求头。','textarea')}${field('自定义请求模板','provider-template','{\n    "model": "{{model}}",\n    "messages": "{{messages}}"\n}','仅用于自定义模板协议；UI 不自动注入未声明的能力。','textarea')}</div></div></details><div class="between" style="margin-top:22px"><div class="flex">${btn('测试连接','test-provider','','plug')}<span class="small muted" data-copy-scope="mixed" data-copy-action="split">仅模拟测试，不产生 API 费用</span></div>${S.transientResult?pill(esc(S.transientResult),'good'):''}</div><div class="form-actions">${p.id!=='new'?btn('删除供应商','delete-provider','danger left','trash'):''}${btn('取消','nav-models')}${btn('保存配置','save-provider','primary')}</div>`;
 }
 function runtimePage() {
     const r = S.runtimes.find(r=>r.id===S.editId) || S.runtimes[0];
@@ -506,6 +735,7 @@ function filesPage() {
 }
 function directoryAdapter(selectedModel = model()) {
     if (!config().model) return { name: '未选择模型', status: '等待选择运行时', detail: '可以先选附加目录；实际读写范围在选定模型运行时后确认。' };
+    if (!selectedModel) return { name: '模型不可用', status: '需重新选择模型', detail: '当前会话引用的模型已不在目录中；发送前请明确选择一个可用模型。' };
     if (selectedModel.source === 'codex') return {
         name: 'Codex 官方运行时', status: '隔离状态待运行时确认',
         detail: 'Windows 原生沙盒约束命令写入；额外可读目录和可写根目录分别交给 Codex 授权。实际生效范围以运行时回报为准。',
@@ -528,46 +758,148 @@ function directoriesSettingsContent() {
 }
 function settingsPage() {
     let content='';
-    if(S.settingsTab==='appearance') content=`<h2 class="settings-title">外观</h2><p class="muted">让工作台适合你的阅读习惯。</p><h3 class="section-heading">主题</h3><div class="theme-grid">${[['light','浅色'],['dark','深色'],['system','跟随系统']].map(([id,label])=>`<button class="theme-option ${S.theme===id?'selected':''}" data-theme-choice="${id}"><span class="theme-preview ${id}"><span></span><i></i><b></b></span><span class="between">${label}${S.theme===id?icon('check'):''}</span></button>`).join('')}</div><div class="setting-row"><div><h4>字体</h4><p>界面使用系统字体；阅读标题采用系统衬线字体。</p></div><select class="select" id="font-choice" aria-label="字体"><option>系统默认</option><option>无衬线优先</option></select></div><div class="setting-row"><div><h4>减少动态效果</h4><p>关闭非必要过渡；始终尊重系统的减少动态效果设置。</p></div>${switchButton('reduce',S.reduced,'减少动态效果')}</div><div class="setting-row"><div><h4>侧栏</h4><p>收起后保留常用入口，让对话获得更多空间。</p></div>${btn(S.collapsed?'展开侧栏':'收起侧栏','toggle-sidebar','sm','panel')}</div><div class="setting-row"><div><h4>窗口布局</h4><p>右栏打开时压缩对话区；窄窗口会暂时收起左栏，展开左栏会关闭右栏。</p></div>${btn('恢复默认布局','reset-layout','sm')}</div>`;
+    if(S.settingsTab==='appearance') content=`<h2 class="settings-title">外观</h2><p class="muted">让工作台适合你的阅读习惯。</p><h3 class="section-heading">主题</h3><div class="theme-grid">${[['light','浅色'],['dark','深色'],['system','跟随系统']].map(([id,label])=>`<button class="theme-option ${S.theme===id?'selected':''}" data-theme-choice="${id}"><span class="theme-preview ${id}"><span></span><i></i><b></b></span><span class="between">${label}${S.theme===id?icon('check'):''}</span></button>`).join('')}</div><div class="setting-row"><div><h4>字体</h4><p>界面使用系统字体；阅读标题采用系统衬线字体。</p></div><select class="select" id="font-choice" aria-label="字体"><option value="system" ${S.fontChoice==='system'?'selected':''}>系统默认</option><option value="sans" ${S.fontChoice==='sans'?'selected':''}>无衬线优先</option></select></div><div class="setting-row"><div><h4>减少动态效果</h4><p>关闭非必要过渡；始终尊重系统的减少动态效果设置。</p></div>${switchButton('reduce',S.reduced,'减少动态效果')}</div><div class="setting-row"><div><h4>侧栏</h4><p>收起后保留常用入口，让对话获得更多空间。</p></div>${btn(S.collapsed?'展开侧栏':'收起侧栏','toggle-sidebar','sm','panel')}</div><div class="setting-row"><div><h4>窗口布局</h4><p>右栏打开时压缩对话区；窄窗口会暂时收起左栏，展开左栏会关闭右栏。</p></div>${btn('恢复默认布局','reset-layout','sm')}</div>`;
     if(S.settingsTab==='appearance') content+=`<div class="setting-row"><div><h4>发送快捷键</h4><p>Shift+Enter 始终换行；输入法组字时不会发送。</p></div><select class="select" id="send-shortcut" aria-label="发送快捷键"><option value="enter" ${S.sendShortcut==='enter'?'selected':''}>Enter 发送</option><option value="ctrl-enter" ${S.sendShortcut==='ctrl-enter'?'selected':''}>Ctrl+Enter 发送</option><option value="alt-enter" ${S.sendShortcut==='alt-enter'?'selected':''}>Alt+Enter 发送</option></select></div>`;
     if(S.settingsTab==='computer') content=`<h2 class="settings-title">电脑控制</h2><p class="muted">可见、可授权、可随时停止的本地操作。</p><div class="setting-row"><div><h4>允许 Windows 电脑控制</h4><p>默认关闭。开启总开关不会自动授权任意应用。</p></div>${switchButton('computer',S.switches.computer,'允许 Windows 电脑控制')}</div><div class="screen-preview" data-copy-scope="fixture" data-copy-action="replace"><div class="screen-window"><div class="screen-title">${icon('monitor')} 记事本 · 当前桌面示意</div><div class="screen-body">UAH Windows 11 computer use<br><br>观察应用 → 检查目标 → 请求授权 → 操作<br><br><span class="muted" data-copy-scope="mixed" data-copy-action="split">此图不是你电脑的屏幕截图。</span></div></div><div class="screen-taskbar" data-copy-scope="mixed" data-copy-action="split">Windows 11 · 独立演示环境</div></div><div class="flex" style="margin-top:13px" data-copy-scope="mixed" data-copy-action="split">${btn('观察桌面','computer-observe','','eye')}${btn('演示输入动作','computer-action','','cursor')}${btn('立即停止','release-lease','danger','stop')}</div><div class="setting-row"><div><h4>屏幕操作权</h4><p>同一时刻仅一个父会话持有，子代理共享。</p></div>${pill(S.lease?`${S.lease} 持有`:'空闲',S.lease?'warn':'good')}</div><div class="setting-row"><div><h4>目标应用授权</h4><p>${S.computerTargets.length?S.computerTargets.map(esc).join('、'):'尚未授权任何应用。首次操作时单独确认。'}</p></div>${btn('管理授权','target-management','sm')}</div><div class="notice">${icon('shield')}开启电脑控制后，还需允许当前 Agent 使用该工具并授权目标应用。只读 / 计划模式不会执行写入动作；操作前会重新确认目标。</div>`;
     if(S.settingsTab==='browser') content=`<h2 class="settings-title">内置浏览器</h2><p class="muted">工作与登录状态，都留在独立的浏览器配置文件里。</p><div class="setting-row"><div><h4>允许 Agent 操作内置浏览器</h4><p>默认关闭。手动浏览和模型操作分开。</p></div>${switchButton('browser',S.switches.browser,'允许操作浏览器')}</div><div class="setting-row"><div><h4>独立配置文件</h4><p class="mono">UAH / WebView2 / isolated-profile</p></div>${pill('与系统浏览器分离')}</div><div class="setting-row"><div><h4>网站登录</h4><p>由你在浏览器内完成；登录态不会提供给模型 API 或搜索服务。</p></div>${btn('打开浏览器','show-browser','sm','globe')}</div><div class="setting-row"><div><h4>网站授权</h4><p>${S.browserAllowed?'localhost:5173 · 已授权当前会话':'尚未授予 Agent 网站操作权限。'}</p></div>${btn('管理授权','target-management','sm')}</div><div class="setting-row"><div><h4>浏览器数据</h4><p>清除后，网站需要重新手动登录。不会影响系统浏览器。</p></div>${btn('清除示例登录态','clear-browser','sm danger')}</div><div class="notice" data-copy-scope="mixed" data-copy-action="split">${icon('lock')}原型中的浏览器是本地 UI 模拟，不加载任意网页，也不收集网站凭据。</div>`;
-    if(S.settingsTab==='search') content=`<h2 class="settings-title">网络搜索</h2><p class="muted">搜索服务独立于模型接口与浏览器登录态。</p><div class="setting-row"><div><h4>启用网络搜索</h4><p>只调用当前选择的服务，不自动回退。</p></div>${switchButton('search',S.switches.search,'启用网络搜索')}</div>${field('当前服务','search-service','SearXNG','','select',['SearXNG','Brave','Tavily','Exa','SerpApi','Google Custom Search'].map(x=>`<option>${x}</option>`).join(''))}${field('服务地址','search-endpoint','https://search.example.com')}${field('服务密钥','search-key','','独立配置；不借用模型密钥或浏览器登录态。原型不会存储密钥。','password')}<div class="form-actions">${btn('测试配置','test-search')}${btn('保存配置','save-search','primary')}</div>`;
+    if(S.settingsTab==='search') content=`<h2 class="settings-title">网络搜索</h2><p class="muted">搜索服务独立于模型接口与浏览器登录态。</p><div class="setting-row"><div><h4>启用网络搜索</h4><p>只调用当前选择的服务，不自动回退。</p></div>${switchButton('search',S.switches.search,'启用网络搜索')}</div>${field('当前服务','search-service',S.searchSettings.service,'','select',['SearXNG','Brave','Tavily','Exa','SerpApi','Google Custom Search'].map(x=>`<option value="${x}" ${x===S.searchSettings.service?'selected':''}>${x}</option>`).join(''))}${field('服务地址','search-endpoint',S.searchSettings.endpoint)}${field('服务密钥','search-key','','独立配置；不借用模型密钥或浏览器登录态。原型不会存储密钥。','password')}<div class="form-actions">${btn('测试配置','test-search')}${btn('保存配置','save-search','primary')}</div>`;
     if(S.settingsTab==='directories') content=directoriesSettingsContent();
     if(S.settingsTab==='data') content=`<h2 class="settings-title">数据与迁移</h2><p class="muted">明确导入、明确导出。不做跨设备实时同步。</p><div class="setting-row"><div><h4>从 Android / UAH 导入</h4><p>先验证、预览冲突，再选择更新、副本或跳过。</p></div>${btn('导入数据','import-data','sm','download')}</div><div class="setting-row"><div><h4>导出配置与会话</h4><p>逐项选择范围，提前展示敏感内容。</p></div>${btn('导出数据','export-data','sm','upload')}</div><div class="setting-row"><div><h4 data-copy-scope="mixed" data-copy-action="split">导入预览示例</h4><p>无需准备文件，体验完整的冲突处理流程。</p></div>${btn('查看冲突预览','demo-import','sm')}</div><div class="setting-row"><div><h4>本地安全存储</h4><p data-copy-scope="mixed" data-copy-action="split">正式版本使用 Windows 安全存储保护密钥。原型不持久化密钥、请求头或官方凭据。</p></div>${icon('lock')}</div><div class="notice warn">${icon('shield')}Android 专属的设备控制配置不会转换为 Windows 授权。导入会话不意味着恢复后台任务或继续执行。</div><div class="setting-row"><div><h4 data-copy-scope="mixed" data-copy-action="split">清除原型数据</h4><p data-copy-scope="mixed" data-copy-action="split">恢复这份 UI 原型的演示数据，不会影响你的任何真实文件。</p></div>${btn('重置原型','reset-prototype','sm danger')}</div>`;
     if(S.settingsTab==='diagnostics') content=`<h2 class="settings-title">诊断与关于</h2><div class="about-brand">${mark()}<div><h3>Used AI Harness</h3><p class="muted small" data-copy-scope="mixed" data-copy-action="split">PC 交互原型 · v1.0</p></div></div><div class="setting-row"><div><h4>设计依据</h4><p class="mono">UAH_PC_HARNESS_FUNCTIONAL_DESIGN.md</p></div>${pill(SOURCE_COMMIT.slice(0,8))}</div><div class="setting-row"><div><h4>运行环境</h4><p data-copy-scope="mixed" data-copy-action="split">浏览器本地演示。没有连接模型、Shell、MCP 或 Windows 控制。</p></div>${pill('离线可打开','good')}</div><div class="setting-row"><div><h4>故障诊断</h4><p>连接错误应保留在所属运行时 / 供应商 / MCP 页面。</p></div>${btn('查看错误状态','demo-error','sm')}</div><div class="setting-row"><div><h4>退出行为</h4><p>中止 UAH 管理的活动任务，保留原因；重新打开不自动续跑。</p></div>${btn('演示退出','exit-app','sm')}</div><div class="form-actions" data-copy-scope="mixed" data-copy-action="split">${btn('原型导览与验收场景','guide','primary','keyboard')}</div>`;
     return `<div class="settings-layout"><nav class="settings-nav"><h2>设置</h2>${SETTINGS_SECTIONS.map(([id,label,ico])=>`<button class="${S.settingsTab===id?'active':''}" data-settings-tab="${id}">${icon(ico)}${label}</button>`).join('')}</nav><section class="settings-content">${content}</section></div>`;
 }
-let lastFocus = null;
 let rendering = false;
 let lastViewKey = '', lastPanelKey = '';
+function domKey(node) {
+    if (node.nodeType !== Node.ELEMENT_NODE) return null;
+    return node.getAttribute('data-key') || (node.id ? `#${node.id}` : null) || (node.hasAttribute('data-detail') ? `detail:${node.dataset.detail}` : null);
+}
+function compatibleNode(current, next) {
+    return current.nodeType === next.nodeType && (current.nodeType !== Node.ELEMENT_NODE || current.tagName === next.tagName);
+}
+function syncElement(current, next) {
+    const focused = current === document.activeElement;
+    const selection = focused && typeof current.selectionStart === 'number'
+        ? [current.selectionStart, current.selectionEnd, current.selectionDirection]
+        : null;
+    const key = domKey(current);
+    for (const attr of Array.from(current.attributes)) if (!next.hasAttribute(attr.name)) current.removeAttribute(attr.name);
+    for (const attr of Array.from(next.attributes)) if (current.getAttribute(attr.name) !== attr.value) current.setAttribute(attr.name, attr.value);
+    if (current.tagName === 'TEXTAREA') {
+        if (!focused && current.value !== next.value) current.value = next.value;
+    } else {
+        reconcileChildren(current, next);
+        if (current.tagName === 'INPUT') {
+            if (!focused && !['file','password'].includes(current.type) && current.value !== next.value) current.value = next.value;
+            if (!focused && current.checked !== next.checked) current.checked = next.checked;
+        } else if (current.tagName === 'SELECT' && !focused && current.value !== next.value) current.value = next.value;
+    }
+    if (key && domKey(current) !== key) current.setAttribute('data-key', key);
+    if (selection && current.isConnected) {
+        try { current.setSelectionRange(selection[0], selection[1], selection[2] || 'none'); } catch (_) {}
+    }
+}
+function reconcileChildren(currentParent, nextParent) {
+    const oldChildren = Array.from(currentParent.childNodes);
+    const keyed = new Map(oldChildren.map(node => [domKey(node), node]).filter(([key]) => key));
+    const used = new Set();
+    const ordered = [];
+    const incoming = Array.from(nextParent.childNodes);
+    incoming.forEach((nextNode, index) => {
+        const key = domKey(nextNode);
+        let current = key ? keyed.get(key) : oldChildren[index];
+        if (current && (used.has(current) || !compatibleNode(current, nextNode))) current = null;
+        if (!current && !key) current = oldChildren.find(node => !used.has(node) && !domKey(node) && compatibleNode(node, nextNode)) || null;
+        if (current) {
+            used.add(current);
+            if (current.nodeType === Node.TEXT_NODE || current.nodeType === Node.COMMENT_NODE) {
+                if (current.nodeValue !== nextNode.nodeValue) current.nodeValue = nextNode.nodeValue;
+            } else syncElement(current, nextNode);
+            ordered.push(current);
+        } else ordered.push(nextNode.cloneNode(true));
+    });
+    for (const node of oldChildren) if (!used.has(node)) node.remove();
+    ordered.forEach((node, index) => {
+        const reference = currentParent.childNodes[index] || null;
+        if (reference !== node) currentParent.insertBefore(node, reference);
+    });
+}
+function syncReducedMotion() {
+    const systemReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.documentElement.dataset.reducedMotion = String(Boolean(S.reduced || systemReduced));
+    return Boolean(S.reduced || systemReduced);
+}
 function render(preserveScroll = false) {
-    const scroll = preserveScroll ? { chat: $('#chat-scroll')?.scrollTop, page: $('.page-scroll')?.scrollTop, panel: $('.panel-body')?.scrollTop } : {};
+    captureSessionScroll(); capturePanelScroll();
+    captureEditableDrafts();
     rendering = true;
     document.documentElement.dataset.theme=S.theme==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):S.theme;
-    document.documentElement.dataset.reducedMotion=String(S.reduced);
+    syncReducedMotion();
+    document.documentElement.style.setProperty('--serif', S.fontChoice === 'sans' ? 'var(--font)' : "Georgia, 'Times New Roman', 'Noto Serif CJK SC', 'Songti SC', SimSun, serif");
     document.documentElement.classList.toggle('sidebar-is-collapsed',S.collapsed);
     const viewKey=`${S.page}/${S.page==='chat'?S.selected:S.editId||''}`;
-    const panelKey=S.page==='chat'&&session().panelOpen?`${S.selected}/${session().panel}`:'';
+    const panelKey=S.page==='chat'&&session()?.panelOpen?`${S.selected}/${session().panel}`:'';
     const panelMotion=panelKey&&!lastPanelKey?'panel-opening':panelKey&&panelKey!==lastPanelKey?'panel-content-enter':'';
     const panel = S.page === 'chat' ? panelHTML(panelMotion) : '';
-    $('#app').innerHTML=`<div class="titlebar"><div class="titlebar-brand">${mark()}<span>Used AI Harness</span></div><div class="titlebar-center">${S.page==='chat'?esc(project(session().project)?.name||'无目录会话'):'本地工作区'}</div><div class="window-actions"><button data-action="window-min" aria-label="最小化窗口（演示）">${icon('minus')}</button><button data-action="window-max" aria-label="最大化窗口（演示）">${icon('maximize')}</button><button data-action="exit-app" aria-label="退出 UAH">${icon('close')}</button></div></div><div class="workspace">${sidebarHTML()}<main class="main ${viewKey!==lastViewKey?'view-enter':''}">${headerHTML()}${S.page==='home'?homeHTML():S.page==='chat'?chatHTML():`<div class="page-scroll"><div class="page">${pagesHTML()}</div></div>`}</main>${panel}</div>`;
+    const nextRoot=document.createElement('div');
+    const scope = formScope();
+    nextRoot.innerHTML=`<div class="titlebar" data-key="titlebar"><div class="titlebar-brand">${mark()}<span>Used AI Harness</span></div><div class="titlebar-center">${S.page==='chat'?esc(project(session().project)?.name||'无目录会话'):'本地工作区'}</div><div class="window-actions"><button data-action="window-min" aria-label="最小化窗口（演示）">${icon('minus')}</button><button data-action="window-max" aria-label="最大化窗口（演示）">${icon('maximize')}</button><button data-action="exit-app" aria-label="退出 UAH">${icon('close')}</button></div></div><div class="workspace" data-key="workspace">${sidebarHTML()}<main class="main ${viewKey!==lastViewKey?'view-enter':''}" data-key="main">${headerHTML()}${S.page==='home'?homeHTML():S.page==='chat'?chatHTML():`<div class="page-scroll" data-key="page-scroll-${S.page}-${S.editId||''}-${S.settingsTab}"><div class="page" data-form-scope="${esc(scope||'')}">${pagesHTML()}</div></div>`}</main>${panel}</div>`;
+    applyEditableDrafts(nextRoot);
+    if (scope && !S.formBaselines[scope]) S.formBaselines[scope] = editableValues(nextRoot, true);
+    reconcileChildren($('#app'), nextRoot);
     lastViewKey=viewKey;lastPanelKey=panelKey;
-    for (const el of $$('details[data-detail]')) el.addEventListener('toggle',()=>{if(el.isConnected)S.details[el.dataset.detail]=el.open;});
+    for (const el of $$('details[data-detail]')) if (!el.dataset.toggleBound) {
+        el.dataset.toggleBound='true';
+        el.addEventListener('toggle',()=>{if(el.isConnected)S.details[el.dataset.detail]=el.open;});
+    }
     const input=$('#composer-input');
-    if(input){const resizeInput=()=>{input.style.height='auto';const height=Math.min(input.scrollHeight,180);input.style.height=height+'px';input.style.overflowY=input.scrollHeight>180?'auto':'hidden';};resizeInput();input.addEventListener('input',()=>{config().input=input.value;const button=$('#send-button');if(button)button.disabled=!input.value.trim()||!config().model;resizeInput();});}
-    if(preserveScroll){if($('#chat-scroll'))$('#chat-scroll').scrollTop=scroll.chat||0;if($('.page-scroll'))$('.page-scroll').scrollTop=scroll.page||0;if($('.panel-body'))$('.panel-body').scrollTop=scroll.panel||0;}
+    if(input){const resizeInput=()=>{input.style.height='auto';const height=Math.min(input.scrollHeight,180);input.style.height=height+'px';input.style.overflowY=input.scrollHeight>180?'auto':'hidden';};resizeInput();}
+    if($('#chat-scroll') && S.page==='chat') $('#chat-scroll').scrollTo({top:session()?.scrollTop||0,behavior:'instant'});
+    const panelBody=$('.right-panel .panel-body');
+    if(panelBody&&S.page==='chat')panelBody.scrollTo({top:session()?.panelScroll?.[session()?.panel||'plan']||0,behavior:'instant'});
+    if(preserveScroll&&$('.page-scroll'))$('.page-scroll').scrollTop=S.pageScroll?.[S.page]||$('.page-scroll').scrollTop;
     rendering=false;
     save();
 }
 function prototypeToast(text, type='info') { toast(text,type,'mixed'); }
-function toast(text, type='info', copyScope='product') {
-    const root=$('#toast-root');root.innerHTML=`<div class="toast" data-copy-scope="${copyScope}" data-copy-action="${copyScope==='product'?'keep':'split'}">${icon(type==='error'?'alert':type==='success'?'check':'info')}<span>${esc(text)}</span><button aria-label="关闭提示" data-action="toast-close">${icon('close')}</button></div>`;
-    clearTimeout(toast.timer);toast.timer=setTimeout(()=>{root.innerHTML='';},6500);
+let toastPointer = { x: -1, y: -1 };
+function toastPointerInside() {
+    const el = $('#toast-root .toast');
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+    return toastPointer.x >= rect.left && toastPointer.x <= rect.right && toastPointer.y >= rect.top && toastPointer.y <= rect.bottom;
 }
+function syncToastPause() {
+    const root = $('#toast-root');
+    toast.paused = Boolean(root?.firstElementChild && (toastPointerInside() || root.contains(document.activeElement)));
+    if (toast.paused && toast.timer) {
+        clearTimeout(toast.timer);
+        toast.timer = null;
+        toast.remaining = Math.max(0, toast.deadline - Date.now());
+    } else if (!toast.paused && !toast.timer && root?.firstElementChild) startToastTimer();
+}
+function startToastTimer() {
+    const root = $('#toast-root');
+    if (toast.paused || toast.timer || !root?.firstElementChild) return;
+    toast.deadline = Date.now() + toast.remaining;
+    toast.timer = setTimeout(() => { root.innerHTML = ''; toast.timer = null; toast.remaining = 0; }, toast.remaining);
+}
+document.addEventListener('pointermove', event => { toastPointer = { x: event.clientX, y: event.clientY }; syncToastPause(); });
+$('#toast-root').addEventListener('focusin', syncToastPause);
+$('#toast-root').addEventListener('focusout', () => queueMicrotask(syncToastPause));
+function toast(text, type='info', copyScope='product', duration=6500) {
+    const root=$('#toast-root');
+    clearTimeout(toast.timer);
+    toast.timer=null;
+    toast.remaining=Math.max(0,Number(duration)||0);
+    root.innerHTML=`<div class="toast" role="status" aria-live="polite" data-copy-scope="${copyScope}" data-copy-action="${copyScope==='product'?'keep':'split'}">${icon(type==='error'?'alert':type==='success'?'check':'info')}<span>${esc(text)}</span><button aria-label="关闭提示" data-action="toast-close">${icon('close')}</button></div>`;
+    syncToastPause();
+}
+toast.remaining=0;toast.timer=null;toast.deadline=0;toast.paused=false;
 let menuAnchor=null;
+let lastFocus=null;
 function closeMenu(){S.popover=null;$('#popover-root').innerHTML='';if(menuAnchor?.isConnected){menuAnchor.setAttribute('aria-expanded','false');menuAnchor.focus();}menuAnchor=null;}
-function closeModal(){S.modal=null;S.pendingProject=null;S.pendingSessionProject=null;$('#overlay-root').innerHTML='';$('#app').removeAttribute('inert');if(lastFocus?.isConnected)lastFocus.focus();}
+function closeModal(){S.modal=null;S.pendingNavigation=null;S.pendingProject=null;S.pendingSessionProject=null;$('#overlay-root').innerHTML='';$('#app').removeAttribute('inert');if(lastFocus?.isConnected)lastFocus.focus();}
 function modal(title,body,footer='',cls='') {
     closeMenu();lastFocus=document.activeElement;S.modal=title;
     $('#app').setAttribute('inert','');
@@ -579,6 +911,14 @@ function confirmDialog(title,body,action,label='确认',danger=false) {
 }
 function menuItem(label,attrs,ico='check',sub='',selected=false) {
     return `<button class="menu-item ${selected?'selected':''}" ${attrs}>${icon(ico)}<span class="grow">${label}${sub?`<span class="menu-sub">${sub}</span>`:''}</span>${selected?icon('check'):''}</button>`;
+}
+function modelMenuItem(item, selectedId) {
+    const availability = modelAvailability(item);
+    const provider = providerForModel(item);
+    const owner = provider?.name || item.provider || item.runtime;
+    const sub = availability.available ? `${owner} · ${item.media}` : `${owner} · ${availability.reason}`;
+    const attrs = `data-select-model="${item.id}" ${availability.available?'':'disabled aria-disabled="true"'}`;
+    return `<div data-filter-item="models" data-filter-value="${esc(item.name+owner+item.wire+availability.reason)}">${menuItem(esc(item.name),attrs,item.source==='api'?'models':'terminal',esc(sub),selectedId===item.id)}</div>`;
 }
 function effortPopoverHTML(selectedModel,available,selected,index) {
     const fallback=selectedModel.efforts==null&&available.length>0;
@@ -598,7 +938,7 @@ function openMenu(name, anchor) {
     }
     if(name==='agents')html=`<div class="pop-label">当前 Agent</div>${S.agents.map(a=>menuItem(esc(a.name),`data-select-agent="${a.id}"`,a.icon,esc(a.desc),config().agent===a.id)).join('')}<div class="divider"></div>${menuItem('管理 Agent','data-nav="agents"','settings')}`;
     if(name==='models') {
-        wide=true;html=`<div class="searchbox">${icon('search')}<input id="model-search" placeholder="搜索模型、供应商或运行时" aria-label="搜索模型"></div><div class="pop-label">自配 API · UAH 自有引擎</div>${MODELS.filter(m=>m.source==='api').map(m=>`<div data-filter-item="models" data-filter-value="${esc(m.name+m.provider+m.wire)}">${menuItem(m.name,`data-select-model="${m.id}"`,'models',`${m.provider} · ${m.media}`,config().model===m.id)}</div>`).join('')}<div class="divider"></div><div class="pop-label">官方订阅运行时</div>${MODELS.filter(m=>m.source!=='api'&&m.id!=='gemini-cli').map(m=>`<div data-filter-item="models" data-filter-value="${esc(m.name+m.provider)}">${menuItem(m.name,`data-select-model="${m.id}"`,'terminal',m.provider,config().model===m.id)}</div>`).join('')}<div class="pop-label">其他官方 CLI</div>${menuItem('Gemini CLI','data-select-model="gemini-cli"','terminal','API Key / 企业认证 · 非 Google 订阅',config().model==='gemini-cli')}${prototypeNote('模型目录使用示例数据；跨运行时切换的分支确认用于验收交互。')}`;
+        wide=true;html=`<div class="searchbox">${icon('search')}<input id="model-search" placeholder="搜索模型、供应商或运行时" aria-label="搜索模型"></div><div class="pop-label">自配 API · UAH 自有引擎</div>${MODELS.filter(m=>m.source==='api').map(m=>modelMenuItem(m,config().model)).join('')}<div class="divider"></div><div class="pop-label">官方订阅运行时</div>${MODELS.filter(m=>m.source!=='api'&&m.id!=='gemini-cli').map(m=>modelMenuItem(m,config().model)).join('')}<div class="pop-label">其他官方 CLI</div>${modelMenuItem(MODELS.find(m=>m.id==='gemini-cli'),config().model)}${prototypeNote('模型目录使用示例数据；跨运行时切换的分支确认用于验收交互。')}`;
     }
     if(name==='permissions')html=`<div class="pop-label">会话权限</div>${Object.entries(PERMISSIONS).map(([id,p])=>menuItem(p[0],`data-permission="${id}"`,p[1],p[2],config().mode===id)).join('')}<div class="notice">${icon('shield')}自动模式不是绕过系统权限；查看记录也不等于批准执行。</div>`;
     if(name==='permissions'&&runtimeModeInfo()){
@@ -625,6 +965,7 @@ function openMenu(name, anchor) {
 }
 function filterRows(group,value){$$(`[data-filter-item="${group}"]`).forEach(row=>{row.hidden=!row.dataset.filterValue.toLowerCase().includes(value.toLowerCase());});}
 function newChat(projectId=null){
+    if(requestDirtyNavigation({type:'new-chat',projectId}))return;
     captureInput();if(S.page==='home')rememberDraftChoices();closeMenu();closeModal();
     S.conversationOwner='draft';
     const targetProject=projectId||S.draftDefaults.project;
@@ -648,16 +989,40 @@ function worktreeModal(){
     const p=project(S.pendingProject),active=S.sessions.filter(t=>t.project===p.id&&(!S.pendingSessionProject||t.id!==S.selected)&&isBusy(t)&&!t.worktree);
     modal(p.git?'这个目录中已有活动会话':'这个目录正在被其他会话使用',`<p>${esc(p.name)} 中有 ${active.length} 个正在执行或等待审批的会话。选择新会话如何使用目录。</p><div class="subtle-box"><div class="flex">${statusDot(active[0]?.state||'running')}<span>${esc(active[0]?.title||'活动会话')}</span></div><p class="mono small muted" style="margin:8px 0 0">${esc(p.path)}</p></div>${p.git?`<button class="option-card ${S.worktreeChoice==='isolated'?'selected':''}" data-worktree="isolated">${icon('branch')}<span><h4>新建独立 Git worktree</h4><p>为新会话分离文件目录，降低并发改动冲突。<br>示例路径：${esc(p.path)}-worktrees\\session-new</p></span><i class="radio-circle"></i></button>`:''}<button class="option-card ${S.worktreeChoice==='shared'?'selected':''}" data-worktree="shared">${icon('folder')}<span><h4>直接使用当前目录</h4><p>多个会话可能同时修改文件。改动归属不明确时标记为“归属不确定”，不伪造精确归因。</p></span><i class="radio-circle"></i></button>${p.git?'':`<div class="notice warn">${icon('alert')}普通目录不能创建 Git worktree。继续即确认并发文件冲突风险。</div>`}${prototypeNote('仅模拟目录选择，不执行 git worktree，也不创建本机文件夹。')}`,`${btn('取消','close-modal')}${btn('使用此目录方案','worktree-confirm','primary')}`);
 }
-function openPanel(id){if(!session()||S.page!=='chat'&&S.conversationOwner==='draft'){toast('请先打开一个已保存的会话。');return;}captureInput();closeMenu();if(S.page!=='chat')S.page='chat';const t=session();t.panel=id;t.panelOpen=true;if(!t.tabs.includes(id))t.tabs.push(id);render(true);}
+const panelTransitions = new Map();
+function cancelPanelTransition(item, completeClose = false) {
+    if (!item) return;
+    const transition = panelTransitions.get(item.id);
+    if (transition) {
+        clearTimeout(transition.timer);
+        transition.node.removeEventListener('animationend', transition.onEnd);
+        panelTransitions.delete(item.id);
+    }
+    item.panelGeneration = (item.panelGeneration || 0) + 1;
+    if (completeClose && item.panelDesired === false) item.panelOpen = false;
+}
+function openPanel(id){
+    if(!session()||S.page!=='chat'&&S.conversationOwner==='draft'){toast('请先打开一个已保存的会话。');return;}
+    captureInput();closeMenu();if(S.page!=='chat')S.page='chat';const t=session();
+    cancelPanelTransition(t);t.panelDesired=true;t.panelOpen=true;t.panel=id;
+    if(!t.tabs.includes(id))t.tabs.push(id);render(true);
+}
 function setPanelVisible(visible) {
     captureInput();closeMenu();const t=session();
-    if(visible){t.panelOpen=true;render(true);return;}
+    if(visible){openPanel(t.panel||'plan');return;}
     if(!t.panelOpen)return;
     const panel=$('.right-panel');
-    if(!panel||S.reduced||matchMedia('(prefers-reduced-motion: reduce)').matches){t.panelOpen=false;render(true);return;}
+    cancelPanelTransition(t);t.panelDesired=false;
+    if(!panel||syncReducedMotion()){t.panelOpen=false;render(true);return;}
     panel.classList.add('panel-closing');
-    let finished=false;const finish=()=>{if(finished)return;finished=true;t.panelOpen=false;render(true);};
-    panel.addEventListener('animationend',finish,{once:true});setTimeout(finish,290);
+    const id=t.id,generation=t.panelGeneration,onEnd=event=>{if(event.target===panel&&event.animationName==='panel-shrink')finish();};
+    const finish=()=>{
+        const current=panelTransitions.get(id);
+        if(!current||current.generation!==generation||t.panelGeneration!==generation||t.panelDesired!==false)return;
+        clearTimeout(current.timer);panel.removeEventListener('animationend',onEnd);panelTransitions.delete(id);t.panelOpen=false;
+        if(S.selected===id&&S.page==='chat')render(true);else save();
+    };
+    const timer=setTimeout(finish,320);panelTransitions.set(id,{node:panel,onEnd,timer,generation});panel.addEventListener('animationend',onEnd);
 }
 function stopTask(id,reason='用户停止了任务。已完成的记录保留，后续动作已取消。'){
     const t=S.sessions.find(x=>x.id===id);if(!t)return;clearInterval(demoStreams.get(id));demoStreams.delete(id);t.state='stopped';t.kind='stopped';t.stoppedReason=reason;
@@ -666,7 +1031,8 @@ function stopTask(id,reason='用户停止了任务。已完成的记录保留，
 }
 function sendMessage(){
     captureInput();const c=config();if(!c.input?.trim())return;if(!c.model){toast('请先选择模型。','error');return;}
-    const mapping=runtimeModeInfo();if(mapping?.[0]==='暂不可用'){toast(`${model().runtime} 尚不能在此权限模式下通过 UAH 安全执行：${mapping[2]}`,'error');return;}
+    if(!selectedModelAvailable(c)){const unavailable=modelAvailability(model(c));toast(`${unavailable.reason}；请明确选择一个可用模型。`,'error');return;}
+    const mapping=runtimeModeInfo();if(mapping?.[0]==='暂不可用'){toast(`${model()?.runtime||'当前运行时'} 尚不能在此权限模式下通过 UAH 安全执行：${mapping[2]}`,'error');return;}
     if(S.page==='home'){
         const active=S.sessions.filter(t=>t.project===c.project&&isBusy(t)&&!t.worktree).map(t=>t.id).sort().join(',');
         if(c.project&&!c.worktree&&active&&c.sharedDirectoryDecision!==active){S.pendingProject=c.project;S.worktreeChoice=project(c.project)?.git?'isolated':'shared';worktreeModal();return;}
@@ -680,11 +1046,13 @@ function sendMessage(){
     render();if(session().state==='running'&&session().kind==='generated')startDemoStream(session().id);requestAnimationFrame(()=>{if($('#chat-scroll'))$('#chat-scroll').scrollTop=$('#chat-scroll').scrollHeight;});
 }
 function selectModel(id){
-    const next=MODELS.find(m=>m.id===id);if(!next)return;captureInput();closeMenu();
-    if(next.source!==model().source && S.page==='chat'){
+    const next=MODELS.find(m=>m.id===id);if(!next)return;
+    const availability=modelAvailability(next);if(!availability.available){toast(`${availability.reason}，不能用于新请求。`,'error');return;}
+    captureInput();closeMenu();const current=model();
+    if(current&&next.source!==current.source && S.page==='chat'){
         S.pendingModel=id;
-        modal('切换运行时，将创建一个分支',`<p>从 <strong>${esc(model().runtime)}</strong> 切换到 <strong>${esc(next.runtime)}</strong>。原会话会保留，不把内部运行状态当作可以原地续跑的上下文。</p><div class="list"><div class="list-row">${icon('check')}<div><h3>可迁移</h3><p>可见对话文本、已保存的工具结果摘要、用户选择的附件引用。</p></div></div><div class="list-row">${icon('close')}<div><h3>不迁移</h3><p>隐藏推理、私有缓存、运行时内部任务状态、未完成的工具调用与审批授权。</p></div></div><div class="list-row">${icon('shield')}<div><h3>重新确认能力与权限</h3><p>模型、工具、思考档位和审批规则以新运行时真实返回为准。</p></div></div></div>${isBusy()?`<div class="notice warn">${icon('alert')}原会话仍在后台执行。分支首次发送时会重新检查目录并发，不会静默接管。</div>`:''}`,`${btn('保留原运行时','close-modal')}${btn('创建分支并切换','confirm-runtime-switch','primary')}`);
-    }else{const c=config();if(S.page==='home'&&c.model&&model().source!==next.source){c.readDirectories=[];c.writeDirectories=[];c.additionalDirectories=[];c.allowedDirectories=[];}c.model=id;normalizeEffortConfig(c);rememberDraftChoices();render(true);toast('模型已切换；下一次请求使用新的配置。');}
+        modal('切换运行时，将创建一个分支',`<p>从 <strong>${esc(current.runtime)}</strong> 切换到 <strong>${esc(next.runtime)}</strong>。原会话会保留，不把内部运行状态当作可以原地续跑的上下文。</p><div class="list"><div class="list-row">${icon('check')}<div><h3>可迁移</h3><p>可见对话文本、已保存的工具结果摘要、用户选择的附件引用。</p></div></div><div class="list-row">${icon('close')}<div><h3>不迁移</h3><p>隐藏推理、私有缓存、运行时内部任务状态、未完成的工具调用与审批授权。</p></div></div><div class="list-row">${icon('shield')}<div><h3>重新确认能力与权限</h3><p>模型、工具、思考档位和审批规则以新运行时真实返回为准。</p></div></div></div>${isBusy()?`<div class="notice warn">${icon('alert')}原会话仍在后台执行。分支首次发送时会重新检查目录并发，不会静默接管。</div>`:''}`,`${btn('保留原运行时','close-modal')}${btn('创建分支并切换','confirm-runtime-switch','primary')}`);
+    }else{const c=config();if(S.page==='home'&&current&&current.source!==next.source){c.readDirectories=[];c.writeDirectories=[];c.additionalDirectories=[];c.allowedDirectories=[];}c.model=id;normalizeEffortConfig(c);rememberDraftChoices();render(true);toast('模型已切换；下一次请求使用新的配置。');}
 }
 function createBranch(targetModel=null,fromUser=false){
     const old=session();captureInput();closeMenu();closeModal();S.page='home';S.conversationOwner='draft';S.draft={...clone(S.draftDefaults),extraDirectories:[],worktree:null,project:old.project,model:targetModel||old.model,agent:old.agent,mode:old.mode,sourceSession:old.id,branchContext:{title:old.title,userText:old.userText||'已保存的原问题',summary:'迁移可见对话与已保存工具摘要；未迁移隐藏推理、私有缓存或执行授权。'},input:fromUser?(old.userText||'在此处继续编辑原问题。'):'',attachments:clone(old.attachments||[])};
@@ -693,9 +1061,9 @@ function createBranch(targetModel=null,fromUser=false){
     render();toast(S.branchNotice);if(old.project&&S.sessions.some(t=>t.project===old.project&&isBusy(t)&&!t.worktree)){S.pendingProject=old.project;S.worktreeChoice=project(old.project)?.git?'isolated':'shared';worktreeModal();}
 }
 function contextModal(){
-    const known=Boolean(config().model)&&model().source==='api'&&model().id==='sonnet-api',used=S.page==='home'?0:session()?.compacted?8200:24800;
+    const known=model()?.source==='api'&&model()?.id==='sonnet-api',used=S.page==='home'?0:session()?.compacted?8200:24800;
     const parts=[['系统指令',2100,'#918476'],['工具定义',4000,'#a7856c'],['环境',1700,'#bda78a'],['用户消息',2500,'#768b79'],['助手正文',5700,'#8b9b84'],['工具结果',6100,'#b9b7a0'],['附件',2100,'#bfa487'],['压缩摘要',600,'#c5baa9']];
-    modal('上下文',`<div class="between"><h3 style="margin:0">${known?`${(used/1000).toFixed(1)}K / 200K`:'容量未上报'}</h3>${pill(known?'本地估算 · 示例':'不可计算使用率')}</div><p class="small muted" style="margin:10px 0" data-copy-scope="mixed" data-copy-action="split">${known?'分类用量是原型样本，不是实际服务端 token 用量。':'缺少容量时只展示已知信息，不将“未上报”解释为 0 或无限。'}</p>${known?`<div class="context-bar">${parts.map(([label,num,color])=>`<i style="width:${num*(used/24800)/200000*100}%;background:${color}" title="${label}"></i>`).join('')}</div><div class="context-legend">${parts.map(([label,num,color])=>`<span><i style="background:${color}"></i>${label}<strong style="margin-left:auto;font-weight:500">${(num*(used/24800)/1000).toFixed(1)}K</strong></span>`).join('')}</div>`:''}<div class="divider"></div><div class="list"><div class="setting-row"><div><h4>服务端上一轮输入 / 输出</h4></div><span class="muted small">未上报</span></div><div class="setting-row"><div><h4>缓存 / 思考用量</h4></div><span class="muted small">未上报</span></div></div><div class="notice">${icon('history')}压缩只改变后续发送的上下文，原始历史、工具记录和历史 Diff 保留。仅允许空闲的 UAH 主会话主动压缩。</div>`,`${btn('关闭','close-modal')}${!isBusy()&&model().source==='api'&&S.page==='chat'?btn('压缩上下文','compact-confirm','primary'):''}`);
+    modal('上下文',`<div class="between"><h3 style="margin:0">${known?`${(used/1000).toFixed(1)}K / 200K`:'容量未上报'}</h3>${pill(known?'本地估算 · 示例':'不可计算使用率')}</div><p class="small muted" style="margin:10px 0" data-copy-scope="mixed" data-copy-action="split">${known?'分类用量是原型样本，不是实际服务端 token 用量。':'缺少容量时只展示已知信息，不将“未上报”解释为 0 或无限。'}</p>${known?`<div class="context-bar">${parts.map(([label,num,color])=>`<i style="width:${num*(used/24800)/200000*100}%;background:${color}" title="${label}"></i>`).join('')}</div><div class="context-legend">${parts.map(([label,num,color])=>`<span><i style="background:${color}"></i>${label}<strong style="margin-left:auto;font-weight:500">${(num*(used/24800)/1000).toFixed(1)}K</strong></span>`).join('')}</div>`:''}<div class="divider"></div><div class="list"><div class="setting-row"><div><h4>服务端上一轮输入 / 输出</h4></div><span class="muted small">未上报</span></div><div class="setting-row"><div><h4>缓存 / 思考用量</h4></div><span class="muted small">未上报</span></div></div><div class="notice">${icon('history')}压缩只改变后续发送的上下文，原始历史、工具记录和历史 Diff 保留。仅允许空闲的 UAH 主会话主动压缩。</div>`,`${btn('关闭','close-modal')}${!isBusy()&&model()?.source==='api'&&S.page==='chat'?btn('压缩上下文','compact-confirm','primary'):''}`);
 }
 function attachSessionModal() {
     const choices=S.sessions.filter(item=>S.page!=='chat'||item.id!==S.selected);
@@ -798,7 +1166,7 @@ function performExport(sections, sensitive=false){
     const result={format:'uah-pc-ui-prototype',version:1,createdAt:new Date().toISOString(),notice:'仅为交互原型数据，不是正式 UAH 备份。无真实凭据或本机文件。',data:{}};
     for(const key of sections){
         if(!['providers','agents','memories','sessions','mcps','plugins'].includes(key))continue;
-        let data=clone(S[key]);
+        let data=key==='sessions'?S.sessions.map(item=>serializeSession(item).session):clone(S[key]);
         data=data.map(item=>{delete item.key;delete item.apiKey;delete item.headers;delete item.credentials;delete item.account;delete item.hookEnabled;delete item.projectEnabled;if(key==='sessions'){item.state='stopped';item.kind='stopped';item.stoppedReason='从导出记录导入；不会自动续跑。';}return item;});
         result.data[key]=data;
     }
@@ -806,19 +1174,61 @@ function performExport(sections, sensitive=false){
     downloadJSON(result,'UAH_Prototype_Export.json');closeModal();prototypeToast('已生成原型 JSON。密钥、请求头与执行授权未导出。','success');
 }
 function downloadJSON(data,name){const blob=new Blob([JSON.stringify(data,null,4)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
-function applyImport(){
-    S.importBackup=clone({agents:S.agents,providers:S.providers,memories:S.memories,sessions:S.sessions});
-    const map={Agent:'agents',供应商:'providers',记忆:'memories',会话:'sessions',MCP:'mcps',插件:'plugins'};
-    const rows=S.importRows||[{key:'agent:coder',name:'代码搭档',type:'Agent'},{key:'provider:anthropic',name:'Anthropic API',type:'供应商'},{key:'memory:m1',name:'代码风格',type:'记忆'},{key:'session:android',name:'移动端历史会话',type:'会话'}];
-    const projectId=$('#import-project')?.value||'agentapp';let count=0;
-    for(const row of rows){const choice=S.importChoices[row.key]||'copy';if(choice==='skip')continue;const key=map[row.type];if(!key)continue;
-        const original=S.importData?.[key]?.find(x=>x.id===row.originalId)||S[key].find(x=>x.id===row.key.split(':')[1])||S[key][0];if(!original)continue;
-        const item=clone(original);delete item.key;delete item.apiKey;delete item.headers;delete item.credentials;if(key==='agents')item.toolIds=['read'];delete item.hookEnabled;delete item.projectEnabled;
-        const exists=S[key].findIndex(x=>x.id===item.id);
-        if(choice==='copy'||exists<0){item.id=`import-${key}-${Date.now()}-${count}`;if(item.name)item.name+='（导入副本）';if(item.title)item.title+='（导入副本）';}
-        if(key==='sessions')Object.assign(item,{project:projectId,state:'stopped',kind:'stopped',stoppedReason:'导入的历史记录，不会自动执行。',panelOpen:false});
-        if(choice==='update'&&exists>=0)S[key][exists]=item;else S[key].push(item);count++;
+function serializeSession(item=session()){
+    const exported=clone(item);exported.workspace=clone(sessionWorkspace(item));
+    exported.state='stopped';exported.stoppedReason='从会话导出；导入后不会自动续跑。';exported.panelOpen=false;exported.input='';exported.attachments=[];exported.extraDirectories=[];exported.worktree=null;
+    exported.workspace.backgroundTasks=(exported.workspace.backgroundTasks||[]).map(task=>['running','approval'].includes(task.state)?{...task,state:'stopped',detail:'从会话导出；不会自动续跑。'}:task);
+    exported.workspace.subagents=(exported.workspace.subagents||[]).map(agent=>({...agent,state:['running','approval'].includes(agent.state)?'stopped':agent.state,turns:(agent.turns||[]).map(turn=>({...turn}))}));
+    for(const key of ['apiKey','headers','credentials','account','hookEnabled','projectEnabled','auth','token'])delete exported[key];
+    return {format:'uah-pc-prototype-session',version:1,notice:'演示会话记录，不含凭据或执行授权。',session:exported};
+}
+const IMPORT_COLLECTIONS=['agents','providers','memories','sessions','mcps','plugins'];
+const IMPORT_TYPE_MAP={Agent:'agents',供应商:'providers',记忆:'memories',会话:'sessions',MCP:'mcps',插件:'plugins'};
+function importSnapshot(){return Object.fromEntries(IMPORT_COLLECTIONS.map(key=>[key,clone(S[key])]));}
+function buildImportPlan(rows=S.importRows,choices=S.importChoices,projectId=$('#import-project')?.value||'agentapp'){
+    const collections=importSnapshot();let count=0;
+    for(const [index,row] of (rows||[]).entries()){
+        const choice=choices?.[row.key]||'copy';if(choice==='skip')continue;
+        const key=IMPORT_TYPE_MAP[row.type];if(!key)continue;
+        const rowId=row.originalId||row.key?.split(':').at(-1);
+        const original=S.importData?.[key]?.find(item=>item.id===rowId)||S[key].find(item=>item.id===rowId);
+        if(!original)continue;
+        const item=sanitizeImportedItem(key,original,index)||clone(original);
+        delete item.key;delete item.apiKey;delete item.headers;delete item.credentials;delete item.account;delete item.hookEnabled;delete item.projectEnabled;
+        if(key==='agents')item.toolIds=['read'];
+        if(key==='providers')item.enabled=false;
+        if(key==='mcps'){item.status='error';item.enabled=false;item.projectEnabled={};}
+        if(key==='plugins'){item.enabled=false;item.projectEnabled={};item.hookEnabled=false;}
+        const current=collections[key].findIndex(candidate=>candidate.id===item.id);
+        if(choice==='update'&&current>=0){collections[key][current]=item;}
+        else{
+            let id=`import-${key}-${Date.now()}-${index}`;
+            while(collections[key].some(candidate=>candidate.id===id))id+=`-${index}`;
+            item.id=id;
+            if(item.name)item.name+='（导入副本）';if(item.title)item.title+='（导入副本）';
+            if(key==='sessions')Object.assign(item,{project:projectId,state:'stopped',kind:'stopped',stoppedReason:'导入的历史记录，不会自动执行。',panelOpen:false});
+            collections[key].push(item);
+        }
+        count++;
     }
+    return {collections,count,projectId};
+}
+function commitImportPlan(plan,afterAssign=null){
+    const backup=importSnapshot();
+    const previousBackup=S.importBackup||null;
+    try{
+        for(const key of IMPORT_COLLECTIONS){S[key]=clone(plan.collections[key]);if(afterAssign)afterAssign(key);}
+        S.importBackup=backup;
+        if(!save())throw new Error('浏览器未能保存本地原型数据');
+        return {count:plan.count,backup};
+    }catch(error){Object.assign(S,backup);S.importBackup=previousBackup;save();throw error;}
+}
+function applyImport(){
+    const rows=S.importRows||[{key:'agent:coder',originalId:'coder',name:'代码搭档',type:'Agent'},{key:'provider:anthropic',originalId:'anthropic',name:'Anthropic API',type:'供应商'},{key:'memory:m1',originalId:'m1',name:'代码风格',type:'记忆'},{key:'session:android',originalId:'s1',name:'移动端历史会话',type:'会话'}];
+    let result;
+    try{result=commitImportPlan(buildImportPlan(rows,S.importChoices));}
+    catch(error){toast(`导入未完成，原数据已恢复：${error?.message||'未知错误'}`,'error');return;}
+    const count=result.count;
     closeModal();render();modal('导入已完成',`<div class="empty-state" style="padding:20px 0">${icon('check')}<h3 data-copy-scope="mixed" data-copy-action="split">已处理 ${count} 项原型数据</h3><p>被跳过的项目保持不变，所有导入任务处于中止状态。<br>设备授权、hooks 执行权限和凭据未继承。</p></div>`,`${btn('恢复导入前数据','undo-import')}${btn('完成','close-modal','primary')}`);S.importRows=null;S.importData=null;S.importChoices={};
 }
 function searchModal(query=''){
@@ -839,8 +1249,23 @@ function handleAction(action,el){
     if(action.startsWith('delete-round-')){confirmDialog('删除这组回复记录？','删除正文与其工具展示记录，不会撤销本地文件改动。此原型仅隐藏样例正文。','delete-message-confirm','删除记录',true);return;}
     switch(action){
     case 'close-modal':closeModal();break;
+    case 'dirty-save-and-continue':{
+        const pending=S.pendingNavigation;
+        if(!pending)break;
+        const commit=formCommitter(pending.scope);
+        if(!commit||!commit())break;
+        if(pending.scope.startsWith('provider:')){S.providerDraftOwner=null;S.providerDraftId=null;S.providerDraftIsNew=false;}
+        closeModal();continueNavigation(pending.target);toast('已保存更改并继续。','success');break;
+    }
+    case 'dirty-discard-and-continue':{
+        const pending=S.pendingNavigation;
+        if(!pending)break;
+        clearEditableDraft(pending.scope);
+        if(pending.scope.startsWith('provider:')&&S.providerDraftOwner===S.editId){S.pendingProviderModels=[];S.pendingCapabilities=null;S.providerDraftOwner=null;S.providerDraftId=null;S.providerDraftIsNew=false;}
+        closeModal();continueNavigation(pending.target);break;
+    }
     case 'close-menu':closeMenu();break;
-    case 'toast-close':$('#toast-root').innerHTML='';break;
+    case 'toast-close':clearTimeout(toast.timer);toast.timer=null;toast.remaining=0;$('#toast-root').innerHTML='';break;
     case 'new-chat':newChat();break;
     case 'back-chat':if(S.conversationOwner==='draft'||!session()){navigate('home');break;}selectSession(S.selected);break;
     case 'toggle-sidebar':if(matchMedia('(max-width: 1100px)').matches&&S.page==='chat'&&session()?.panelOpen){captureInput();session().panelOpen=false;S.collapsed=false;render(true);break;}captureInput();S.collapsed=!S.collapsed;$('.sidebar')?.classList.toggle('collapsed',S.collapsed);document.documentElement.classList.toggle('sidebar-is-collapsed',S.collapsed);if(S.page==='settings'&&S.settingsTab==='appearance')$('.settings-content [data-action="toggle-sidebar"]')?.replaceChildren(document.createTextNode(S.collapsed?'展开侧栏':'收起侧栏'));save();break;
@@ -860,7 +1285,7 @@ function handleAction(action,el){
     case 'approve-command':session().state='running';session().kind='running';session().generatedText='本次命令已获明确批准。正在模拟运行测试，记录将保留在这一轮。';render(true);prototypeToast('仅批准了这一次示例命令。');break;
     case 'approve-plan':session().mode='accept';session().state='running';session().kind='running';sessionWorkspace().backgroundTasks.forEach(task=>{if(task.state==='approval')task.state='done';});S.planApproved=true;render(true);toast('计划已明确批准，进入需审批执行模式。');break;
     case 'deny-approval':stopTask(S.selected,'用户拒绝了待审批操作；未执行该命令或计划。');break;
-    case 'scroll-approval':{$('.approval-card')?.scrollIntoView({block:'center',behavior:S.reduced?'instant':'smooth'});break;}
+    case 'scroll-approval':{$('.approval-card')?.scrollIntoView({block:'center',behavior:syncReducedMotion()?'auto':'smooth'});break;}
     case 'scroll-bottom':if($('#chat-scroll'))$('#chat-scroll').scrollTop=$('#chat-scroll').scrollHeight;break;
     case 'child-back':S.selectedChild=null;render(true);break;
     case 'diff-all':S.diffVariant='all';openPanel('diff');break;
@@ -892,7 +1317,7 @@ function handleAction(action,el){
     case 'save-session-name':if(!$('#rename-input')?.value.trim()){toast('名称不能为空。','error');return;}session().title=$('#rename-input').value.trim();closeModal();render();break;
     case 'delete-session':confirmDialog('删除会话？','删除这份原型中的会话记录。活动任务会先中止，删除不会撤销本机文件改动。','delete-session-confirm','删除会话',true);break;
     case 'delete-session-confirm':{const id=S.selected;clearInterval(demoStreams.get(id));demoStreams.delete(id);if(S.lease===id)S.lease=null;S.sessions=S.sessions.filter(x=>x.id!==id);S.selected=S.sessions[0]?.id||null;closeModal();newChat();break;}
-    case 'export-session':downloadJSON({format:'uah-pc-prototype-session',notice:'演示数据',session:session()},'UAH_Session_Demo.json');closeMenu();break;
+    case 'export-session':downloadJSON(serializeSession(session()),'UAH_Session_Demo.json');closeMenu();break;
     case 'add-project':pickDirectoryFor(S.page==='home'?'main-draft':S.page==='chat'?'main-chat':'main-catalog');break;
     case 'pick-mcp-cwd':pickDirectoryFor('mcp-cwd');break;
     case 'clear-mcp-cwd':readMcpDraft();S.mcpDraft.cwd='';S.mcpDraft.cwdPickerOnly=false;render(true);break;
@@ -910,20 +1335,20 @@ function handleAction(action,el){
     case 'attach-session-confirm':{const item=S.sessions.find(t=>t.id===S.pendingReference);if(!item){toast('会话已不可用。','error');break;}const c=config();c.attachments=c.attachments||[];c.attachments.push({name:`引用会话 · ${item.title}`,source:'session',sessionId:item.id,reference:{title:item.title,userText:item.userText||'',generatedText:item.generatedText||'',followUps:clone(item.followUps||[])}});S.pendingReference=null;closeModal();render(true);toast('已加入会话快照；发送时随当前消息保存。');break;}
     case 'agent-new':navigate('agent-edit','new');break;
     case 'toggle-all-tools':{const boxes=$$('input[name="agent-tool"]'),all=boxes.every(x=>x.checked);boxes.forEach(x=>x.checked=!all);break;}
-    case 'save-agent':{if(!$$('input[name="agent-tool"]:checked').length){toast('请至少选择一种工具；当前版本不支持保存全部禁用的 Agent。','error');return;}const name=$('#agent-name').value.trim();if(!name){toast('Agent 名称不能为空。','error');return;}const old=S.agents.find(x=>x.id===S.editId);const a={id:old?.id||'agent-'+Date.now(),name,desc:$('#agent-desc').value,prompt:$('#agent-prompt').value,model:$('#agent-model').value,icon:old?.icon||'agent',tools:'自定义工具',toolIds:$$('input[name="agent-tool"]:checked').map(x=>x.value)};if(old)Object.assign(old,a);else S.agents.push(a);navigate('agents');prototypeToast('Agent 已保存到原型。');break;}
+    case 'save-agent':if(!commitAgentForm())return;S.skipDirtyGuard=true;try{navigate('agents');}finally{S.skipDirtyGuard=false;}prototypeToast('Agent 已保存到原型。');break;
     case 'delete-agent':confirmDialog('删除这个 Agent？','现有历史保留；引用该 Agent 的新配置会回落到通用助手。','delete-agent-confirm','删除',true);break;
     case 'delete-agent-confirm':{const id=S.editId;S.agents=S.agents.filter(x=>x.id!==id);if(!S.agents.length)S.agents=[clone(AGENTS[0])];for(const t of [...S.sessions,S.draft])if(t.agent===id)t.agent=S.agents[0].id;navigate('agents');break;}
     case 'agent-transfer':case 'provider-transfer':exportModal();break;
-    case 'provider-new':navigate('provider-edit','new');break;
+    case 'provider-new':{const target={type:'provider',id:null};if(requestDirtyNavigation(target))break;const id=beginProviderDraft(null);navigate('provider-edit',id);break;}
     case 'test-provider':case 'mcp-test':case 'test-search':{const old=el?.innerHTML;if(el){el.disabled=true;el.innerHTML=`${icon('refresh')}测试中…`;}setTimeout(()=>{if(el?.isConnected){el.disabled=false;el.innerHTML=old;}S.transientResult='模拟连接通过';prototypeToast('示例连接通过。未发送网络请求，也未产生费用。','success');},650);break;}
     case 'fetch-models':modal('模型目录 · 示例返回',`<p data-copy-scope="mixed" data-copy-action="split">这里演示“接口获取 / 手动添加”的工作流。并未向供应商接口发起请求。</p><div class="list">${MODELS.filter(x=>x.source==='api').map(m=>`<div class="list-row"><div class="grow"><h3>${m.name}</h3><p class="mono">${m.wire}</p></div>${pill(m.media)}</div>`).join('')}</div><div class="notice" style="margin-top:15px">${icon('info')}目录变化先进入供应商草稿，由供应商页“保存配置”统一持久化。</div>`,btn('添加到配置草稿','close-modal','primary'));break;
     case 'model-add':modal('手动添加模型',`${field('显示名称','new-model-name')}${field('模型 ID','new-model-id','','手动输入，不从显示名称推断协议能力。')}`,`${btn('取消','close-modal')}${btn('添加到配置草稿','model-add-save','primary')}`);break;
-    case 'model-add-save':{const wire=$('#new-model-id').value.trim(),name=$('#new-model-name').value.trim();if(!wire||!name){toast('请填写模型名称和 ID。','error');return;}S.pendingProviderModels=S.pendingProviderModels||[];S.pendingProviderModels.push({id:'model-'+Date.now(),name,wire,source:'api',provider:$('#provider-name')?.value||'自定义',runtime:'UAH 自有引擎',efforts:null,media:'能力未声明',context:'未声明'});closeModal();toast('已加入供应商草稿；请点击“保存配置”。');break;}
+    case 'model-add-save':{const wire=$('#new-model-id').value.trim(),name=$('#new-model-name').value.trim();if(!wire||!name){toast('请填写模型名称和 ID。','error');return;}if(S.providerDraftOwner!==S.editId){toast('供应商草稿已失效，请重新打开编辑页。','error');return;}S.pendingProviderModels.push({id:'model-'+Date.now(),name,wire,source:'api',providerId:S.providerDraftId,provider:$('#provider-name')?.value||'自定义',runtime:'UAH 自有引擎',efforts:null,media:'能力未声明',context:'未声明'});closeModal();render(true);toast('已加入供应商草稿；请点击“保存配置”。');break;}
     case 'save-model-capabilities':S.pendingCapabilities={modelId:S.editModelId,context:$('#model-context')?.value||'',supportsVision:$('#model-vision')?.checked||false};closeModal();toast('能力修改保留在供应商草稿；请保存供应商。');break;
     case 'restore-model-capabilities':$('#model-context').value='';$('#model-vision').checked=false;toast('已清除手动覆盖；恢复接口声明。');break;
-    case 'save-provider':{const name=$('#provider-name').value.trim(),endpoint=$('#provider-endpoint').value.trim();if(!name||!/^https?:\/\//i.test(endpoint)){toast('请填写名称和有效的 HTTP(S) 接口地址。','error');return;}const old=S.providers.find(x=>x.id===S.editId);const p={id:old?.id||'provider-'+Date.now(),name,endpoint,protocol:$('#provider-protocol').value,models:(old?.models||0)+(S.pendingProviderModels?.length||0),enabled:old?.enabled||false};if(old)Object.assign(old,p);else S.providers.push(p);if(S.pendingProviderModels?.length){MODELS.push(...S.pendingProviderModels);S.pendingProviderModels=[];}if(S.pendingCapabilities){const m=MODELS.find(x=>x.id===S.pendingCapabilities.modelId);if(m){m.contextOverride=S.pendingCapabilities.context;m.media=S.pendingCapabilities.supportsVision?'文本 · 图像（手动覆盖）':'文本（手动覆盖）';}S.pendingCapabilities=null;}navigate('models');toast('已保存非敏感配置。API Key 和请求头未持久化。');break;}
+    case 'save-provider':if(!commitProviderForm())return;S.providerDraftOwner=null;S.providerDraftId=null;S.providerDraftIsNew=false;S.skipDirtyGuard=true;try{navigate('models');}finally{S.skipDirtyGuard=false;}toast('已保存非敏感配置。API Key 和请求头未持久化。');break;
     case 'delete-provider':confirmDialog('删除供应商？','只删除原型中的非敏感配置，相关历史记录保留。','delete-provider-confirm','删除供应商',true);break;
-    case 'delete-provider-confirm':S.providers=S.providers.filter(x=>x.id!==S.editId);navigate('models');break;
+    case 'delete-provider-confirm':S.providers=S.providers.filter(x=>x.id!==S.editId);S.pendingProviderModels=[];S.pendingCapabilities=null;S.providerDraftOwner=null;S.providerDraftId=null;S.providerDraftIsNew=false;save();navigate('models');break;
     case 'runtime-capabilities':S.modelTab='capabilities';navigate('models');break;
     case 'runtime-detect':{const r=S.runtimes.find(x=>x.id===S.editId);if(!r.installed){modal('官方客户端安装',`<p data-copy-scope="mixed" data-copy-action="split">正式桌面版会提供官方安装说明及安装状态检测，不修改官方客户端。原型仅演示未安装 → 已检测状态。</p><div class="subtle-box">${esc(r.engine)}</div>`,`${btn('取消','close-modal')}${btn('模拟已安装','runtime-installed','primary')}`);}else prototypeToast('已模拟重新检测到官方客户端。');break;}
     case 'runtime-installed':S.runtimes.find(x=>x.id===S.editId).installed=true;closeModal();render(true);break;
@@ -977,7 +1402,7 @@ function handleAction(action,el){
     case 'skill-parent':navigate('plugin-detail','vue');break;
     case 'skill-reference':modal('references / components.md',`<article class="prose"><h3>组件约定</h3><p>保持 props 与事件语义明确；加载、禁用、错误与空状态必须可见。</p><p>这是关联资源预览，不会执行脚本。</p></article>`,btn('关闭','close-modal'));break;
     case 'memory-new':navigate('memory-edit','new');break;
-    case 'memory-save':{const title=$('#memory-title').value.trim(),body=$('#memory-body').value.trim();if(!title||!body){toast('标题和内容不能为空。','error');return;}const old=S.memories.find(x=>x.id===S.editId),m={id:old?.id||'m'+Date.now(),title,body,scope:$('#memory-scope').value,updated:'刚刚'};if(old)Object.assign(old,m);else S.memories.push(m);navigate('memory');break;}
+    case 'memory-save':if(!commitMemoryForm())return;S.skipDirtyGuard=true;try{navigate('memory');}finally{S.skipDirtyGuard=false;}break;
     case 'memory-delete':confirmDialog('删除记忆？','仅删除当前记忆条目，相关会话历史仍保留。','memory-delete-confirm','删除',true);break;
     case 'memory-delete-confirm':S.memories=S.memories.filter(x=>x.id!==S.editId);navigate('memory');break;
     case 'file-source':S.fileSource=!S.fileSource;render(true);break;
@@ -1010,12 +1435,12 @@ function handleAction(action,el){
     case 'browser-refresh':S.targetChanged=true;render(true);prototypeToast('示例页面已刷新，旧观察快照失效。');break;
     case 'terminal-new':{const t=session();t.manualTerminals=t.manualTerminals||[];t.manualTerminals.push({name:'PowerShell '+(t.manualTerminals.length+1),lines:['新建的独立手动终端（演示）','目录：'+(t.worktree||project(t.project)?.path),'输入 help 查看示例命令。']});t.activeTerminal=t.manualTerminals.length-1;S.terminalTab=0;render(true);prototypeToast('已创建独立的示例终端标签。');break;}
     case 'terminal-clear':S.terminalOutput=[];render(true);break;
-    case 'save-search':save();toast('已保存非敏感搜索设置；服务密钥不保存。');break;
+    case 'save-search':{const persisted=commitSearchForm();toast(persisted?'已保存非敏感搜索设置；服务密钥不保存。':'搜索设置仅保留在当前原型会话中，浏览器未能持久化。',''+(persisted?'success':'error'));render(true);break;}
     case 'import-data':importModal(false);break;
     case 'choose-import-file':$('#config-input').click();break;
     case 'demo-import':S.importRows=null;S.importData=null;importModal(true);break;
     case 'apply-import':applyImport();break;
-    case 'undo-import':if(S.importBackup){Object.assign(S,S.importBackup);S.importBackup=null;closeModal();render();prototypeToast('已恢复导入前的原型数据。');}break;
+    case 'undo-import':if(S.importBackup){const current=importSnapshot();Object.assign(S,clone(S.importBackup));if(!save()){Object.assign(S,current);toast('未能保存恢复结果，当前数据未改变；可以重试恢复。','error');break;}S.importBackup=null;closeModal();render();prototypeToast('已恢复导入前的原型数据。');}break;
     case 'export-data':exportModal();break;
     case 'perform-export':{const sections=$$('input[name="export-section"]:checked').map(x=>x.value);if(!sections.length){toast('请至少选择一类数据。','error');return;}S.exportSections=sections;if($('#export-sensitive').checked){confirmDialog('再次确认敏感导出','真实应用中此选项可能包含密钥和附加请求头，请勿随意分享。原型没有存储凭据，只导出明确的演示说明。','sensitive-export-confirm','确认导出演示文件');}else performExport(sections);break;}
     case 'sensitive-export-confirm':performExport(S.exportSections,true);break;
@@ -1072,7 +1497,7 @@ document.addEventListener('click',event=>{
     if(d.terminalTab!==undefined){S.terminalTab=Number(d.terminalTab);render(true);return;}
     if(d.copy!==undefined){copyText(d.copy);return;}
     if(d.agentEdit){navigate('agent-edit',d.agentEdit);return;}
-    if(d.provider){S.pendingProviderModels=[];navigate('provider-edit',d.provider);return;}
+    if(d.provider){const target={type:'provider',id:d.provider};if(requestDirtyNavigation(target))return;const id=beginProviderDraft(d.provider);navigate('provider-edit',id);return;}
     if(d.runtime){navigate('runtime',d.runtime);return;}
     if(d.modelTab){S.modelTab=d.modelTab;render();return;}
     if(d.adapterMode){S.adapterMode=d.adapterMode;render(true);return;}
@@ -1086,7 +1511,7 @@ document.addEventListener('click',event=>{
     if(d.skill){navigate('skill-detail',d.skill);return;}
     if(d.memory){navigate('memory-edit',d.memory);return;}
     if(d.file){S.fileId=d.file;S.fileSource=false;render(true);return;}
-    if(d.settingsTab){S.settingsTab=d.settingsTab;render();return;}
+    if(d.settingsTab){const target={type:'settings-tab',id:d.settingsTab};if(requestDirtyNavigation(target))return;S.settingsTab=d.settingsTab;render();return;}
     if(d.themeChoice){setTheme(d.themeChoice);render(true);return;}
     if(d.switch){handleSwitch(d.switch);return;}
     if(d.stop){stopTask(d.stop);return;}
@@ -1101,9 +1526,14 @@ document.addEventListener('input',event=>{
     if(el.dataset.filter)filterRows(el.dataset.filter,el.value);
     if(el.id==='global-search')$('#search-results').innerHTML=searchResults(el.value);
     if(el.id==='effort-slider')updateEffortPreview(effortOptions(model())[Number(el.value)]);
+    if(el.id==='composer-input'){
+        config().input=el.value;
+        const send=$('#send-button');if(send)send.disabled=!el.value.trim()||!selectedModelAvailable(config());
+    } else if(formScope()) captureEditableDrafts();
 });
 document.addEventListener('change',event=>{
     const el=event.target;
+    if(formScope())captureEditableDrafts();
     if(['mcp-form-transport','mcp-form-auth'].includes(el.id)){readMcpDraft();render(true);return;}
     if(el.id==='effort-slider'){commitEffort(effortOptions(model())[Number(el.value)]);return;}
     if(el.dataset.change==='task-filter'){S.taskFilter=el.value;render(true);return;}
@@ -1112,7 +1542,7 @@ document.addEventListener('change',event=>{
     if(el.id==='plugin-project'){S.pluginProject=el.value;render(true);return;}
     if(el.id==='files-project'){S.project=el.value;render(true);return;}
     if(el.id==='memory-filter'){S.memoryFilter=el.value;render(true);return;}
-    if(el.id==='font-choice'){document.documentElement.style.setProperty('--serif',el.value==='无衬线优先'?'var(--font)':"Georgia, 'Noto Serif CJK SC', SimSun, serif");return;}
+    if(el.id==='font-choice'){S.fontChoice=el.value==='sans'?'sans':'system';const persisted=save();render(true);toast(persisted?'字体选择已保存。':'字体已切换，但仅保留在当前原型会话中。',persisted?'success':'error');return;}
     if(el.id==='send-shortcut'){S.sendShortcut=el.value;save();toast(`发送快捷键已改为 ${sendShortcutLabel()}。`);return;}
 });
 document.addEventListener('keydown',event=>{
@@ -1142,6 +1572,34 @@ $('#directory-picker-input').addEventListener('change',event=>{
     if(name)applyPickedDirectory(name,S.pendingDirectoryTarget||'main-draft');
     else toast('未选择文件夹；此浏览器的备用选择器可能不支持空目录。');
 });
+function sanitizeImportedSession(item,index=0){
+    const text=(value,max=15000)=>typeof value==='string'?value.slice(0,max):'';
+    const label=(value,fallback='')=>text(value,200)||fallback;
+    const id=/^[a-zA-Z0-9_-]{1,100}$/.test(item.id)?item.id:`import-session-${index}`;
+    const safeRelativePath=value=>{const path=text(value,300).replace(/\\/g,'/');return path&&!path.startsWith('/')&&!/^[a-zA-Z]:/.test(path)&&!path.split('/').includes('..')?path:'';};
+    const sourceWorkspace=item.workspace&&typeof item.workspace==='object'?item.workspace:{};
+    const sourcePlan=sourceWorkspace.planFile&&typeof sourceWorkspace.planFile==='object'?sourceWorkspace.planFile:null;
+    const planPath=safeRelativePath(sourcePlan?.path);
+    const sourceTasks=Array.isArray(sourceWorkspace.backgroundTasks)?sourceWorkspace.backgroundTasks:[];
+    const sourceAgents=Array.isArray(sourceWorkspace.subagents)?sourceWorkspace.subagents:[];
+    const allowedStates=new Set(['done','failed','stopped','running','approval']);
+    const workspace={
+        planFile:planPath?{path:planPath,saved:label(sourcePlan.saved,'导入'),content:text(sourcePlan.content)}:null,
+        backgroundTasks:sourceTasks.slice(0,100).map((task,i)=>({id:/^[a-zA-Z0-9_-]{1,100}$/.test(task?.id)?task.id:`import-task-${i}`,title:label(task?.title,'导入任务'),state:['running','approval'].includes(task?.state)?'stopped':allowedStates.has(task?.state)?task.state:'stopped',detail:label(task?.detail,'导入的历史任务'),time:label(task?.time,'导入')})),
+        subagents:sourceAgents.slice(0,50).map((agent,i)=>({id:/^[a-zA-Z0-9_-]{1,100}$/.test(agent?.id)?agent.id:`import-agent-${i}`,title:label(agent?.title,'导入子代理'),model:label(agent?.model,'未上报'),state:['running','approval'].includes(agent?.state)?'stopped':allowedStates.has(agent?.state)?agent.state:'stopped',turns:(Array.isArray(agent?.turns)?agent.turns:[]).slice(0,200).map(turn=>({role:['user','assistant','tool'].includes(turn?.role)?turn.role:'assistant',name:label(turn?.name),text:text(turn?.text)}))})),
+    };
+    return {
+        id,title:label(item.title,'导入会话'),project:S.projects.some(project=>project.id===item.project)?item.project:'agentapp',
+        state:'stopped',kind:['chat','approval','running','stopped','generated','markdown','error','plan-approval'].includes(item.kind)?item.kind:'chat',
+        model:typeof item.model==='string'&&item.model?item.model:null,agent:S.agents.some(candidate=>candidate.id===item.agent)?item.agent:'general',
+        mode:['readonly','plan','accept','auto'].includes(item.mode)?item.mode:'readonly',round:Number.isFinite(item.round)?Math.max(1,Math.min(100,item.round)):1,
+        userText:text(item.userText),generatedText:text(item.generatedText),editedReply:text(item.editedReply),followUps:(Array.isArray(item.followUps)?item.followUps:[]).slice(0,100).map(value=>text(value)),
+        hideReply:!!item.hideReply,created:label(item.created,'导入'),tabs:(Array.isArray(item.tabs)?item.tabs:[]).filter(tab=>Object.prototype.hasOwnProperty.call(PANEL_INFO,tab)),
+        panel:Object.prototype.hasOwnProperty.call(PANEL_INFO,item.panel)?item.panel:'plan',panelOpen:false,pinned:false,stoppedReason:'导入的历史记录，不会自动执行。',
+        input:'',attachments:[],extraDirectories:[],worktree:null,workspace,scrollTop:Number.isFinite(item.scrollTop)?Math.max(0,Math.min(100000,item.scrollTop)):0,
+        panelScroll:item.panelScroll&&typeof item.panelScroll==='object'?Object.fromEntries(Object.entries(item.panelScroll).filter(([key,value])=>Object.prototype.hasOwnProperty.call(PANEL_INFO,key)&&Number.isFinite(value)).map(([key,value])=>[key,Math.max(0,Math.min(100000,value))])):{},
+    };
+}
 function sanitizeImportedItem(key,item,index){
     if(!item||typeof item!=='object'||Array.isArray(item))return null;
     const text=(v,max=500)=>typeof v==='string'?v.slice(0,max):'';
@@ -1150,7 +1608,7 @@ function sanitizeImportedItem(key,item,index){
     if(key==='agents')return {id,name:label(item.name)||'导入 Agent',desc:text(item.desc),prompt:text(item.prompt,15000),icon:'agent',model:'跟随会话',tools:'未单独授权',toolIds:['read']};
     if(key==='memories')return {id,title:label(item.title)||'导入记忆',body:text(item.body,15000),scope:label(item.scope)||'全局',updated:'刚刚'};
     if(key==='providers')return {id,name:label(item.name)||'导入供应商',protocol:['OpenAI 兼容','Anthropic Messages','Gemini','自定义模板'].includes(item.protocol)?item.protocol:'OpenAI 兼容',endpoint:text(item.endpoint),models:Number.isFinite(item.models)?Math.min(100,item.models):0,enabled:false};
-    if(key==='sessions')return {...clone(SESSIONS[0]),id,title:label(item.title)||'导入会话',userText:text(item.userText,15000),project:'agentapp',state:'stopped',kind:'stopped',model:'sonnet-api',agent:'general',mode:'readonly',attachments:[],input:'',followUps:[],worktree:null,panelOpen:false};
+    if(key==='sessions')return sanitizeImportedSession(item,index);
     if(key==='mcps')return {id,name:label(item.name)||'导入 MCP',transport:item.transport==='Streamable HTTP'?'Streamable HTTP':'stdio',command:text(item.command),desc:'导入的未验证配置',status:'error',enabled:false,tools:0,resources:0,prompts:0};
     if(key==='plugins')return {id,name:label(item.name)||'导入插件',slug:label(item.slug),version:label(item.version),format:label(item.format)||'待验证',skills:0,agents:0,mcp:0,hooks:0,enabled:false,icon:'puzzle'};
     return null;
@@ -1159,14 +1617,25 @@ $('#config-input').addEventListener('change',async event=>{
     const file=event.target.files[0];event.target.value='';if(!file)return;
     if(file.size>2*1024*1024){prototypeToast('原型只接受小于 2 MB 的 JSON 演示数据。','error');return;}
     if(!file.name.toLowerCase().endsWith('.json')){prototypeToast('ZIP 恢复只提供流程演示，请使用内置冲突样本。');return;}
-    try{const raw=JSON.parse(await file.text());if(raw.format!=='uah-pc-ui-prototype'||!raw.data||typeof raw.data!=='object')throw new Error('不是这份原型的 JSON 导出格式');
-        S.importData={};S.importRows=[];const names={agents:'Agent',providers:'供应商',memories:'记忆',sessions:'会话',mcps:'MCP',plugins:'插件'};
-        for(const key of Object.keys(names)){if(!Array.isArray(raw.data[key]))continue;const items=raw.data[key].slice(0,50).map((x,i)=>sanitizeImportedItem(key,x,i)).filter(Boolean);S.importData[key]=items;for(const item of items)S.importRows.push({key:`${key}:${item.id}`,originalId:item.id,name:item.name||item.title,type:names[key],status:S[key].some(x=>x.id===item.id)?'ID 已存在，等待选择':'新条目，等待确认'});}
+    try{const raw=JSON.parse(await file.text());
+        const names={agents:'Agent',providers:'供应商',memories:'记忆',sessions:'会话',mcps:'MCP',plugins:'插件'};
+        if(raw.format==='uah-pc-prototype-session'&&raw.session&&typeof raw.session==='object'){
+            const item=sanitizeImportedSession(raw.session,0);S.importData={sessions:[item]};S.importRows=[{key:`sessions:${item.id}`,originalId:item.id,name:item.title,type:'会话',status:S.sessions.some(existing=>existing.id===item.id)?'ID 已存在，等待选择':'单会话导出，等待确认'}];
+        }else{
+            if(raw.format!=='uah-pc-ui-prototype'||!raw.data||typeof raw.data!=='object')throw new Error('不是这份原型的 JSON 导出格式');
+            S.importData={};S.importRows=[];
+            for(const key of Object.keys(names)){if(!Array.isArray(raw.data[key]))continue;const items=raw.data[key].slice(0,50).map((x,i)=>sanitizeImportedItem(key,x,i)).filter(Boolean);S.importData[key]=items;for(const item of items)S.importRows.push({key:`${key}:${item.id}`,originalId:item.id,name:item.name||item.title,type:names[key],status:S[key].some(x=>x.id===item.id)?'ID 已存在，等待选择':'新条目，等待确认'});}
+        }
         if(!S.importRows.length)throw new Error('文件中没有支持的数据条目');S.importChoices={};importModal(true);
     }catch(error){toast('导入校验失败：'+error.message,'error');}
 });
 window.addEventListener('beforeunload',()=>{if(S.resetting)return;for(const t of S.sessions)if(isBusy(t)){t.state='stopped';t.kind='stopped';t.stoppedReason='页面退出时中止；重新打开不会自动续跑。';sessionWorkspace(t).backgroundTasks.forEach(task=>{if(['running','approval'].includes(task.state))task.state='stopped';});}S.lease=null;save();});
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(S.theme==='system')setTheme('system');});
+matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',event=>{
+    syncReducedMotion();
+    if(event.matches)for(const item of S.sessions)if(item.panelDesired===false)cancelPanelTransition(item,true);
+    render(true);
+});
 const demoStreams=new Map();
 function startDemoStream(id){
     const task=S.sessions.find(t=>t.id===id);if(!task)return;
@@ -1252,12 +1721,13 @@ function guideModal(){modal('原型导览',`<p data-copy-scope="mixed" data-copy
 function applyScene(id){
     for(const timer of demoStreams.values())clearInterval(timer);demoStreams.clear();
     closeMenu();closeModal();S.scene=id;S.conversationOwner='session';S.sessions=clone(SESSIONS);S.projects=clone(PROJECTS);S.selected='s1';S.page='chat';S.details={};S.fileId='readme';S.fileSource=false;S.diffVariant='normal';S.diffFile='tool';S.selectedChild=null;S.modelTab='api';S.mcpTab='tools';S.compacted=false;S.lease=null;S.targetChanged=false;S.pendingSessionProject=null;S.browserLogs=[];S.browserTabs=[{name:'本地预览',url:'http://localhost:5173'},{name:'账号登录',url:'https://example.com/login'}];S.browserTab=0;S.browserUrl='http://localhost:5173';S.browserAllowed=false;S.switches.browser=false;S.switches.computer=false;S.collapsed=false;S.transientResult='';S.taskFilter='all';
-    S.agents=clone(AGENTS);S.providers=clone(PROVIDERS);S.runtimes=clone(RUNTIMES);S.mcps=clone(MCPS);S.plugins=clone(PLUGINS);S.memories=clone(MEMORIES);S.draft={project:null,agent:'coder',model:id==='home-ready'?'sonnet-api':null,mode:'accept',effort:'medium',readDirectories:[],writeDirectories:[],additionalDirectories:[],input:'',attachments:[]};S.editId=null;S.newSessionCounter=6;
+    S.agents=clone(AGENTS);S.providers=clone(PROVIDERS);S.runtimes=clone(RUNTIMES);S.mcps=clone(MCPS);S.plugins=clone(PLUGINS);S.memories=clone(MEMORIES);S.draft={project:null,agent:'coder',model:id==='home-ready'?'sonnet-api':null,mode:'accept',effort:'medium',readDirectories:[],writeDirectories:[],additionalDirectories:[],input:'',attachments:[]};S.editId=null;S.newSessionCounter=6;S.pendingProviderModels=[];S.pendingCapabilities=null;S.providerDraftOwner=null;S.providerDraftId=null;S.providerDraftIsNew=false;S.editableDrafts={};S.formBaselines={};S.pendingNavigation=null;
     const simple={agents:['agents'], 'agent-edit':['agent-edit','coder'],models:['models'],'provider-edit':['provider-edit','anthropic'],runtime:['runtime','claude'],mcp:['mcp'],'mcp-detail':['mcp-detail','filesystem'],'mcp-auth':['mcp-detail','github'],'mcp-error':['mcp-detail','notes-mcp'],plugins:['plugins'],'plugin-detail':['plugin-detail','vue'],skills:['skills'],'skill-detail':['skill-detail','vue-component'],memory:['memory'],'memory-edit':['memory-edit','m1'],files:['files']};
     const settings={appearance:'appearance',computer:'computer','browser-settings':'browser','search-settings':'search',data:'data'};
     const panels={diff:'diff','diff-missing':'diff','diff-large':'diff','diff-uncertain':'diff','diff-binary':'diff','diff-renamed':'diff',plan:'plan',tasks:'tasks',subagents:'agents',child:'agents',browser:'browser','browser-auth':'browser','browser-stale':'browser',terminal:'terminal'};
     if(id==='home'||id==='home-ready'){S.page='home';if(id==='home-ready'){S.draft.project='agentapp';S.draft.input='阅读项目规范，为工具调用的内联展开制定实施计划。';}}
     if(simple[id]){S.page=simple[id][0];S.editId=simple[id][1]||null;}
+    if(id==='provider-edit')beginProviderDraft('anthropic');
     if(settings[id]){S.page='settings';S.settingsTab=settings[id];}
     if(panels[id]){const t=session();t.panelOpen=true;t.panel=panels[id];t.tabs=Array.from(new Set(['plan',panels[id]]));}
     if(id==='command')S.details['s1/command']=true;
@@ -1296,7 +1766,7 @@ function applyScene(id){
     try{history.replaceState(null,'',`#scene=${encodeURIComponent(id)}`);}catch(_){}
     save();
 }
-window.UAH={getState:()=>S,scenes:SCENES,scene:applyScene,render,action:handleAction,setTheme:value=>{setTheme(value);render(true);},selectSession,openPanel,selectModel,newChat,chooseProject,sendMessage,stopTask};
+window.UAH={getState:()=>S,scenes:SCENES,scene:applyScene,render,action:handleAction,setTheme:value=>{setTheme(value);render(true);},selectSession,openPanel,selectModel,newChat,chooseProject,sendMessage,stopTask,buildImportPlan,commitImportPlan,serializeSession,sanitizeImportedSession,modelAvailability,toastForTest:(text,duration=6500)=>toast(text,'info','product',duration)};
 setTheme(S.theme);
 const initial=new URLSearchParams(location.hash.replace(/^#/,''));
 if(initial.get('scene')&&SCENES.some(s=>s[0]===initial.get('scene')))applyScene(initial.get('scene'));else render();

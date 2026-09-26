@@ -6,3 +6,15 @@ __pycache__/
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# Desktop build and local development state
+node_modules/
+dist/
+artifacts/
+.idea/
+.venv-prototype/
+native/**/bin/
+native/**/obj/
+*.db
+*.db-shm
+*.db-wal
