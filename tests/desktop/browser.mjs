@@ -15,6 +15,7 @@ try {
     page.setDefaultTimeout(15000);
     await page.getByRole('textbox', { name: '消息', exact: true }).waitFor();
     await page.getByRole('combobox', { name: '运行模型', exact: true }).selectOption('local-verification');
+    await page.getByRole('button', { name: '无目录', exact: true }).click();
     await page.getByRole('textbox', { name: '消息', exact: true }).fill('浏览器宿主验证');
     await page.getByRole('button', { name: '发送消息', exact: true }).click();
     await page.getByRole('button', { name: '工作面板', exact: true }).click();
@@ -78,6 +79,7 @@ try {
     await desktop.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(1));
     await page.getByRole('button', { name: '新对话', exact: true }).click();
     await page.getByRole('combobox', { name: '运行模型', exact: true }).selectOption('local-verification');
+    assert.equal(await page.getByRole('button', { name: '无目录', exact: true }).count(), 0, 'new sessions inherit the last created session directory choice');
     await page.getByRole('textbox', { name: '消息', exact: true }).fill('第二个浏览器会话');
     await page.getByRole('button', { name: '发送消息', exact: true }).click();
     await page.getByRole('button', { name: '工作面板', exact: true }).click();
@@ -98,7 +100,7 @@ try {
     await page.getByRole('button', { name: '设置', exact: true }).click();
     assert.equal(await desktop.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.find((view) => view.webContents?.getURL().startsWith('https://example.com')).getVisible()), false);
     checks.push('management view hides remote content before opening dialogs');
-    await page.getByRole('button', { name: '返回对话', exact: true }).click();
+    await page.getByRole('navigation', { name: '会话列表' }).getByRole('button', { name: /浏览器宿主验证/ }).click();
     await page.getByRole('button', { name: '关闭网页', exact: true }).click();
     assert.equal(await desktop.evaluate(({ webContents }, firstId) => Boolean(webContents.fromId(firstId)), isolation.id), false);
     checks.push('explicit close releases the selected browser host');

@@ -10,12 +10,15 @@ import type {
     SessionRecord,
     Snapshot,
 } from '../shared/contracts.js';
+import type { RequestContextDetail } from '../shared/request-context';
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const MAX_SESSIONS = 5_000;
 const MAX_RUNS = 500;
 
 export interface StoreCommit {
+    contexts?: RequestContextDetail[];
+    clearContextSessions?: string[];
     sessions?: SessionRecord[];
     runs?: RunRecord[];
     approvals?: ApprovalRecord[];
@@ -116,6 +119,9 @@ export class RuntimeStore {
         this.assertOpen();
         this.database.exec('BEGIN IMMEDIATE;');
         try {
+            for (const sessionId of changes.clearContextSessions ?? []) {
+                this.database.prepare('DELETE FROM request_contexts WHERE run_id IN (SELECT id FROM runs WHERE session_id = ?)').run(sessionId);
+            }
             for (const session of changes.sessions ?? []) {
                 this.database
                     .prepare(
@@ -152,6 +158,11 @@ export class RuntimeStore {
                             data = excluded.data`,
                     )
                     .run(approval.requestId, approval.runId, approval.status, serialize(approval));
+            }
+
+            for (const context of changes.contexts ?? []) {
+                this.database.prepare('INSERT INTO request_contexts (run_id, data) VALUES (?, ?) ON CONFLICT(run_id) DO UPDATE SET data = excluded.data')
+                    .run(context.runId, serialize(context));
             }
 
             for (const artifact of changes.artifacts ?? []) {
@@ -200,6 +211,12 @@ export class RuntimeStore {
         this.closed = true;
     }
 
+    readRequestContext(runId: string): RequestContextDetail | null {
+        this.assertOpen();
+        const row = this.database.prepare('SELECT data FROM request_contexts WHERE run_id = ?').get(runId) as { data: string } | undefined;
+        return row ? parseRow<RequestContextDetail>(row.data, 'request_contexts') : null;
+    }
+
     private initializeSchema(): void {
         const row = this.database.prepare('PRAGMA user_version').get() as {
             user_version: number;
@@ -216,7 +233,7 @@ export class RuntimeStore {
 
         this.database.exec('BEGIN EXCLUSIVE;');
         try {
-            this.database.exec(`
+            if (currentVersion === 0) this.database.exec(`
                 CREATE TABLE sessions (
                     id TEXT PRIMARY KEY,
                     created_at TEXT NOT NULL,
@@ -256,6 +273,12 @@ export class RuntimeStore {
                 );
                 CREATE UNIQUE INDEX events_run_sequence
                     ON events(run_id, sequence) WHERE run_id <> '';
+            `);
+            this.database.exec(`
+                CREATE TABLE request_contexts (
+                    run_id TEXT PRIMARY KEY REFERENCES runs(id) ON DELETE CASCADE,
+                    data TEXT NOT NULL
+                );
                 PRAGMA user_version = ${SCHEMA_VERSION};
             `);
             this.database.exec('COMMIT;');

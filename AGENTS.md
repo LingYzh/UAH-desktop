@@ -17,3 +17,10 @@
 - UI 唯一实现位于相邻 UI 仓库。UAH 通过 `@lingyzh/ui`（`file:../UI`）导入，保持 Vue dedupe，不复制组件源码回 UAH。
 
 新会话首先阅读 `docs/HANDOFF.md`，并检查两个仓库的实际状态，不将交接中的历史状态当成当前状态。
+
+## 提示词运行时上下文维护
+
+- 接入或变更目录、Git 状态、记忆、MCP、工具能力时，同时检查 `src/runtime/prompt-context.ts`、`src/shared/claude-harness-prompts.ts` 和 `src/shared/gpt-harness-prompts.ts`，更新上下文提供器、缺省说明及测试；不得让提示词继续声明已接入能力不可用，或虚构未接入能力。
+- 动态状态在每次模型请求前解析，不能写回 Agent 配置或历史指令快照。保留用户编辑与不含上下文标记的普通提示词；字段缺失时使用明确未知/未接入说明。详见 `docs/AGENT-PRESETS.md`。
+- 原生 Codex 运行时接入先读 `docs/CODEX-RUNTIME.md`。API portable 预设不能直接当作 Codex 的基础覆盖文件；默认由原生运行时按真实模型组装指令，职责和工具各由单一运行时负责。
+- API 条件装配入口为 `src/runtime/prompt-assembler.ts`，基座／角色适配在 `src/shared/conditional-prompts.ts`。新工具或能力必须使用实际工具注册结果作为启用依据，并补充模块条件、版本、脱敏诊断和切换测试；不要恢复旧的无条件工具长说明。旧品牌完整绑定文件保留为精确迁移来源，不应随新能力修改而破坏旧默认识别。见 `docs/CONDITIONAL-PROMPTS.md`。

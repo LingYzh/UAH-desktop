@@ -1,0 +1,71 @@
+{
+    "checked_date": "2026-09-27",
+    "release": {
+        "version": "0.157.1",
+        "tag": "rust-v0.157.1",
+        "commit": "36650394c5b38c2990ccf2a3457165ca3e9d9726",
+        "published_at": "2026-09-26T01:02:31Z",
+        "release_id": 397006677,
+        "prerelease": false
+    },
+    "model_snapshot": "gpt-6-astra",
+    "catalog": {
+        "path": "codex-rs/models-manager/models.json",
+        "git_blob_sha": "8fd2c078f857aa9e12ee2b74131e539d3ead520f",
+        "size_bytes": 424356,
+        "url": "https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/models-manager/models.json"
+    },
+    "source_selectors": {
+        "original/gpt-6-astra.base.md": "models[slug=gpt-6-astra].model_messages.instructions_template",
+        "original/gpt-6-astra.root-role.md": "models[slug=gpt-6-astra].model_messages.multi_agent.role.root",
+        "original/gpt-6-astra.subagent-role.md": "models[slug=gpt-6-astra].model_messages.multi_agent.role.subagent",
+        "original/bundled/root-role.md": "DEFAULT_MULTI_AGENT_V2_ROOT_AGENT_USAGE_HINT_TEXT",
+        "original/bundled/subagent-role.md": "DEFAULT_MULTI_AGENT_V2_SUBAGENT_USAGE_HINT_TEXT",
+        "original/multi-agent.shared-runtime.txt": "DEFAULT_MULTI_AGENT_V2_SHARED_USAGE_HINT_TEXT",
+        "original/multi-agent.wait-hint.txt": "DEFAULT_MULTI_AGENT_V2_WAIT_AGENT_USAGE_HINT_TEXT",
+        "original/multi-agent.model-override-hint.txt": "DEFAULT_MULTI_AGENT_V2_MODEL_OVERRIDE_USAGE_HINT_TEXT",
+        "original/multi-agent.explicit-mode.txt": "EXPLICIT_REQUEST_ONLY_MULTI_AGENT_MODE_TEXT",
+        "original/multi-agent.proactive-mode.txt": "PROACTIVE_MULTI_AGENT_MODE_TEXT",
+        "original/multi-agent.concurrency-format.txt": "Runtime format string in MultiAgentRoleInstructions::body; not rendered."
+    },
+    "source_code": [
+        {
+            "path": "codex-rs/prompts/src/model_instructions.rs",
+            "git_blob_sha": "a169e408b65ae96b8e8f70ca806cbe2ba8eb885e",
+            "url": "https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/prompts/src/model_instructions.rs"
+        },
+        {
+            "path": "codex-rs/prompts/src/model_messages.rs",
+            "git_blob_sha": "ac6ec4042c7b0a47a3adfc87869f57fc5e353072",
+            "url": "https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/prompts/src/model_messages.rs"
+        },
+        {
+            "path": "codex-rs/prompts/src/model_messages/multi_agent.rs",
+            "git_blob_sha": "533b52d6db392e04b239af7b12c0248908836cfa",
+            "url": "https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/prompts/src/model_messages/multi_agent.rs"
+        },
+        {
+            "path": "codex-rs/prompts/src/multi_agent_instructions.rs",
+            "git_blob_sha": "b9ed30e9b7d8e1d8f44a8627c80e485acc461bb2",
+            "url": "https://github.com/openai/codex/blob/36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/prompts/src/multi_agent_instructions.rs"
+        }
+    ],
+    "extraction": {
+        "method": "Full source strings read through the official GitHub connector and transferred as decoded UTF-8 Markdown/text.",
+        "changes_to_source_extracts": "JSON and Rust literal quoting removed. No intentional wording changes.",
+        "independent_upstream_byte_comparison": "Not executed in this environment; export_originals.py --verify-pack provides independent verification.",
+        "complete_runtime_capture": false
+    },
+    "adaptations": {
+        "language": "English source-preserving adaptation with Chinese integration documentation",
+        "host_placeholders": 34,
+        "shared_base_plus_role": true,
+        "changes_recorded_in": "evidence/*.diff"
+    },
+    "validation": {
+        "unit_tests_passed": 18,
+        "live_codex_exec_run": false,
+        "paid_model_calls": 0,
+        "license_notice_git_blob_verified": true
+    }
+}

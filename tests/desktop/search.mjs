@@ -42,12 +42,19 @@ try {
     await page.waitForFunction(() => document.querySelector('.search-dialog')?.dataset.state === 'open');
     assert.equal(Math.round((await search.boundingBox()).width), 800);
     assert.equal(await search.getByRole('button', { name: /修复输入框布局/ }).count(), 1);
-    assert.equal(await search.getByRole('button', { name: /模型与账号/ }).isDisabled(), true);
+    assert.equal(await search.getByRole('button', { name: /模型与账号/ }).isDisabled(), false);
     await capture('01-search-all.png');
     await page.keyboard.press('Escape');
     await search.waitFor({ state: 'hidden' });
     assert.equal(await page.locator('.search-toggle').evaluate((element) => document.activeElement === element), true);
     passed.push('prototype-sized global modal, grouped sessions and shortcuts, autofocus and Escape focus restoration');
+
+    await open();
+    await input.fill('模型与账号');
+    await search.getByRole('button', { name: '模型与账号', exact: true }).click();
+    await page.getByRole('heading', { name: '模型与账号', exact: true }).waitFor();
+    await page.getByRole('button', { name: '新对话', exact: true }).click();
+    passed.push('model shortcut opens the implemented endpoint manager');
 
     await open();
     await input.fill('  ORCHID  ');
@@ -89,7 +96,7 @@ try {
     await input.fill('发布');
     await input.press('Enter');
     await page.getByRole('dialog', { name: '保存设置更改？', exact: true }).waitFor();
-    await page.getByRole('button', { name: '取消', exact: true }).click();
+    await page.getByRole('button', { name: '继续编辑', exact: true }).click();
     assert.equal(await page.getByRole('radio', { name: '深色', exact: true }).getAttribute('aria-checked'), 'true');
     passed.push('empty results do not navigate; repeat shortcut selects query; search navigation honors dirty settings');
 

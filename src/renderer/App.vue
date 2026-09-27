@@ -5,6 +5,8 @@ import ChatWorkspace from './components/ChatWorkspace.vue';
 import Icon from './components/Icon.vue';
 import WorkspacePanel from './components/WorkspacePanel.vue';
 import SearchDialog from './components/SearchDialog.vue';
+import EndpointManager from './components/EndpointManager.vue';
+import AgentManager from './components/AgentManager.vue';
 import { UiButton, UiSelect, UiSwitch, UiField, UiTabs, UiTabPanel, UiDialog, UiSnackbarHost, UiCollapse, snackbar } from '@lingyzh/ui';
 
 const workspace = useWorkspace();
@@ -38,11 +40,9 @@ const navWidth = computed(() => compact.value ? 57 : 254);
 const maxPanelWidth = computed(() => Math.max(260, width.value - navWidth.value - 5 - 370));
 const panelWidth = computed(() => Math.min(maxPanelWidth.value, Math.max(260, workspace.panel.width)));
 const layoutStyle = computed(() => ({ '--nav-width': `${navWidth.value}px`, '--panel-width': `${panelWidth.value}px` }));
-const lastRun = (sessionId) => workspace.snapshot.runs.filter((run) => run.sessionId === sessionId).at(-1);
+const lastRun = (sessionId) => workspace.snapshot.runs.filter((run) => run.sessionId === sessionId && !run.parentRunId).at(-1);
 const activeCount = computed(() => workspace.snapshot.runs.filter((run) => activeStates.includes(run.state)).length);
 const futureFeatures = [
-    { label: 'Agent', icon: 'agent', title: 'Agent 管理尚未接入' },
-    { label: '模型与账号', icon: 'models', title: '模型与账号管理尚未接入' },
     { label: 'MCP 连接器', icon: 'plug', title: 'MCP 连接器尚未接入' },
     { label: '插件与技能', icon: 'puzzle', title: '插件与技能尚未接入' }
 ];
@@ -58,6 +58,10 @@ function selectSearchSession(id) {
 function selectSearchSettings() {
     searchOpen.value = false;
     showSettings();
+}
+function selectSearchEndpoints() {
+    searchOpen.value = false;
+    navigate(() => workspace.page = 'endpoints');
 }
 watch(() => workspace.selectedId, (id) => {
     const key = id || 'draft';
@@ -131,6 +135,10 @@ function toggleNavigation() {
 function handleGlobalShortcut(event) {
     if (event.isComposing || event.keyCode === 229 || !(event.ctrlKey || event.metaKey) || event.altKey) return;
     const key = event.key.toLowerCase();
+    if (['k', 'n'].includes(key) && document.querySelector('dialog[open]:not(.search-dialog)')) {
+        event.preventDefault();
+        return;
+    }
     if (key === 'k') {
         event.preventDefault();
         openSearch();
@@ -200,17 +208,18 @@ onBeforeUnmount(() => {
 <template>
     <div class="app-shell" :class="{ 'compact-navigation': compact }" :style="layoutStyle">
         <div class="titlebar">
-            <div class="titlebar-brand"><img src="/assets/uah-mark.svg" alt="" /><span>Used AI Harness</span></div>
+            <div class="titlebar-brand"><template v-if="!compact"><img src="/assets/uah-mark.svg" alt="" /><span>Used AI Harness</span></template><UiButton class="navigation-toggle" variant="ghost" size="sm" icon aria-label="收起或展开导航" :aria-expanded="!compact" title="收起或展开导航" @click="toggleNavigation"><Icon name="panel" /></UiButton></div>
             <div class="titlebar-center">本地工作区</div>
             <div class="titlebar-system-space" aria-hidden="true"></div>
         </div>
         <div class="desktop" :class="{ compact, 'panel-open': workspace.panel.open && workspace.page === 'chat', 'panel-focus': panelFocus && workspace.page === 'chat' }">
             <aside class="sidebar" aria-label="主导航">
-                <div class="sidebar-brand"><button class="brand" aria-label="UAH 新对话" @click="navigate(workspace.newSession)"><img src="/assets/uah-mark.svg" alt="" /><span class="nav-label">UAH</span></button><button class="collapse-button" aria-label="收起或展开导航" :aria-expanded="!compact" @click="toggleNavigation"><Icon name="panel" /></button></div>
                 <button class="nav-button new-chat" title="新对话" :aria-current="!workspace.selectedId && workspace.page === 'chat' ? 'page' : undefined" @click="navigate(workspace.newSession)"><Icon name="edit" /><span class="nav-label">新对话</span></button>
                 <button class="nav-button search-toggle" title="搜索会话、项目与设置" aria-haspopup="dialog" :aria-expanded="searchOpen" @click="openSearch"><Icon name="search" /><span class="nav-label">搜索</span><kbd v-if="!compact" class="nav-shortcut">Ctrl K</kbd></button>
                 <div class="nav-separator"></div>
                 <div class="nav-section-title nav-label">快捷功能</div>
+                <button class="nav-button" title="模型与账号" :aria-current="workspace.page === 'endpoints' ? 'page' : undefined" @click="navigate(() => workspace.page = 'endpoints')"><Icon name="models" /><span class="nav-label">模型与账号</span></button>
+                <button class="nav-button" title="Agent" :aria-current="workspace.page === 'agents' ? 'page' : undefined" @click="navigate(() => workspace.page = 'agents')"><Icon name="agent" /><span class="nav-label">Agent</span></button>
                 <nav class="shortcut-list" aria-label="快捷功能">
                     <button v-for="item in futureFeatures" :key="item.label" class="nav-button unavailable" :title="item.title" :aria-label="`${item.label}，${item.title}`" disabled><Icon :name="item.icon" /><span class="nav-label">{{ item.label }}</span></button>
                     <button class="nav-button more-button" title="更多功能" :aria-expanded="moreExpanded" @click="moreExpanded = !moreExpanded"><Icon :name="moreExpanded ? 'down' : 'chevron'" /><span class="nav-label">更多功能</span></button>
@@ -221,14 +230,15 @@ onBeforeUnmount(() => {
                 </nav>
                 <div class="nav-section-title nav-label">会话 <span>{{ workspace.snapshot.sessions.length }}</span></div>
                 <nav class="session-list" aria-label="会话列表"><button v-for="item in workspace.snapshot.sessions" :key="item.id" class="session-button" :class="{ selected: workspace.selectedId === item.id && workspace.page === 'chat' }" :aria-current="workspace.selectedId === item.id ? 'page' : undefined" :title="`${item.title} · ${stateLabels[lastRun(item.id)?.state] || '就绪'}`" @click="navigate(() => workspace.select(item.id))"><span class="state-dot" :data-state="lastRun(item.id)?.state" aria-hidden="true"></span><span class="session-copy nav-label"><span>{{ item.title }}</span><small>{{ stateLabels[lastRun(item.id)?.state] || '就绪' }}</small></span></button><p v-if="!workspace.snapshot.sessions.length" class="sidebar-empty nav-label">发送第一条消息后，会话会保存在这里。</p></nav>
-                <div class="sidebar-bottom"><button class="nav-button" title="设置" :aria-current="workspace.page === 'settings' ? 'page' : undefined" @click="showSettings"><Icon name="settings" /><span class="nav-label">设置</span></button><div class="workspace-identity"><div class="avatar">U</div><div class="nav-label"><strong>本地工作区</strong><small>{{ activeCount ? `${activeCount} 个任务进行中` : '所有数据保存在本机' }}</small></div></div></div>
+                <div class="sidebar-bottom"><button class="nav-button" title="设置" :aria-current="workspace.page === 'settings' ? 'page' : undefined" @click="showSettings"><Icon name="settings" /><span class="nav-label">设置</span></button><div class="workspace-identity"><div class="avatar">U</div><div class="nav-label"><strong>本地工作区</strong><small>{{ activeCount ? `${activeCount} 个任务进行中` : '对话历史保存在本机' }}</small></div></div></div>
             </aside>
             <main class="main-area" :inert="panelFocus && workspace.page === 'chat'">
                 <div v-if="!workspace.connected" class="preview-banner">网页预览 · 运行、文件与桌面能力请使用 Electron 应用</div>
                 <div v-if="workspace.error" class="global-error" role="alert"><span>{{ workspace.error }}</span><button aria-label="关闭错误提示" @click="workspace.error = ''"><Icon name="close" /></button></div>
                 <ChatWorkspace v-show="workspace.page === 'chat'" :class="{ 'view-enter': workspace.page === 'chat' }" />
+                <EndpointManager v-if="workspace.page === 'endpoints'" />
+                <AgentManager v-if="workspace.page === 'agents'" />
                 <section v-show="workspace.page === 'settings'" class="settings-page" :class="{ 'view-enter': workspace.page === 'settings' }" aria-label="设置">
-                    <header class="workspace-header settings-header"><UiButton variant="ghost" @click="navigate(() => workspace.page = 'chat')"><Icon name="back" />返回对话</UiButton></header>
                     <div class="settings-layout">
                         <nav class="settings-navigation" aria-label="设置分类">
                             <h2>设置</h2>
@@ -253,7 +263,7 @@ onBeforeUnmount(() => {
                                 </div>
                                 <div class="button-row settings-save"><UiButton variant="primary" :disabled="!dirty" @click="saveSettings">保存设置</UiButton><span class="muted small">{{ dirty ? '有未保存的更改' : '已保存' }}</span></div>
                             </UiTabPanel>
-                            <UiTabPanel :model-value="settingsSection" value="about" id-prefix="settings" class="capability-summary"><h2 class="settings-title">关于与能力</h2><p>UAH · 本地桌面工作区</p><h3>当前可用</h3><p>本地验证运行时 · 流式文本 · 单次文件审批 · 历史快照 · 独立浏览器 · Windows 只读观察</p><h3>后续接入</h3><p>AI 模型、官方 CLI、PTY 终端和电脑操作尚未接入。当前不会执行任意 Shell 命令。</p></UiTabPanel>
+                            <UiTabPanel :model-value="settingsSection" value="about" id-prefix="settings" class="capability-summary"><h2 class="settings-title">关于与能力</h2><p>UAH · 本地桌面工作区</p><h3>当前可用</h3><p>API 端点与模型管理 · 三种协议的文本流式对话 · 本地验证与文件审批 · 历史快照 · 独立浏览器 · Windows 只读观察</p><h3>后续接入</h3><p>订阅与官方运行时、API 文件工具、PTY 终端和电脑操作尚未接入。当前不会执行任意 Shell 命令。</p></UiTabPanel>
                         </div>
                     </div>
                 </section>
@@ -262,7 +272,7 @@ onBeforeUnmount(() => {
             <WorkspacePanel :suspended="searchOpen || searchPresent || confirmPresent || Boolean(leaveIntent)" :inert="!panelVisible" :aria-hidden="!panelVisible" />
         </div>
     </div>
-    <SearchDialog ref="searchDialog" :open="searchOpen" :sessions="workspace.snapshot.sessions" :runs="workspace.snapshot.runs" @close="searchOpen = false" @present-change="searchPresent = $event" @select-session="selectSearchSession" @navigate-settings="selectSearchSettings" />
+    <SearchDialog ref="searchDialog" :open="searchOpen" :sessions="workspace.snapshot.sessions" :runs="workspace.snapshot.runs" @close="searchOpen = false" @present-change="searchPresent = $event" @select-session="selectSearchSession" @navigate-settings="selectSearchSettings" @navigate-endpoints="selectSearchEndpoints" />
     <UiSnackbarHost />
-    <UiDialog v-model:open="confirmOpen" @present-change="confirmPresent = $event" @closed="confirmClosed" @update:open="resolveLeave('cancel')" class="confirm-dialog" aria-labelledby="dirty-title"><h2 id="dirty-title">保存设置更改？</h2><p>离开之前，可以保存或放弃本次修改。</p><div class="button-row"><UiButton @click="resolveLeave('cancel')">取消</UiButton><UiButton @click="resolveLeave('discard')">放弃更改</UiButton><UiButton variant="primary" @click="resolveLeave('save')">保存并离开</UiButton></div></UiDialog>
+    <UiDialog v-model:open="confirmOpen" @present-change="confirmPresent = $event" @closed="confirmClosed" @update:open="resolveLeave('cancel')" class="confirm-dialog" aria-labelledby="dirty-title"><h2 id="dirty-title">保存设置更改？</h2><p>离开之前，可以保存或放弃本次修改。</p><div class="button-row"><UiButton @click="resolveLeave('cancel')">继续编辑</UiButton><UiButton @click="resolveLeave('discard')">放弃更改</UiButton><UiButton variant="primary" @click="resolveLeave('save')">保存并离开</UiButton></div></UiDialog>
 </template>

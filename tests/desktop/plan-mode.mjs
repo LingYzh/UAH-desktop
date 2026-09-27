@@ -1,0 +1,183 @@
+import { _electron as electron } from 'playwright';
+import assert from 'node:assert/strict';
+import http from 'node:http';
+import { mkdir, mkdtemp, writeFile, readFile, access } from 'node:fs/promises';
+import path from 'node:path';
+
+const root = process.cwd();
+await mkdir('artifacts', { recursive: true });
+const evidence = await mkdtemp(path.resolve('artifacts/plan-mode-'));
+const project = path.join(evidence, 'project');
+await mkdir(project);
+await writeFile(path.join(project, 'example.txt'), 'before\n');
+const requests = [];
+const errors = [];
+const planOne = '# 实施方案\n\n1. 阅读 `example.txt` 并核对现有行为。\n2. 仅更新这一处文件。\n3. 读取结果并验证兼容性。\n\n项目尚未修改，等待你审阅。';
+const planTwo = '# 修订后的实施方案\n\n- 保留兼容：只修改 `example.txt`，其他文件保持现状。\n- 将 `before` 替换为 `after`。\n- 验证保存内容，并汇报实际结果。';
+const userPlan = planOne + '\n\n- 用户补充：实施前必须保留回归测试。';
+const sse = data => `data: ${JSON.stringify(data)}\n\n`;
+const server = http.createServer(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks).toString());
+    requests.push(body);
+    response.writeHead(200, { 'content-type': 'text/event-stream' });
+    const names = body.tools?.map(tool => tool.function.name) || [];
+    const planning = names.includes('submit_plan');
+    const tools = body.messages.filter(message => message.role === 'tool');
+    const input = body.messages.filter(message => message.role === 'user').at(-1).content;
+    let calls;
+    if (planning) {
+        assert.ok(!names.includes('write_file'));
+        assert.ok(!names.includes('run_command'));
+        if (!tools.length) {
+            if (input.includes('保留兼容')) assert.ok(input.includes('用户补充：实施前必须保留回归测试。'), 'Revise receives user-edited current version');
+            calls = [['read', 'read_file', { path: 'example.txt' }], ['draft', 'write_plan', { content: input.includes('保留兼容') ? planTwo : planOne }]];
+        }
+        else calls = [['submit', 'submit_plan', {}]];
+    } else if (!tools.length) calls = [['edit', 'write_file', { path: 'example.txt', expectedContent: 'before\n', content: 'after\n' }]];
+    const delta = calls ? { tool_calls: calls.map(([id, name, args], index) => ({ index, id, type: 'function', function: { name, arguments: JSON.stringify(args) } })) } : { content: '计划已实施并完成验证。' };
+    response.end(sse({ choices: [{ delta, finish_reason: calls ? 'tool_calls' : 'stop' }] }) + 'data: [DONE]\n\n');
+});
+await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+const env = { ...process.env, UAH_DATA_DIR: path.join(evidence, 'data') };
+delete env.ELECTRON_RUN_AS_NODE;
+delete env.UAH_DEV_URL;
+const app = await electron.launch({ args: ['.'], cwd: root, env });
+async function waitForCompletedRun(page, count) {
+    const deadline = Date.now() + 20_000;
+    while (Date.now() < deadline) {
+        const state = await page.evaluate(() => window.uah.command({ type: 'snapshot' }));
+        const run = state.runs.at(-1);
+        if (state.runs.length >= count && ['completed', 'failed', 'stopped'].includes(run?.state)) {
+            assert.equal(run.state, 'completed', run.error || 'fixture run did not complete');
+            return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    throw new Error('Timed out waiting for the expected completed run');
+}
+try {
+    const page = await app.firstWindow();
+    page.setDefaultTimeout(20000);
+    page.on('pageerror', error => errors.push(error.message));
+    await page.getByRole('textbox', { name: '消息', exact: true }).waitFor();
+    await app.evaluate(({ dialog }, directory) => { dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [directory] }); }, project);
+    await page.evaluate(url => (async () => {
+        const directory = await window.uah.chooseDirectory();
+        const saved = await window.uah.endpoints({ type: 'save', draft: { id: null, name: 'Plan fixture', protocol: 'openai-chat', baseUrl: url, models: ['fixture'], enabled: true, revision: 0, apiKey: null } });
+        await window.uah.command({ type: 'create-session', title: 'Plan workflow', directory, selection: { endpointId: saved.endpoints[0].id, modelId: 'fixture' }, agentId: 'default', controls: { permissionMode: 'plan', reasoningEffort: 'default' } });
+    })(), `http://127.0.0.1:${server.address().port}/v1`);
+    await page.reload();
+    await page.getByRole('textbox', { name: '消息', exact: true }).fill('Plan fixture');
+    await page.getByRole('button', { name: '发送消息', exact: true }).click();
+    const approve = page.getByRole('button', { name: '批准并逐项审批', exact: true });
+    await approve.waitFor();
+    assert.equal(await page.getByRole('textbox', { name: '消息', exact: true }).count(), 0, 'pending plan replaces ordinary composer');
+    assert.equal(await page.locator('.chat-scroll').getByRole('heading', { name: '实施方案', exact: true }).count(), 0, 'plan body lives only in sidebar');
+    assert.equal(await page.locator('.composer-dock').getByRole('region', { name: '实施计划审阅' }).count(), 1);
+    await waitForCompletedRun(page, 1);
+    let state = await page.evaluate(() => window.uah.command({ type: 'snapshot' }));
+    const first = state.runs[0];
+    assert.equal(first.plan.status, 'proposed');
+    assert.equal(first.plan.content, planOne);
+    await access(first.plan.filePath);
+    assert.equal(await readFile(first.plan.filePath, 'utf8'), planOne);
+    assert.equal(await readFile(path.join(project, 'example.txt'), 'utf8'), 'before\n');
+    assert.equal(state.artifacts.length, 0, 'plan file is separate from workspace changes');
+    const requestCount = requests.length;
+    await page.getByRole('button', { name: '在右栏查看计划文件', exact: true }).click();
+    const panel = page.getByRole('complementary', { name: '会话工作面板' });
+    await panel.getByRole('heading', { name: '实施方案', exact: true }).waitFor();
+    await panel.getByRole('button', { name: '复制计划内容', exact: true }).click();
+    await page.getByText('计划内容已复制。', { exact: true }).waitFor();
+    assert.equal(await app.evaluate(async ({ clipboard }, expected) => (await clipboard.readText()).replaceAll('\r\n', '\n') === expected, planOne), true);
+    assert.equal(requests.length, requestCount, 'viewing and copying does not approve');
+    await panel.getByRole('button', { name: '直接编辑 Markdown', exact: true }).click();
+    assert.equal(await approve.isDisabled(), true, 'unfinished manual edit cannot approve old saved content');
+    await page.waitForTimeout(300);
+    assert.match(await panel.getByRole('combobox', { name: '计划文件版本' }).locator('selectedcontent').textContent(), /待审批/);
+    await panel.getByRole('textbox', { name: '计划标题', exact: true }).fill('用户命名的任务计划');
+    await panel.getByRole('textbox', { name: '计划 Markdown', exact: true }).fill(userPlan);
+    const editPng = await app.evaluate(async ({ BrowserWindow }) => (await BrowserWindow.getAllWindows()[0].capturePage()).toDataURL());
+    await writeFile(path.join(evidence, 'plan-editor.png'), Buffer.from(editPng.split(',')[1], 'base64'));
+    await panel.getByRole('tab', { name: '预览', exact: true }).click();
+    await panel.getByText('用户补充：实施前必须保留回归测试。', { exact: true }).waitFor();
+    await page.waitForTimeout(300);
+    const editorPng = await app.evaluate(async ({ BrowserWindow }) => (await BrowserWindow.getAllWindows()[0].capturePage()).toDataURL());
+    await writeFile(path.join(evidence, 'plan-editor-preview.png'), Buffer.from(editorPng.split(',')[1], 'base64'));
+    await panel.getByRole('button', { name: '保存新版本', exact: true }).click();
+    await page.getByText('已保存新版本，尚未批准实施。', { exact: true }).waitFor();
+    assert.equal(await approve.isEnabled(), true, 'saved version becomes reviewable');
+    state = await page.evaluate(() => window.uah.command({ type: 'snapshot' }));
+    const edited = state.runs[0].plan;
+    assert.equal(edited.documentId, first.plan.documentId);
+    assert.equal(edited.version, 2);
+    assert.equal(edited.content, userPlan);
+    assert.equal(edited.history[0].id, first.plan.id);
+    assert.equal(requests.length, requestCount, 'direct edit does not invoke a model or approve');
+    await panel.getByRole('combobox', { name: '计划文件版本', exact: true }).selectOption(first.plan.id);
+    assert.equal(await panel.getByRole('button', { name: '直接编辑 Markdown', exact: true }).count(), 0, 'historical version is read-only');
+    await panel.getByRole('combobox', { name: '计划文件版本', exact: true }).selectOption(edited.id);
+    for (const [theme, width, zoom] of [['light', 1440, 1], ['dark', 900, 1.25]]) {
+        if (theme === 'dark') await panel.getByRole('button', { name: '关闭工作面板' }).click();
+        await page.evaluate(theme => document.documentElement.dataset.theme = theme, theme);
+        await app.evaluate(({ BrowserWindow }, { width, zoom }) => { const win = BrowserWindow.getAllWindows()[0]; win.setSize(width, 900); win.webContents.setZoomFactor(zoom); }, { width, zoom });
+        await page.getByRole('button', { name: '指导 Agent 修订', exact: true }).scrollIntoViewIfNeeded();
+        await page.waitForTimeout(300);
+        const png = await app.evaluate(async ({ BrowserWindow }) => (await BrowserWindow.getAllWindows()[0].capturePage()).toDataURL());
+        await writeFile(path.join(evidence, `plan-${theme}.png`), Buffer.from(png.split(',')[1], 'base64'));
+    }
+    await app.evaluate(({ BrowserWindow }) => { const win = BrowserWindow.getAllWindows()[0]; win.setSize(1440, 900); win.webContents.setZoomFactor(1); });
+    await page.reload();
+    await approve.waitFor();
+    assert.equal(requests.length, requestCount, 'reload retains proposal without model calls');
+    await writeFile(edited.filePath, '# External edit must not be silently approved');
+    await approve.click();
+    await page.getByRole('region', { name: '实施计划审阅' }).getByRole('alert').waitFor();
+    assert.equal(requests.length, requestCount, 'changed plan file blocks stale approval');
+    state = await page.evaluate(() => window.uah.command({ type: 'snapshot' }));
+    assert.equal(state.runs[0].plan.status, 'proposed');
+    assert.equal(state.sessions[0].controls.permissionMode, 'plan');
+    await writeFile(edited.filePath, userPlan);
+    await page.getByRole('button', { name: '指导 Agent 修订', exact: true }).click();
+    await page.getByRole('textbox', { name: '计划修改意见', exact: true }).fill('保留兼容，只修改一个文件。');
+    await page.waitForTimeout(300);
+    const revisePng = await app.evaluate(async ({ BrowserWindow }) => (await BrowserWindow.getAllWindows()[0].capturePage()).toDataURL());
+    await writeFile(path.join(evidence, 'plan-revise.png'), Buffer.from(revisePng.split(',')[1], 'base64'));
+    await page.getByRole('button', { name: '提交意见并继续规划', exact: true }).click();
+    await page.getByRole('heading', { name: '修订后的实施方案', exact: true }).waitFor();
+    await waitForCompletedRun(page, 2);
+    state = await page.evaluate(() => window.uah.command({ type: 'snapshot' }));
+    assert.equal(state.runs[0].plan.status, 'revision-requested');
+    assert.equal(state.runs.at(-1).plan.status, 'proposed');
+    assert.equal(state.sessions[0].controls.permissionMode, 'plan');
+    assert.equal(state.runs.at(-1).plan.documentId, first.plan.documentId);
+    assert.equal(state.runs.at(-1).plan.version, 3);
+    assert.equal(state.runs.at(-1).plan.title, '用户命名的任务计划');
+    assert.notEqual(state.runs.at(-1).plan.filePath, first.plan.filePath);
+    assert.equal(await readFile(first.plan.filePath, 'utf8'), planOne);
+    assert.equal(await readFile(edited.filePath, 'utf8'), userPlan);
+    assert.equal(await readFile(state.runs.at(-1).plan.filePath, 'utf8'), planTwo);
+    assert.equal(await readFile(path.join(project, 'example.txt'), 'utf8'), 'before\n');
+    await approve.click();
+    await page.getByRole('button', { name: '批准本次操作', exact: true }).waitFor();
+    state = await page.evaluate(() => window.uah.command({ type: 'snapshot' }));
+    assert.equal(state.sessions[0].controls.permissionMode, 'manual');
+    assert.equal(state.runs[1].plan.status, 'approved');
+    assert.equal(await readFile(path.join(project, 'example.txt'), 'utf8'), 'before\n', 'plan approval respects selected per-edit permission');
+    await page.getByRole('button', { name: '批准本次操作', exact: true }).click();
+    await page.getByText('计划已实施并完成验证。', { exact: true }).waitFor();
+    await page.getByRole('textbox', { name: '消息', exact: true }).waitFor();
+    assert.equal(await page.locator('.composer-dock').getByRole('region', { name: '实施计划审阅' }).count(), 0, 'approval restores ordinary composer');
+    assert.equal(await page.locator('.chat-scroll').getByRole('heading', { name: '修订后的实施方案', exact: true }).count(), 0, 'generated revision and approval inputs do not duplicate plan body');
+    assert.equal(await readFile(path.join(project, 'example.txt'), 'utf8'), 'after\n');
+    assert.equal(await page.getByRole('button', { name: '重新生成最新回复', exact: true }).count(), 0);
+    assert.deepEqual(errors, []);
+    await writeFile(path.join(evidence, 'report.json'), JSON.stringify({ passed: true, requests: requests.length, errors }, null, 4));
+    console.log('PASS plan files, review/sidebar/copy, revision, reload, explicit permission approval and implementation: ' + evidence);
+} catch (error) {
+    const page = await app.firstWindow();
+    await writeFile(path.join(evidence, 'failure.txt'), await page.locator('body').innerText());
+    throw error;
+} finally { await app.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }

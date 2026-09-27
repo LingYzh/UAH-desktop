@@ -1,16 +1,48 @@
+import type { ApiProtocol, EndpointCommand, EndpointReply } from './endpoints';
+import type { AgentCommand, AgentSettings } from './agents';
+import type { ModelParameters } from './model-parameters';
+import type { PermissionMode } from './permissions';
+import { parseSessionControls, type SessionControls } from './session-controls';
+import type { DelegationRequest, DelegationPlan } from './delegation';
+
 export interface RuntimeConfig {
     runtimeId: string;
     modelId: string;
     agentId: string;
     policyVersion: number;
+    endpointId?: string;
+    endpointRevision?: number;
+    endpointUrl?: string;
+    protocol?: ApiProtocol;
+    /** Snapshot of the primary-agent settings used for this run. */
+    agentName?: string;
+    agentInstructions?: string;
+    /** Compatibility with snapshots written before model settings were separated. */
+    agentParameters?: ModelParameters;
+    modelParameters?: ModelParameters;
+    permissionMode?: PermissionMode;
+    allowDelegation?: boolean;
 }
 
 export interface SessionRecord {
+    activePlanRunId?: string;
+    pendingModeTransition?: ModeTransition;
+    branchAgent?: RuntimeConfig;
+    branchFromRunId?: string;
+    branchMessages?: import('./endpoints').ApiMessage[];
     id: string;
     title: string;
     directory: string | null;
     requested: RuntimeConfig;
     createdAt: string;
+    controls?: SessionControls;
+    controlsRevision?: number;
+    initialConfig?: {
+        agentId: string;
+        selection: { endpointId: string; modelId: string } | null;
+        controls: SessionControls;
+        directory: string | null;
+    };
 }
 
 export type RunState =
@@ -22,7 +54,29 @@ export type RunState =
     | 'completed'
     | 'failed';
 
+export interface RunActivity {
+    id: string;
+    kind: 'text' | 'reasoning' | 'tool' | 'agent';
+    title: string;
+    content: string;
+    status: 'running' | 'approval' | 'completed' | 'failed' | 'stopped';
+    childRunId?: string;
+    /** Structured display metadata; content remains the canonical legacy/history text. */
+    tool?: { name: string; arguments: Record<string, unknown>; result?: string; isError?: boolean; artifactId?: string };
+}
 export interface RunRecord {
+    requestContext?: import('./request-context').RequestContextSummary;
+    modeTransition?: ModeTransition;
+    plan?: PlanRecord;
+    history?: { editedOutput?: string; deleted?: boolean };
+    retryOfRunId?: string;
+    finishedAt?: string;
+    /** Optional user explanation supplied when explicitly stopping this run. */
+    stopReason?: string;
+    parentRunId?: string;
+    depth?: number;
+    contextMessages?: import('./endpoints').ApiMessage[];
+    activities?: RunActivity[];
     id: string;
     sessionId: string;
     turnId: string;
@@ -35,6 +89,10 @@ export interface RunRecord {
     createdAt: string;
 }
 
+export interface ModeTransition { id: string; from: PermissionMode; to: PermissionMode; reason: 'manual' | 'tool' | 'plan-approved'; planId?: string; planVersion?: number }
+export interface PlanVersion { id: string; documentId?: string; title?: string; version?: number; content: string; filePath: string; hash: string; createdAt: string }
+export interface PlanRecord extends PlanVersion { draftPath?: string; history?: PlanVersion[]; status: 'draft' | 'proposed' | 'approved' | 'revision-requested'; resolvedAt?: string; executionRunId?: string; feedback?: string }
+
 export interface ApprovalIdentity {
     runtimeId: string;
     sessionId: string;
@@ -45,6 +103,7 @@ export interface ApprovalIdentity {
 }
 
 export interface ApprovalRecord extends ApprovalIdentity {
+    toolCallId?: string;
     status: 'pending' | 'approved' | 'rejected' | 'expired';
     summary: string;
     path: string;
@@ -72,9 +131,21 @@ export interface Snapshot {
 
 export type Command =
     | { type: 'snapshot' }
-    | { type: 'create-session'; title: string; directory: string | null }
-    | { type: 'start-run'; sessionId: string; input: string }
-    | { type: 'stop-run'; runId: string }
+    | { type: 'create-session'; title: string; directory: string | null; selection?: { endpointId: string; modelId: string }; controls?: SessionControls; agentId?: string; branchFromRunId?: string }
+    | { type: 'edit-reply'; runId: string; output: string }
+    | { type: 'edit-plan'; runId: string; planId: string; content: string; title: string }
+    | { type: 'delete-reply'; runId: string }
+    | { type: 'regenerate-run'; runId: string; selection?: { endpointId: string; modelId: string } | null }
+    | { type: 'resolve-plan'; runId: string; planId: string; decision: 'approve' | 'revise'; permissionMode?: 'manual' | 'accept-edits' | 'auto' | 'bypass'; feedback?: string; selection?: { endpointId: string; modelId: string } | null }
+    | { type: 'set-session-controls'; sessionId: string; controls: SessionControls; revision: number }
+    | {
+          type: 'start-run';
+          sessionId: string;
+          input: string;
+          selection?: { endpointId: string; modelId: string } | null;
+          agentId?: string;
+      }
+    | { type: 'stop-run'; runId: string; reason?: string }
     | {
           type: 'resolve-approval';
           identity: ApprovalIdentity;
@@ -119,6 +190,14 @@ export interface BrowserState {
 }
 
 export interface DesktopBridge {
+    git(query: import('./git').GitQuery): Promise<import('./git').GitResult>;
+    requestContext(query: { runId: string }): Promise<import('./request-context').RequestContextDetail | null>;
+    openLogs(): Promise<void>;
+    openExternal(url: string): Promise<void>;
+    writeClipboard(text: string): Promise<void>;
+    agents(command: AgentCommand): Promise<AgentSettings>;
+    previewDelegation(value: { parentRunId: string; request: DelegationRequest }): Promise<DelegationPlan>;
+    endpoints(command: EndpointCommand): Promise<EndpointReply>;
     command(command: Command): Promise<Snapshot>;
     onEvent(listener: (event: RuntimeEvent) => void): () => void;
     setWindowTheme(theme: 'light' | 'dark'): Promise<void>;
@@ -225,7 +304,17 @@ export function parseCommand(value: unknown): Command {
             return { type: 'snapshot' };
         }
         case 'create-session': {
-            assertExactKeys(value, ['type', 'title', 'directory'], 'command');
+            const hasSelection = Object.hasOwn(value, 'selection');
+            const hasControls = Object.hasOwn(value, 'controls');
+            assertExactKeys(value, ['type', 'title', 'directory', ...(hasSelection ? ['selection'] : []), ...(hasControls ? ['controls'] : []), ...(Object.hasOwn(value, 'agentId') ? ['agentId'] : []), ...(Object.hasOwn(value, 'branchFromRunId') ? ['branchFromRunId'] : [])], 'command');
+            let selection: { endpointId: string; modelId: string } | undefined;
+            if (hasSelection) {
+                assertExactKeys(value.selection, ['endpointId', 'modelId'], 'selection');
+                selection = {
+                    endpointId: readString(value.selection.endpointId, 'selection.endpointId'),
+                    modelId: readString(value.selection.modelId, 'selection.modelId'),
+                };
+            }
             if (value.directory !== null && typeof value.directory !== 'string') {
                 fail('directory must be a string or null');
             }
@@ -237,10 +326,63 @@ export function parseCommand(value: unknown): Command {
                 type: 'create-session',
                 title: readString(value.title, 'title', MAX_TITLE_LENGTH),
                 directory: value.directory as string | null,
+                ...(selection ? { selection } : {}),
+                ...(hasControls ? { controls: parseSessionControls(value.controls) } : {}),
+                ...(Object.hasOwn(value, 'agentId') ? { agentId: readString(value.agentId, 'agentId') } : {}),
+                ...(Object.hasOwn(value, 'branchFromRunId') ? { branchFromRunId: readString(value.branchFromRunId, 'branchFromRunId') } : {}),
             };
         }
+        case 'edit-reply': {
+            assertExactKeys(value, ['type', 'runId', 'output'], 'command');
+            if (typeof value.output !== 'string' || value.output.length > 1_000_000) fail('output must be text up to 1000000 characters');
+            return { type: 'edit-reply', runId: readString(value.runId, 'runId'), output: value.output };
+        }
+        case 'edit-plan': {
+            assertExactKeys(value, ['type', 'runId', 'planId', 'content', 'title'], 'command');
+            if (typeof value.content !== 'string' || !value.content.trim() || value.content.length > 100000 || new TextDecoder().decode(new TextEncoder().encode(value.content)) !== value.content) fail('plan content must be valid nonempty Unicode up to 100000 characters');
+            return { type: 'edit-plan', runId: readString(value.runId, 'runId'), planId: readString(value.planId, 'planId'), content: value.content, title: readString(value.title, 'title', MAX_TITLE_LENGTH) };
+        }
+        case 'resolve-plan': {
+            const hasSelection = Object.hasOwn(value, 'selection');
+            if (value.decision !== 'approve' && value.decision !== 'revise') fail('plan decision must be approve or revise');
+            assertExactKeys(value, ['type', 'runId', 'planId', 'decision', value.decision === 'approve' ? 'permissionMode' : 'feedback', ...(hasSelection ? ['selection'] : [])], 'command');
+            if (value.decision === 'approve' && !['manual', 'accept-edits', 'auto', 'bypass'].includes(value.permissionMode as string)) fail('approved plan requires an explicit execution permission mode');
+            if (value.decision === 'revise' && (typeof value.feedback !== 'string' || !value.feedback.trim() || value.feedback.length > 20000)) fail('plan feedback must be nonempty text up to 20000 characters');
+            const selection = hasSelection ? parseCommand({ type: 'start-run', sessionId: 'plan', input: 'plan', selection: value.selection }) : undefined;
+            return { type: 'resolve-plan', runId: readString(value.runId, 'runId'), planId: readString(value.planId, 'planId'), decision: value.decision,
+                ...(value.decision === 'approve' ? { permissionMode: value.permissionMode as 'manual' | 'accept-edits' | 'auto' | 'bypass' } : { feedback: value.feedback as string }),
+                ...(selection?.type === 'start-run' ? { selection: selection.selection } : {}) };
+        }
+        case 'regenerate-run': {
+            const hasSelection = Object.hasOwn(value, 'selection');
+            assertExactKeys(value, ['type', 'runId', ...(hasSelection ? ['selection'] : [])], 'command');
+            let selection: { endpointId: string; modelId: string } | null = null;
+            if (hasSelection && value.selection !== null) {
+                assertExactKeys(value.selection, ['endpointId', 'modelId'], 'selection');
+                selection = { endpointId: readString(value.selection.endpointId, 'selection.endpointId'), modelId: readString(value.selection.modelId, 'selection.modelId') };
+            }
+            return { type: 'regenerate-run', runId: readString(value.runId, 'runId'), ...(hasSelection ? { selection } : {}) };
+        }
+        case 'delete-reply': {
+            assertExactKeys(value, ['type', 'runId'], 'command');
+            return { type: 'delete-reply', runId: readString(value.runId, 'runId') };
+        }
+        case 'set-session-controls': {
+            assertExactKeys(value, ['type', 'sessionId', 'controls', 'revision'], 'command');
+            if (!Number.isSafeInteger(value.revision) || (value.revision as number) < 0) fail('revision must be a non-negative safe integer');
+            return { type: 'set-session-controls', sessionId: readString(value.sessionId, 'sessionId'),
+                controls: parseSessionControls(value.controls), revision: value.revision as number };
+        }
         case 'start-run': {
-            assertExactKeys(value, ['type', 'sessionId', 'input'], 'command');
+            const hasSelection = Object.hasOwn(value, 'selection');
+            const hasAgentId = Object.hasOwn(value, 'agentId');
+            assertExactKeys(value, ['type', 'sessionId', 'input', ...(hasSelection ? ['selection'] : []), ...(hasAgentId ? ['agentId'] : [])], 'command');
+            let selection: { endpointId: string; modelId: string } | null = null;
+            if (hasSelection && value.selection !== null) {
+                assertExactKeys(value.selection, ['endpointId', 'modelId'], 'selection');
+                selection = { endpointId: readString(value.selection.endpointId, 'selection.endpointId'), modelId: readString(value.selection.modelId, 'selection.modelId') };
+            }
+            const agentId = hasAgentId ? readString(value.agentId, 'agentId') : undefined;
             const input = readInput(value.input);
             if (input.trim().length === 0) {
                 fail('input must not be empty');
@@ -250,13 +392,17 @@ export function parseCommand(value: unknown): Command {
                 type: 'start-run',
                 sessionId: readString(value.sessionId, 'sessionId'),
                 input,
+                ...(hasSelection ? { selection } : {}),
+                ...(agentId ? { agentId } : {}),
             };
         }
         case 'stop-run': {
-            assertExactKeys(value, ['type', 'runId'], 'command');
+            const hasReason = Object.hasOwn(value, 'reason');
+            assertExactKeys(value, ['type', 'runId', ...(hasReason ? ['reason'] : [])], 'command');
             return {
                 type: 'stop-run',
                 runId: readString(value.runId, 'runId'),
+                ...(hasReason ? { reason: readString(value.reason, 'reason', 2000) } : {}),
             };
         }
         case 'resolve-approval': {

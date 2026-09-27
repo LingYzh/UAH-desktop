@@ -1,0 +1,23 @@
+test_all_full_prompt_slots_documented (test_tools.ToolTests.test_all_full_prompt_slots_documented) ... ok
+test_catalog_list (test_tools.ToolTests.test_catalog_list) ... ok
+test_catalog_object (test_tools.ToolTests.test_catalog_object) ... ok
+test_empty_slot (test_tools.ToolTests.test_empty_slot) ... ok
+test_explicit_empty_role_preserved (test_tools.ToolTests.test_explicit_empty_role_preserved) ... ok
+test_invalid_catalog (test_tools.ToolTests.test_invalid_catalog) ... ok
+test_missing_base_flagged (test_tools.ToolTests.test_missing_base_flagged) ... ok
+test_missing_role_uses_bundled (test_tools.ToolTests.test_missing_role_uses_bundled) ... ok
+test_missing_slot (test_tools.ToolTests.test_missing_slot) ... ok
+test_native_lowercase_template_preserved (test_tools.ToolTests.test_native_lowercase_template_preserved) ... ok
+test_no_hardcoded_codex_tools_in_portable (test_tools.ToolTests.test_no_hardcoded_codex_tools_in_portable) ... ok
+test_non_string_slot (test_tools.ToolTests.test_non_string_slot) ... ok
+test_one_pass_only (test_tools.ToolTests.test_one_pass_only) ... ok
+test_portable_module_assembly (test_tools.ToolTests.test_portable_module_assembly) ... ok
+test_render (test_tools.ToolTests.test_render) ... ok
+test_repeated_slot (test_tools.ToolTests.test_repeated_slot) ... ok
+test_template_literal (test_tools.ToolTests.test_template_literal) ... ok
+test_unsafe_slug (test_tools.ToolTests.test_unsafe_slug) ... ok
+
+----------------------------------------------------------------------
+Ran 18 tests in 0.002s
+
+OK

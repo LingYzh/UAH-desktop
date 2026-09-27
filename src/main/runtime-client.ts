@@ -1,15 +1,17 @@
 import { utilityProcess, type UtilityProcess } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { Command, RuntimeEvent, Snapshot } from '../shared/contracts';
+import type { ApiConnection, ModelCatalog, ApiTestResult } from '../shared/endpoints';
+import type { AgentCommand, AgentSettings } from '../shared/agents';
 
 export class RuntimeClient {
     private child: UtilityProcess;
-    private pending = new Map<string, { resolve: (value: Snapshot) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }>();
+    private pending = new Map<string, { resolve: (value: unknown) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }>();
     private ready: Promise<void>;
     private exited: Promise<void>;
     private dead = false;
 
-    constructor(workerPath: string, dataDirectory: string, onEvent: (event: RuntimeEvent) => void) {
+    constructor(workerPath: string, dataDirectory: string, onEvent: (event: RuntimeEvent) => void, resolveConnection: (id: string) => ApiConnection) {
         this.child = utilityProcess.fork(workerPath, [dataDirectory], { serviceName: 'UAH Runtime Supervisor', stdio: 'pipe' });
         // Never relay raw runtime stdout/stderr to the renderer.
         this.child.stdout?.resume();
@@ -25,6 +27,15 @@ export class RuntimeClient {
         // Attach immediately, including when startup fails before the first command.
         this.ready.catch(() => {});
         this.child.on('message', (message) => {
+            if (message?.kind === 'resolve-connection') {
+                try {
+                    if (typeof message.endpointId !== 'string') throw new Error('端点 ID 无效。');
+                    this.child.postMessage({ kind: 'connection', id: message.id, connection: resolveConnection(message.endpointId) });
+                } catch {
+                    this.child.postMessage({ kind: 'connection', id: message.id, error: '端点不可用、已停用或凭据无法解密，请检查模型与账号设置。' });
+                }
+                return;
+            }
             if (message?.kind === 'event') onEvent(message.event);
             if (message?.kind !== 'reply') return;
             const request = this.pending.get(message.id);
@@ -32,7 +43,7 @@ export class RuntimeClient {
             clearTimeout(request.timer);
             this.pending.delete(message.id);
             if (message.error) request.reject(new Error(message.error));
-            else request.resolve(message.snapshot);
+            else request.resolve(message.snapshot ?? message.result);
         });
         this.exited = new Promise((resolve) => this.child.once('exit', () => {
             this.dead = true;
@@ -49,16 +60,38 @@ export class RuntimeClient {
         await this.ready;
         return this.request({ kind: 'command', command });
     }
+    async git(query: import('../shared/git').GitQuery): Promise<import('../shared/git').GitResult> {
+        await this.ready;
+        return this.request({ kind: 'git-query', query }, 30_000);
+    }
+    async requestContext(query: { runId: string }): Promise<import('../shared/request-context').RequestContextDetail | null> {
+        await this.ready;
+        return this.request({ kind: 'request-context', query });
+    }
+    async delegationPreview(value: { parentRunId: string; request: import('../shared/delegation').DelegationRequest }): Promise<import('../shared/delegation').DelegationPlan> {
+        await this.ready;
+        return this.request({ kind: 'delegation-preview', value });
+    }
 
-    private request(message: Record<string, unknown>): Promise<Snapshot> {
+    async agentOperation(command: AgentCommand): Promise<AgentSettings> {
+        await this.ready;
+        return this.request<AgentSettings>({ kind: 'agent-operation', command });
+    }
+
+    async apiOperation(connection: ApiConnection, operation: 'discover' | 'test', modelId?: string): Promise<ModelCatalog | ApiTestResult> {
+        await this.ready;
+        return this.request<ModelCatalog | ApiTestResult>({ kind: 'api-operation', connection, operation, modelId }, 45_000);
+    }
+
+    private request<T = Snapshot>(message: Record<string, unknown>, timeout = 15000): Promise<T> {
         if (this.dead) return Promise.reject(new Error('运行进程不可用。'));
         const id = randomUUID();
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => {
                 this.pending.delete(id);
                 reject(new Error('运行进程未响应；请检查任务状态后再操作。'));
-            }, 15000);
-            this.pending.set(id, { resolve, reject, timer });
+            }, timeout);
+            this.pending.set(id, { resolve: (value) => resolve(value as T), reject, timer });
             this.child.postMessage({ ...message, id });
         });
     }

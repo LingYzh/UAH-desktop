@@ -1,0 +1,42 @@
+import { _electron as electron } from 'playwright';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+await mkdir('artifacts', { recursive: true });
+const evidence = await mkdtemp(path.resolve('artifacts/agent-visual-'));
+const env = { ...process.env, UAH_DATA_DIR: path.join(evidence, 'data') };
+delete env.ELECTRON_RUN_AS_NODE;
+delete env.UAH_DEV_URL;
+const app = await electron.launch({ args: ['.'], env });
+try {
+    const page = await app.firstWindow();
+    page.setDefaultTimeout(12000);
+    await page.getByRole('button', { name: 'Agent', exact: true }).click();
+    await page.getByRole('button', { name: '编辑 Agent 默认助手', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: '编辑 Agent 配置', exact: true });
+    await dialog.getByLabel('Agent 指令', { exact: true }).fill('先阅读任务上下文，明确不确定之处，再给出可执行的建议。');
+    const capture = async name => {
+        await page.waitForTimeout(200);
+        const data = await app.evaluate(async ({ BrowserWindow }) => (await BrowserWindow.getAllWindows()[0].capturePage()).toDataURL());
+        await writeFile(path.join(evidence, name + '.png'), Buffer.from(data.split(',')[1], 'base64'));
+    };
+    await capture('primary-light');
+    await dialog.getByRole('button', { name: '关闭', exact: true }).click();
+    await page.getByRole('button', { name: '继续编辑', exact: true }).click();
+    assert.equal(await dialog.getByLabel('Agent 指令', { exact: true }).inputValue(), '先阅读任务上下文，明确不确定之处，再给出可执行的建议。');
+    await dialog.getByRole('button', { name: '保存 Agent', exact: true }).click();
+    await dialog.waitFor({ state: 'hidden' });
+    await page.getByRole('button', { name: '添加子代理角色', exact: true }).click();
+    await dialog.getByLabel('名称', { exact: true }).fill('审阅助手');
+    await dialog.getByLabel('用途说明', { exact: true }).fill('检查行为变更、边界条件与回归风险。');
+    await dialog.getByRole('button', { name: '保存 Agent', exact: true }).click();
+    await dialog.waitFor({ state: 'hidden' });
+    await capture('list-light');
+    await page.evaluate(() => document.documentElement.dataset.theme = 'dark');
+    await app.evaluate(({ BrowserWindow }) => { const window = BrowserWindow.getAllWindows()[0]; window.setSize(900, 800); window.webContents.setZoomFactor(1.25); });
+    await capture('list-dark-narrow');
+    await page.getByRole('button', { name: '调度预设', exact: true }).click();
+    await capture('subagents-dark-narrow');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
+    console.log('PASS ' + evidence);
+} finally { await app.close(); }

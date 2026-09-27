@@ -5,12 +5,12 @@ import Icon from './Icon.vue';
 import { UiButton, UiInput, UiDialog } from '@lingyzh/ui';
 
 const props = defineProps({ open: Boolean, sessions: { type: Array, default: () => [] }, runs: { type: Array, default: () => [] } });
-const emit = defineEmits(['close', 'select-session', 'navigate-settings', 'present-change']);
+const emit = defineEmits(['close', 'select-session', 'navigate-settings', 'navigate-endpoints', 'present-change']);
 const dialog = ref(null);
 const input = ref(null);
 const query = ref('');
 const shortcuts = [
-    { id: 'models', label: '模型与账号', disabled: true },
+    { id: 'models', label: '模型与账号', disabled: false },
     { id: 'mcp', label: 'MCP 连接器', disabled: true },
     { id: 'plugins', label: '插件与技能', disabled: true },
     { id: 'memory', label: '记忆', disabled: true },
@@ -25,7 +25,7 @@ function focusSearch() { input.value?.focus(); input.value?.select(); }
 let pendingSelection = null;
 function close() { emit('close'); }
 function selectSession(id) { pendingSelection = () => emit('select-session', id); close(); }
-function selectSettings() { pendingSelection = () => emit('navigate-settings'); close(); }
+function selectShortcut(item) { pendingSelection = () => emit(item.id === 'models' ? 'navigate-endpoints' : 'navigate-settings'); close(); }
 function closed() {
     const action = pendingSelection;
     pendingSelection = null;
@@ -62,7 +62,7 @@ defineExpose({ focusSearch });
                 <p v-if="!sessions.length" class="search-empty">没有匹配的会话。</p>
                 <div class="search-divider"></div>
                 <div class="search-label">快捷入口</div>
-                <button v-for="item in entries" :key="item.id" class="search-result" data-search-result :disabled="item.disabled" :title="item.disabled ? '尚未接入' : undefined" @click="selectSettings"><Icon name="chevron" :size="15" /><span>{{ item.label }}</span><small v-if="item.disabled" class="search-unavailable">尚未接入</small></button>
+                <button v-for="item in entries" :key="item.id" class="search-result" data-search-result :disabled="item.disabled" :title="item.disabled ? '尚未接入' : undefined" @click="selectShortcut(item)"><Icon name="chevron" :size="15" /><span>{{ item.label }}</span><small v-if="item.disabled" class="search-unavailable">尚未接入</small></button>
                 <p v-if="!entries.length" class="search-empty">没有匹配的快捷入口。</p>
             </div>
             <p class="search-note">只搜索本机已有会话与快捷入口，不扫描磁盘。</p>

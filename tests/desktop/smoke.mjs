@@ -32,13 +32,14 @@ async function check(name, action) {
 }
 try {
     await launch();
-    await check('isolated renderer and explicit model selection', async () => {
+    await check('isolated renderer and explicit model/directory selection', async () => {
         assert.equal(await page.evaluate(() => typeof window.require), 'undefined');
         assert.equal(await page.evaluate(() => typeof window.process), 'undefined');
         await page.getByRole('textbox', { name: '消息', exact: true }).fill('无目录流式验证');
         assert.equal(await page.getByRole('button', { name: '发送消息', exact: true }).isDisabled(), true);
         await page.screenshot({ path: path.join(evidence, 'desktop-home.png') });
         await page.getByRole('combobox', { name: '运行模型', exact: true }).selectOption('local-verification');
+        await page.getByRole('button', { name: '无目录', exact: true }).click();
         const composerBefore = await page.locator('.composer').boundingBox();
         await page.getByRole('button', { name: '发送消息', exact: true }).click();
         await page.locator('.turn').first().waitFor();
@@ -60,15 +61,16 @@ try {
     await check('dirty settings can cancel navigation and save with truthful feedback', async () => {
         await page.getByRole('button', { name: '设置', exact: true }).click();
         await page.getByRole('radio', { name: '深色', exact: true }).click();
-        await page.getByRole('button', { name: '返回对话', exact: true }).click();
-        await page.getByRole('button', { name: '取消', exact: true }).click();
+        await page.getByRole('button', { name: '新对话', exact: true }).click();
+        await page.getByRole('button', { name: '继续编辑', exact: true }).click();
         assert.equal(await page.getByRole('radio', { name: '深色', exact: true }).getAttribute('aria-checked'), 'true');
         await page.getByRole('button', { name: '保存设置', exact: true }).click();
         assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
         await page.getByRole('button', { name: '关闭通知', exact: true }).click();
         await page.getByRole('radio', { name: '浅色', exact: true }).click();
         await page.getByRole('button', { name: '保存设置', exact: true }).click();
-        await page.getByRole('button', { name: '返回对话', exact: true }).click();
+        await page.getByRole('button', { name: '新对话', exact: true }).click();
+        assert.equal(await page.getByRole('button', { name: '无目录', exact: true }).count(), 0, 'new sessions inherit the last created session directory choice');
     });
     await check('directory comes from host picker; approval writes a real immutable snapshot', async () => {
         await page.getByRole('button', { name: '新对话', exact: true }).click();
@@ -93,7 +95,7 @@ try {
         assert.equal(await readFile(artifact.path, 'utf8'), artifact.newContent);
         await writeFile(artifact.path, 'Changed outside UAH.', 'utf8');
         assert.equal((await snapshot()).artifacts.at(-1).newContent, artifact.newContent);
-        await page.locator('.artifact-row').last().click();
+        await page.locator('.turn .ui-file-change-row').last().click();
         await page.getByRole('heading', { name: path.basename(artifact.path), exact: true }).waitFor();
         await page.screenshot({ path: path.join(evidence, 'desktop-snapshot.png') });
     });
@@ -107,7 +109,7 @@ try {
     });
     await check('narrow layout keeps composer available and panel can return to conversation', async () => {
         await desktop.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(800, 760));
-        await page.getByRole('button', { name: '返回对话 ×', exact: true }).click();
+        await page.getByRole('button', { name: '关闭工作面板', exact: true }).click();
         assert.equal(await page.getByRole('textbox', { name: '消息', exact: true }).isVisible(), true);
         await page.screenshot({ path: path.join(evidence, 'desktop-800.png') });
         await desktop.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1440, 960));
@@ -115,12 +117,15 @@ try {
     await check('long conversation scroll survives settings, session switching and return', async () => {
         await page.getByRole('button', { name: '新对话', exact: true }).click();
         await page.getByRole('textbox', { name: '消息', exact: true }).fill('滚动回归\n' + '保留阅读位置，不跟随回复跳到底部。\n'.repeat(100));
+        assert.equal(await page.getByRole('button', { name: '移除工作目录', exact: true }).count(), 1, 'new sessions inherit the last created session directory');
+        await page.getByRole('button', { name: '移除工作目录', exact: true }).click();
+        await page.getByRole('button', { name: '无目录', exact: true }).click();
         await page.getByRole('button', { name: '发送消息', exact: true }).click();
         await page.locator('.turn .status').last().filter({ hasText: '已完成' }).waitFor();
         await page.locator('.chat-scroll').evaluate((element) => { element.scrollTop = 600; });
         await page.waitForFunction(() => Math.abs(document.querySelector('.chat-scroll').scrollTop - 600) < 1);
         await page.getByRole('button', { name: '设置', exact: true }).click();
-        await page.getByRole('button', { name: '返回对话', exact: true }).click();
+        await page.getByRole('navigation', { name: '会话列表' }).getByRole('button', { name: /滚动回归/ }).click();
         assert.ok(Math.abs(await page.locator('.chat-scroll').evaluate((element) => element.scrollTop) - 600) < 1);
         await page.getByRole('button', { name: '设置', exact: true }).click();
         await page.getByRole('navigation', { name: '会话列表' }).getByRole('button', { name: /无目录流式验证/ }).click();

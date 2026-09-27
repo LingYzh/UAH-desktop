@@ -14,6 +14,13 @@ try {
     const page = await desktop.firstWindow();
     page.setDefaultTimeout(10000);
     await page.getByRole('textbox', { name: '消息', exact: true }).waitFor();
+    assert.equal(await page.locator('.sidebar-brand').count(), 0);
+    const navigationToggle = page.getByRole('button', { name: '收起或展开导航', exact: true });
+    assert.equal(await navigationToggle.evaluate(button => button.closest('.titlebar') !== null), true);
+    assert.equal(await navigationToggle.evaluate(button => getComputedStyle(button).getPropertyValue('-webkit-app-region')), 'no-drag');
+    const toggleBounds = await navigationToggle.boundingBox();
+    const titleBounds = await page.locator('.titlebar-brand').boundingBox();
+    assert(toggleBounds.y >= titleBounds.y && toggleBounds.y + toggleBounds.height <= titleBounds.y + titleBounds.height);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     const settle = () => page.evaluate(async () => {
         await Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => {})));
@@ -108,11 +115,11 @@ try {
     await page.getByRole('radio', { name: '深色', exact: true }).click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
     assert.notEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('uah-desktop-preferences-v1') || '{}').theme), 'dark');
-    await page.getByRole('button', { name: '返回对话', exact: true }).click();
-    await page.getByRole('button', { name: '取消', exact: true }).click();
+    await page.getByRole('button', { name: '新对话', exact: true }).click();
+    await page.getByRole('button', { name: '继续编辑', exact: true }).click();
     await settle();
     assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
-    await page.getByRole('button', { name: '返回对话', exact: true }).click();
+    await page.getByRole('button', { name: '新对话', exact: true }).click();
     await page.getByRole('button', { name: '放弃更改', exact: true }).click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === 'light');
     await page.getByRole('button', { name: '设置', exact: true }).click();
@@ -125,7 +132,7 @@ try {
     await page.getByRole('button', { name: '保存设置', exact: true }).click();
     await page.getByRole('radio', { name: '浅色', exact: true }).click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === 'light');
-    await page.getByRole('button', { name: '返回对话', exact: true }).click();
+    await page.getByRole('button', { name: '新对话', exact: true }).click();
     await page.getByRole('button', { name: '放弃更改', exact: true }).click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
     await page.getByRole('button', { name: '设置', exact: true }).click();

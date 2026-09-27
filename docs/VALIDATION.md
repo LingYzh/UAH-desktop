@@ -150,3 +150,197 @@
 - 最终桌面回归 8/8（artifacts/desktop-NZUHtb）、原生浏览器回归 7/7（artifacts/browser-wOeOEa）通过。
 
 配套 UI 检查点：4eb946a78b50aac1ada8e47871c5082d4e8ba9c2（LingYzh/UI）。重现本次 UAH 检查点时，将 UI 检出至该提交并置于相邻目录。
+
+## 2026-09-26 · API 与端点接入
+
+- 接入 OpenAI Chat Completions、OpenAI Responses、Anthropic Messages 文本流式协议；端点目录与手动模型、连接测试、系统加密密钥、模型选择、上下文及停止均走真实主进程/隔离运行进程链路。订阅、官方运行时和 API 工具执行未纳入本轮。
+- 已先盘点并复用 UI 的公开组件与真实 demo，未新增共享组件或改动 UI 仓库。详细边界见 [API-INTEGRATION.md](./API-INTEGRATION.md)。
+- 类型检查与生产构建通过；最终单元 **48/48**。
+- 端点桌面专项 **8/8**：[endpoints-OTVWxP/report.json](../artifacts/endpoints-OTVWxP/report.json)，无 pageerror。涵盖系统加密保存与重启后实际认证请求、模型目录、两轮上下文、401 错误、停止挂起连接、启停与删除、模态草稿防丢失。
+- 原桌面回归 **8/8**：[desktop-4Pg3Na/report.json](../artifacts/desktop-4Pg3Na/report.json)；搜索回归 **6/6**：[search-BhTrvP/report.json](../artifacts/search-BhTrvP/report.json)。后者验证重复 Ctrl+K 选择查询文本和新模型管理入口。
+- root 查看端点专项原生截图的浅深主题、编辑器顶部/底部、900×800 的 125% 缩放状态；确认焦点可见、没有横向裁切、长表单可滚动、操作按钮可达。证据以 endpoints-OTVWxP 为准，早期 Playwright 截图在 Electron 缩放时截取区域不正确。
+- 所有 API 验证使用本地 HTTP fixture，没有真实服务商账号调用或计费凭据联调。未机械重跑无变更的全部 UI 库、原生浏览器与桌面观察专项。
+
+## 2026-09-26 · 桌面开发服务端口冲突修复
+
+- 原因：dev:web 已使用 5173，而桌面启动脚本再次要求同一 strictPort 且写死 renderer URL。
+- 桌面开发改从 5175 开始自动避让，传递实际监听地址；Vite 缓存与网页预览分离。关闭服务使用该次启动的 Vite 对象和 Electron exit 事件，不按端口、PID 或进程名称终止其他服务。
+- `node tests/desktop/dev-start.mjs` 通过：占用端口自动避让、实际地址 Electron 启动、renderer 隔离、端点与运行 IPC、本地验证运行完成，以及关闭自有服务后原占用监听仍可访问。证据 `artifacts/dev-start-mjTXtk/report.json`。
+- 已启动供用户使用的桌面窗口，监听 5175；既有 5173 网页预览保持运行。本轮没有 UI 组件或外观变更。
+
+## 2026-09-26 端点目录与弹窗修复
+- 组件盘点：复用 UiDialog/UiScrollArea；先在 D:/UI 补齐 scrollable、固定 error/header/footer，真实 demo 验收见 UI/VALIDATION.md 及 artifacts/dialog-scroll-CEBFBX。
+- EndpointStore.preview 不再要求启用草稿有模型；save/resolve 仍保持校验。避免读取目录之前被“至少一个模型”阻断。
+- 编辑端点固定标题、错误和操作；正文独立滚动，滚动条不经过外层圆角。
+- typecheck、两仓构建通过；48 项单元测试、8 项桌面端点流程通过。桌面新增启用草稿清空再发现模型，以及 HTTP 401 错误在底部滚动后保持可见的断言。证据 artifacts/endpoints-G41rDw；root 检查 endpoint-error-fixed.png 与 endpoint-editor-light-top.png。
+- 用户 localhost:5580 无凭据 GET /models 与 /v1/models 均返回 401，仅证实服务可达且要求认证；未读取或发送用户密钥，未确认其认证后的目录结果。基础地址需依服务配置包含 /v1。
+- 后端修复需重启 Electron 生效；本轮未终止用户正在使用的窗口。
+
+## 2026-09-26 诊断日志组件盘点
+日志入口复用 UiButton、snackbar 及已有 EndpointManager 顶部/弹窗 footer；没有新组件或通用样式缺口。后台日志独立于 UI，不收集原始请求/响应正文。
+
+诊断验收：类型检查、构建、54 项单元测试通过；桌面 8 项端点流程通过，覆盖 501 项目录的详细错误、错误与日志 requestId/operation/protocol 关联、固定目录 IPC 打开、密钥和对话正文不进入日志。root 检查 artifacts/endpoints-pf3Oah/endpoint-detailed-error.png：详细信息完整可见，按钮保持固定。日志写入异常不影响请求，轮转与脱敏单测通过。实际 localhost:5580 认证后返回内容未采集，真实根因待复现。
+
+## 2026-09-26 单页目录兼容与侧栏精简
+盘点：复用 UiButton 的 ghost/sm/icon、UiIcon 与已验收 flex 工具类；只调整应用标题栏布局，无新组件或公共外观能力缺口。移除重复品牌行，导航切换置于标题行；root 负责桌面视觉验收。读取指定诊断编号确认 Anthropic 首响应已有 25 个合法模型，仅分页判定失败。
+
+能力信息组件盘点：复用 UiCard、UiScrollArea 和现有文字/间距工具类，在模型 ID 下方展示服务报告的能力；无需新组件或共享样式，未知不猜测。
+
+最终验收：typecheck、构建及 60 项单元测试通过。8 项桌面端点流程覆盖 Anthropic 选择下读取通用无分页目录、能力展示/保存/重启保持、明确 false、加密密钥保持及流式对话。证据 artifacts/endpoints-nKWygI，root 检查 endpoint-editor-light-bottom.png。外观 7 项流程通过，root 检查 artifacts/appearance-oXjL0T/01-home.png 与 06-settings-200.png：重复品牌行移除，顶部按钮不占拖动区域，折叠后仍可点击，200% 缩放可见。当前测试没有使用用户密钥重放本地模型服务。
+
+## 2026-09-26 手动能力与测试反馈盘点
+已读移动端 AgentApp 的 ModelFetcher.kt、Models.kt、ProvidersScreen.kt：原生图片/PDF/音频/视频独立能力，手动覆盖优先，刷新保留覆盖，恢复时清除能力及上下文覆盖。UAH 复用已验收 UiDialog header/footer、UiCard、UiScrollArea、UiField、UiSelect、UiInput：测试反馈放 header 插槽，能力编辑独立 dialog；没有公共样式/组件缺口。
+
+本轮验收完成：63 项单元测试、类型检查、构建通过；8 项端点桌面流程验证原生输入能力、编辑取消、覆盖应用/保存/刷新/重启保持及恢复声明清除上下文覆盖；测试结果包含实际回复且正文滚动后仍可见。root 检查 artifacts/endpoints-4Tefkm/model-capabilities-editor.png、endpoint-test-result.png 及 artifacts/endpoints-kbVIph/model-capabilities-dark-narrow.png（深色、900×800、125%）。8 项桌面底座流程 artifacts/desktop-Uccx9Q、7 项外观 artifacts/appearance-UnOIXE、6 项搜索 artifacts/search-Yv2mby 通过。删除返回按钮后，阅读位置回归使用历史会话入口返回原会话；未以新对话代替返回原会话。
+
+2026-09-26 模型选择器：构建与两仓 typecheck 通过，renderer 4 项通过（包含跨 provider 同名模型隔离、禁用/空端点过滤）。Electron endpoints 8 项通过，覆盖隐藏占位、分组标签、模型纯 ID 展示及真实流式调用。UI 库真实 demo 已验收浅深色和自定义滚动条拖动、键盘跨组选择；完整组件回归 20 项通过（D:/UI/artifacts/ui-IpuLTP）。
+
+2026-09-26 已有对话选择器：根因是 selected 分支使用 disabled button。统一 UiSelect 后，64 项单测、类型检查、构建通过；额外验证 start-run 选择校验、会话内切换及明确本地验证。Electron 8 项通过（artifacts/endpoints-89Au7a），包含真实鼠标在第一轮完成后打开并选择模型。Supervisor 测试验证第二轮请求切换模型且保留历史，第一轮 effective 不变。
+
+2026-09-27 provider 与能力图标：UI 真实紧凑卡片 demo 浅深色验收通过（D:/UI/artifacts/provider-card-bZ0Gsl）。UAH 卡片/编辑器浅深主题与 900x800 125% 布局验收通过。64 项单测通过；初始启用无模型拒绝补充测试通过。最终构建、两仓 typecheck、Electron endpoints 8 项通过（artifacts/endpoints-nEWAb7），覆盖默认启用、卡片停用持久化、禁发请求、密钥/能力覆盖保留、仅显示支持图标。Tooltip 独立悬停/键盘/Esc 测试与浅深视觉验收通过；实际弹窗 tooltip 已检查 capability-tooltip.png，未被容器裁剪。
+
+2026-09-27 Agent 设置阶段：UI 新增 UiTextarea，真实示例浅/深主题聚焦、禁用、错误及多行编辑验收通过（D:/UI/artifacts/textarea-XPwJBi）。关闭文案回归、API endpoints 8 项通过（artifacts/endpoints-PCZmxC）。主 Agent schema/store/三协议映射/配置快照/history/timeout/cancellation/renderer 共 76 项单测通过，tsc + UI typecheck 与构建通过。完整 desktop smoke 8 项通过（artifacts/desktop-7YmXYg）。
+
+Agent 专项桌面 6 项通过（artifacts/agents-yHXEUF）：真实 loopback SSE 验证指令、temperature、输出上限及零历史请求，运行配置快照、默认模型切换、非法保存不修改原配置、角色及调度设置重启恢复。独立页面检查通过（artifacts/agent-visual-eecD7y），包括脏表单关闭后继续编辑、保存及无横向溢出。root 检查浅色主 Agent 编辑器、深色列表和调度弹窗，以及 900×800、125% 的主 Agent 编辑器底部；滚动区、固定页脚和待接入标识可见。未调用真实付费服务，子代理执行未接入。
+
+## 2026-09-27 Agent / 模型解耦与权限
+
+组件盘点：复用 UiField 的 description / aria-describedby、UiInput、UiSelect、UiTextarea、UiSwitch、UiDialog、UiScrollArea 与已有布局工具类；不需要新增公共组件或业务 CSS。设置字段逐项提供用途与默认行为，主 Agent 不再出现模型/采样参数，子代理仅保留可选模型绑定和角色权限。
+
+89 项单元测试、UAH + UI 类型检查和生产构建通过。覆盖每模型生成参数的严格解析、schema v4 迁移/保留、Agent v2 原文归档迁移、会话 Agent 锁定及重启保持、三种子代理来源、所有权限层级组合（含 bypass）、禁止伪造父权限和工作区，以及运行参数快照。8 项端点桌面回归通过（artifacts/endpoints-cqz1uT）。独立 Agent 页面检查通过（artifacts/agent-visual-oLP12y）；root 已检查浅色编辑器、深色 900×800 125% 调度弹窗，说明文本和固定页脚可见。模型设置与委派 IPC 的专项桌面验收另记。
+
+最终专项：新增上下文 2 项单测并重跑委派 5 项通过，覆盖 all/selected/none 独立选择、内容复制、按父当轮历史窗口隔离其他/未来会话、禁止 system 角色与超限上下文。最新构建和两仓 typecheck 通过。桌面 Agent 专项 13 项通过（artifacts/agents-p6oxxg），验证两模型的真实 SSE 请求参数、主 Agent 与模型独立选择、首轮锁定、继承/预设/临时 Agent、权限拒绝、三种上下文 IPC、编辑预设不改变父运行权限以及重启恢复。root 检查模型设置浅深色上下两端、子代理底部，均为 900×800 125%；说明、选择器、固定页脚与内部滚动边界正常。未执行真实子代理或文件/Shell 工具，未调用外部付费服务。
+
+## 2026-09-27 会话权限与思考强度
+
+组件盘点：复用 UiSelect / UiScrollArea / UiField；现有选择器缺少说明行和菜单标题，先在 D:/UI 扩展 items/menuTitle、真实 demo、文档与测试。root 在业务接入前审阅 described-select-IL4BXH 的浅色菜单及深色 900×800 / 125% 截图，双行选项、右侧勾选、焦点和容器边界验收通过；完整组件测试 20/20。
+
+UAH 本轮 typecheck、build 通过；完整单元测试 97/97。桌面 Agent 集成 14/14，证据 artifacts/agents-h25qxB/report.json，使用隔离数据与本地 HTTP fixture，未使用用户端点或密钥。覆盖会话模式/强度立即保存、下轮参数、Plan 指令、历史不可变、Agent 锁定、重启恢复和子代理权限校验。root 已检查 session-permission-menu-light-900-800-125.png 和 session-effort-menu-dark-900-800-125.png：说明可读、勾选正确、长列表在 UI 滚动容器内、没有越出圆角边界。
+
+三协议请求体映射由 transport 测试验证；真实服务对档位的支持仍取决于模型。思考内容展示及真实工具/子代理执行不在本轮验收范围。须重启 Electron 加载新 runtime 与迁移。
+
+## 2026-09-27 工具循环、思考与实际子代理
+
+组件库先完成 UiActivity、rich select 的真实 demo 与视觉验收，UAH 再接入。root 检查浅深主题 900×800 / 125% 的折叠思考、工具审批和子代理执行结果。UI 完整 20/20（28 文档路由）通过；UAH 运行时及 renderer 完整测试 134/134 通过，含三协议原生工具续传、reasoning/signature 保留、审批、工作区路径防护、写入冲突与排队取消、子代理继承/临时/预设角色、权限子集、上下文隔离、并发/深度/停止与恢复、停止理由回传。
+
+Agent 桌面 15 项通过：artifacts/agents-vPhpk5；工具初版桌面 5 项通过：artifacts/tool-chat-U4bcHD；桌面 smoke 和 browser 通过：artifacts/desktop-w0CrQh、artifacts/browser-ndCawa。这些使用隔离数据和本地协议 fixture，没有使用用户 API 密钥或调用付费服务。UAH/UI typecheck 与生产构建通过。当前命令没有 OS 沙盒，auto 仍须审批；bypass 自动执行，进程停止只保证直接子进程。MCP、电脑操作和官方运行时未纳入实现。
+
+后续子代理侧栏变更：组件盘点确认现有 Tabs/Card/ScrollArea/Activity/Dialog/Textarea 足够，未新增共享样式。首级列表和二级只读详情复用真实组件，停止理由弹窗使用 UI 库滚动和固定页脚。桌面验收证据另附于下。
+
+子代理侧栏视觉验收：root 直接检查 artifacts/tool-chat-SE5lMF 中浅色列表、深色只读详情及停止理由弹窗（900×800 / 125%），并检查 artifacts/tool-chat-jhex17 中浅色列表和深色详情（1440×900 并排视图）。主对话与右侧详情分离，状态、返回列表与折叠内容可读；弹窗理由与固定底部动作可见。两级视图、会话隔离、无操作详情、关闭弹窗不停止、空/非空理由、父代理结果与重启恢复六项桌面场景初次通过；宽窗口补充版本测试记录后附。
+
+最终桌面回归 6/6 通过：artifacts/tool-chat-BusPXq/report.json。包含浅深主题宽/窄两种布局、列表/详情横向无溢出断言，以及真实待审批子代理的只读详情和停止流程。root 复核最终深色宽窗口详情截图通过。最新生产构建与两仓类型检查通过。
+
+## 2026-09-27 默认提示词与工具可用性
+
+已确认本机 agents.sqlite 的子代理总开关为 false，默认助手指令长度 0；通过 AgentStore 完成 v4 归档迁移及用户请求的开启，重新读取确认 enabled=true、默认提示词长度 708。未读取或打印 API 密钥，未调用用户模型服务。代码测试 141/141 通过，新增覆盖请求实际 tools 字段及启用/全局关闭/Agent 禁止/模型禁用四种状态、深度限制、默认提示词与迁移幂等/自定义配置保留。生产构建和 TypeScript 通过。UI 仅用已验收组件新增开关说明文本，无共享能力缺口或样式变更。
+
+最新工具桌面回归 6/6 通过，证据 artifacts/tool-chat-giuYEn/report.json，覆盖真实子代理启动/等待、只读详情、停止理由与重启恢复；构建与两仓 typecheck 通过。
+
+## 2026-09-27 并行等待与工具说明
+
+完整测试145/145、两仓类型检查和生产构建通过。新增确定性协议 fixture 保持子代理响应未释放，验证主代理在其运行期间完成独立 read_file；timeoutMs=0 与正数短超时均返回 running，释放子响应后可得到完整结果。另验证超时参数边界、直属任务归属及等待期间停止父子任务。工作区五个工具的文档 JSON 示例均在真实临时文件执行器上验证（命令示例为 Get-Location）；所有8个工具及嵌套参数说明随请求定义传入模型，完整参考 docs/TOOLS.md。未调用用户端点或进行真实模型费用测试。本轮没有视觉样式变更。
+
+## 2026-09-27 对话富文本、平滑流式与工具差异
+
+组件盘点和 UI-first：D:/UI 的 UiMarkdown/UiDiff、真实 demo、独立文档先完成浅深主题与窄屏缩放验收，才接入 UAH；详见该库 VALIDATION.md。主/子代理共用渲染，工具参数不直接展示，提议和真实快照明确区分。
+
+UAH 单元152/152、两仓 typecheck 和生产 build 通过。工具桌面6/6：artifacts/tool-chat-4QrGLC/report.json，包含人工审批提议 diff、执行后的 exact artifact 快照、Markdown正文、子代理只读、停止理由及重启恢复。root 直接检查浅色审批图、浅色 Markdown 完成图、深色工具实际 diff 和1440px子代理详情，接受900×800/125%与宽屏布局。
+
+流式桌面4/4：artifacts/rich-chat-2Xj153/report.json。隔离本地 SSE 分批突发输出，断言数据已完整持久化时呈现仍为部分文本，验证结束完整、向上阅读不被拉回、重新回底部后按实际渲染高度跟随。组件层另验证稳定正文/代码节点与文字选择、减少动态效果和安全富文本处理。未使用用户端点或密钥；Electron 需重启加载新IPC和工具元数据。
+
+最终共享UI回归14/14单元、20/20完整文档桌面检查（30路由）、Markdown专项通过，UAH按最终共享源码重新生产构建通过。构建仅有大型chunk体积提示，公式/图表按需加载。Markdown的嵌套Mermaid围栏当前显示为代码，顶层绘图；未声称任意HTML或所有第三方扩展支持。
+
+## 原型对齐：工具内联差异与轮末文件清单（进行中）
+
+root直接核对 design/UAH_PC_Prototype_v1/src/app.js 的 toolDetails/changesHTML/diffLinesHTML，以及 styles.css 的 tool/codebox/round-changes 样式。缺口：UiActivity轻量内联变体（前图标后箭头/标题统计/无竖线）、UiDiff紧凑变体（单行快照标题/右栏查看）、UiFileChanges清单。先在D:/UI实现真实组合demo和文档、浅深/缩放验收，再消费；不在UAH补业务CSS绕过共享组件。数据从不可变快照计算，同轮同文件首旧末新汇总，并包含子代理真实产物；不读当前磁盘。
+
+本轮完成：共享组件接入前root检查D:/UI/artifacts/conversation-07zftp/wide-light.png与dark.png并记录验收；最终组件证据conversation-KM3a2M，完整文档20/20（32路由），typecheck/14单元/默认Diff与Tooltip回归通过。UAH root检查artifacts/turn-actions-8fpBr8/prototype-light.png和prototype-dark.png，与原型的轻量工具行、内联差异、轮末列表和操作栏对应。
+
+UAH完整单元165/165通过，新增首次展开reactivity回归后renderer workspace12/12、分组/汇总/呈现12/12通过。两仓类型检查与最终生产构建通过。桌面最终证据：turn-actions-HySEzC（连续工具组审批、内联diff、轮末真实统计与右栏、复制、仅编辑历史、首次发送才建分支、最新回复真实再生成、删除展示且文件不撤销）；tool-chat-rXXlyX 6/6（含子代理只读/停止/重启），rich-chat-rUkY1M 4/4（平滑输出/上滚保持），desktop-oDcR4c 8/8（选择/批准/停止/窄屏/滚动/恢复）。所有请求为隔离本地fixture，未使用用户服务。
+
+发现并修复：activityView首次 ||= 返回原始对象导致子代理思考箭头与正文折叠失联，已先赋值再从ref读取代理；桌面默认拒绝浏览器剪贴板权限，复制改为可信renderer只写IPC，await Electron44异步clipboard API，未开放读取权限。操作弹窗采用逐实例useId避免多轮ARIA目标冲突。历史操作的新契约和剪贴板桥须重启Electron。
+
+## 分支修复与 Plan 工作流：组件盘点
+
+本轮实现前 root 核对 D:/UI/src/ui/index.ts、UiCard/UiActivity/UiSelect/UiField/UiTextarea API 与 ConversationDemo：立即保存分支及继承历史沿用既有 Markdown 对话布局；计划审阅复用 UiCard、UiMarkdown、UiField、UiSelect、UiTextarea、UiButton 与布局工具类。没有新增通用交互或共享样式缺口，不复制组件、不增加业务 CSS。使用已验收组件组装，随后进行真实桌面流程和浅深/窄窗口视觉检查。重新生成限制按整个会话的已发生文件写入判断（包括子代理、先改后恢复），不以净 diff 是否为空判断。
+
+本轮完成：180/180 单元通过，包含真实计划文件边界、UTF-8/链接检查、提交与修订、重启后审批、外部文件改变、端点/控制设置/重复审批竞态、普通文字不造计划、子代理拒绝计划工具、分支 Agent 快照及重新生成副作用限制。两仓 typecheck 与生产 build 通过，仍只有既有大型 chunk 提示。最终日志：artifacts/plan-final-tests.log、plan-final-typecheck.log、plan-final-build.log。
+
+桌面 Plan 证据 artifacts/plan-mode-u69DIi/report.json：真实写文件、右栏查看和复制、刷新恢复、文件 tamper 拒批、修改意见生成独立文件、显式 Manual 审批与后续逐次文件审批。root 检查 plan-light.png（1440px/100%）、plan-dark.png（900px/125%），长路径可换行、Markdown/权限说明/审批按钮可用，使用现有组件样式验收。
+
+分支及轮末操作证据 artifacts/turn-actions-rI9BAy/report.json：重启且最新会话无目录后，仍可从原会话立即创建持久分支，历史显示并刷新恢复，未发额外模型请求；发生文件改动时 UI 与 IPC 均拒绝重新生成。root 检查 saved-branch.png，确认选中新分支、继承内容及继续对话输入框真实显示。截图等待渲染帧落屏，避免采到切换前旧帧。
+
+相关回归：artifacts/tool-chat-GJPpA8/report.json 6/6，含工具审批/diff/子代理只读/停止及重启；artifacts/rich-chat-zIBtZx/report.json 4/4，含突发平滑输出、上滚保持、回底跟随、最终完整文本。流式测试修正为等待 ResizeObserver 后的实际自动滚动，不在文字刚发布而下一动画帧尚未完成时断言；未修改流式实现。所有测试使用隔离本地 SSE 和独立数据目录，无用户端点或密钥调用。
+
+## 默认 Agent 与 Markdown 编辑
+
+实现前组件盘点、来源及迁移细节记录在 AGENT-PRESETS.md；复用 UiTextarea/UiTabs/UiTabPanel/UiMarkdown，无共享UI缺口及CSS改动。185/185单元、两仓typecheck、build通过；新增桌面专项 artifacts/agent-presets-S7RKnI/report.json 验证三个真实提示词请求、编辑/预览、键盘、安全渲染及重启保存，root检查浅深/900px125%图片通过。既有Agent桌面15/15证据 artifacts/agents-KfPB75/report.json。构建仍仅有既有chunk体积提示，本轮没有真实用户端点请求。
+
+## 用户模板、上下文钩子与滚动修复
+
+组件盘点：UiScrollArea已有height属性及demo，直接正确配置viewport约束，无共享能力缺口/样式变更。旧构建在24额外角色下滚轮测试失败，修复后artifacts/agent-scroll-x82AxP浅深/窄屏125%滚轮、键盘、末项编辑及回顶部通过，root检查dark.png滚动条与最后卡片。
+
+用户两份附件仅占位替换，新增共同基座+子角色；v6迁移保留自定义，动态槽位不回写。192/192单元、两仓typecheck、build通过（claude-bindings-tests/types/build.log）；artifacts/agent-presets-B7TNvK/report.json验证真实主/子请求含新提示词与当轮状态、子代理无越权工具，Markdown预览/保存/重启通过。详细钩子接口、来源、容量限制与迁移边界见AGENT-PRESETS.md。未使用用户服务或密钥。
+
+## GPT 分层提示词与子预设（2026-09-27）
+
+- 资料包 python scripts/test_tools.py：18/18；MANIFEST 35项全部匹配。export_originals下载固定模型目录Git blob匹配，原始root/subagent字节一致，base仅一处行尾空格差异（verify-pack退出1，未误报通过）。证据 artifacts/gpt-source-verification.json；详细固定hash见CODEX-RUNTIME.md。
+- node scripts/generate-gpt-prompts.mjs --check通过；模板逐字、绑定完整性、主子角色分离、动态身份/目录/工具/权限、未来Git/记忆槽位与不递归注入均有单元覆盖。
+- npm test：198/198，artifacts/gpt-tests.log；AgentStore 25项涵盖v1到v7、归档、精确旧默认更新、自定义/禁用/删除/碰撞、容量、revision及失败回滚。
+- npm run typecheck（UAH与UI）、npm run build通过，artifacts/gpt-types.log、gpt-build.log；仅已有大chunk提示。
+- npm run test:agent-presets：artifacts/agent-presets-lbCj0X/report.json，9次真实本地SSE请求覆盖三主预设、Claude/GPT子运行、独立角色和parentRunId、readonly工具边界、编辑器Markdown、键盘、脚本不执行、原文保存及重启。
+- 没有共享UI样式改动，复用已验收组件；未使用用户密钥或端点，未调用原生Codex或付费模型。
+
+## 统一条件提示词（2026-09-27）
+
+- 215/215自动测试：artifacts/conditional-tests-current.log。包含v8精确迁移29项、条件装配5项、真实工具循环模拟4项、诊断9项，以及原审批/权限/文件/三协议等回归。早期旧system文案断言失败已改为检查模块/schema/保存原文及精确history；当前全套通过。
+- npm run typecheck（含UI）、npm run build通过：artifacts/conditional-types.log、conditional-build.log。构建保留原有chunk体积提示。
+- npm run test:agent-presets通过：artifacts/agent-presets-exN25I/report.json，9次本地SSE请求；root检查preview-dark-narrow.png（900px/125%）可滚动、无横向溢出、操作区可达。复用已验收UI，仅说明文字变化。
+- 实际从保存的kiro目录发现25项模型；只读数据库存在旧字段格式、safeStorage依赖原userData，测试helper兼容后二者恢复。未修改用户端点，未暴露密钥；早期--list笼统错误已补stage/安全error code诊断。
+
+真实测试报告：
+
+| 服务模型标识 | 只读文件 | 编辑与diff | 真实计划文件/提交 | inherit子代理/等待 |
+| --- | --- | --- | --- | --- |
+| gpt-5.6-luna | 通过 | — | — | — |
+| gpt-5.6-terra | 通过 | — | — | — |
+| gpt-5.6-sol | 通过 | 通过 | 通过 | 通过 |
+| claude-haiku-4.5 | 通过 | — | — | — |
+| claude-sonnet-4.6 | 通过（两轮） | 通过 | 通过 | 通过 |
+| claude-opus-4.8 | 通过 | — | — | — |
+
+共13用例全通过。首轮9例：artifacts/kiro-prompts-2026-09-27T15-27-01-722Z/report.json；Claude4例：artifacts/kiro-prompts-2026-09-27T15-28-13-775Z/report.json。运行日志artifacts/kiro-real-tests.log与kiro-claude-workflow.log。服务当前未列出gpt-6-sol，没有以其他型号冒充。型号来自服务目录，未独立核验代理服务背后的上游模型身份。
+
+每例使用隔离project/data和随机nonce；真实调用read_file，验证返回nonce；编辑验证文件OLD→NEW和不可变前后快照；Plan验证write/read/submit与磁盘文件一致且未改项目；父模型真实spawn+wait，子运行实际读取，父没有自行读取替代子工作。全部无命令、无普通审批、无越权文件artifact；Plan保持proposed未实施。未测试账号全模型、全部effort或原生CLI，不把有限烟测当作普遍模型可靠性保证。
+
+脚本只在用户明确启动--models时生成，自动npm test不触发任何真实服务。case最长180秒，使用Supervisor停止/收拢，不按瞬时PID杀服务器。可按case/data/logs/runtime.jsonl核对prompt.assembled（21模块候选，包含跳过原因）与真实工具运行。
+
+## Plan 任务版本与右栏审阅（2026-09-28）
+
+- 组件盘点：复用共享 Card、Field、Input、Textarea、Tabs、Select、Markdown、ScrollArea 和布局工具类，未增加业务 CSS。动态版本标签缺陷先在 D:/UI 修复与文档验收（artifacts/described-select-HRdW5u，见该仓库 VALIDATION.md），之后构建接入 UAH。
+- npm test 226/226：artifacts/plan-v2-unit-tests.txt。覆盖当前任务身份、手工编辑历史、同任务 Agent 修订、不可覆盖快照、旧路径迁移、澄清不失效、删除不复活、审批重放/竞态、权限与转换注入、正文展示摘要不改模型输入。最后追加当前标题传递断言后 Plan／prompt／presentation 专项23/23通过。
+- 两仓 npm run typecheck、npm run build 通过：artifacts/plan-v2-typecheck.txt、plan-v2-build.txt。保留已有大 chunk 提示。
+- Electron tests/desktop/plan-mode.mjs：最终 artifacts/plan-mode-h65cpl/report.json 通过。真实本地 SSE fixture 验证右栏正文、待审批替换 composer、右栏编辑/预览、编辑中禁用审批、保存后可审批、v1/v2/v3、历史只读、复制、reload、外部修改拒绝、Revise 携带用户正文、Manual 批准后仍需文件审批、批准后恢复 composer、对话不重复完整计划、文件精确变更和零 pageerror。
+- Root 直接检查本轮截图（artifacts/plan-mode-dULyBn/plan-light.png、plan-dark.png、plan-revise.png、plan-editor.png）：1440px浅色右栏与底部审批同时展示；900px/125%深色操作可达；正文、版本与编辑器均在右栏，审批区有受限滚动，未溢出圆角。最后增加编辑锁后同脚本再次通过 h65cpl。Revise 图中的错误条来自测试刻意篡改计划文件，属于正确拒绝提示。
+
+真实 kiro 最终验证（使用用户已授权端点，各自独立隔离数据/项目）：
+
+| 服务返回模型标识 | 初始规划 / 人工编辑后 Agent 修订 / 实施 | 断言 | 报告 |
+| --- | --- | --- | --- |
+| gpt-5.6-sol | 三轮 completed，40.5秒 | 20/20 | artifacts/kiro-prompts-2026-09-27T16-24-25-516Z/report.json |
+| claude-sonnet-4.6 | 三轮 completed，27.6秒 | 20/20 | artifacts/kiro-prompts-2026-09-27T16-25-09-638Z/report.json |
+
+初始v1 → 用户编辑v2 → Revise反馈v3 → accept-edits批准并精确OLD→NEW。任务身份/标题稳定、反馈marker保留、批准前无项目改动、全部旧版本不变、编辑diff精确、两次审批重放被拒绝；没有命令、外部网络或委派。Root 复查报告；较早GPT/Claude成功报告16-16-22-696Z和16-17-01-534Z保留。此前两次harness失败分别为误拒绝同fixture绝对路径、未明确元数据标题，均保留失败报告；修复测试边界，并在运行时Revise输入中补充实际当前标题和版本。
+
+复现：node scripts/test-kiro-prompts.mjs --plan-review=gpt-5.6-sol（或claude-sonnet-4.6）。只读加载kiro配置，解密key仅在内存；网络限定loopback5580且禁止重定向；不发送用户项目。自动npm test不调用真实模型。有限端到端样本不代表所有模型和故障条件；模型标识来自本地中转服务，未核验上游身份。
+
+## 运行时修复、只读 Git、请求上下文（2026-09-28）
+
+- `npm test`：263/263，通过。`artifacts/git-context-tests-complete.log`。新增三协议晚到子结果、中断效果/删除/分支边界、严格Chat终态/usage、10项Git安全fixture、原生公开上下文投影/密钥私有字段隔离/v1数据库迁移/编辑删除失效、renderer查询竞态与Git呈现。
+- `npm run typecheck`、`npm run build`：通过，覆盖UAH与相邻UI库，日志`artifacts/git-context-typecheck-final.log`、`git-context-build-final.log`。保留原有chunk大小提示，不影响构建。
+- `npm run test:git-context`：最终37断言、4请求通过；`artifacts/git-context-Eak2dU/report.json`。真实Electron隔离数据目录+临时Git仓库+localhost SSE。实际API目录授权、路径逃逸拒绝、分支/状态/两类diff/log/中文文件、服务usage/缓存/容量、工具续轮/未知usage、会话切换、两次重启及删除详情失效；HEAD与index前后哈希完全一致。pageerror和consoleErrors为空。
+- Root逐张检查Eak2dU中Git浅深、context-usage浅深、context-expanded浅深、context-scrolled-dark、context-collapsed-dark图：1440/100%和900/125%均通过。展开后真实文本Range位于内外viewport共同可视区；外壳scrollTop=0，与viewport顶部对齐，固定关闭按钮可达。初次cGG1TW/EnHP9h功能通过但截图不合格的记录保留，未冒称视觉通过。
+- UI先行：`D:/UI/USAGE_METER_VALIDATION.md`与usage-meter-qKhMlm六图；`D:/UI/DIALOG_NESTED_VALIDATION.md`与dialog-nested-Avpq9P八图，root均直接查看验收。滚动外壳改clip修复焦点导致的双层滚动空白，无API变化。UI独立嵌套可见性、dialog-scroll及全组件ui.mjs20项全部通过（ui-PHOT1i）。
+- Plan完整桌面回归：`artifacts/plan-mode-0PFDSN/report.json`通过，6请求、零页面错误。旧测试对异步桥的等待不足使下一轮尚处draft时断言proposed；改为Node端等待指定轮次数达到并且明确completed，原行为断言保持，回归通过。
+- 未调用用户真实模型服务，未修改用户项目Git状态。接口兼容服务未上报usage时保持估算/未知；分类估算不代表精确token或账单。未接入Git写操作、压缩或原生CLI。

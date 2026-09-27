@@ -2,6 +2,8 @@
 
 状态：用户已选择。日期：2026-09-26。
 
+后续增量：三种文本 API、端点管理和系统加密密钥已接入，详见 [API-INTEGRATION.md](./API-INTEGRATION.md)。以下确定性适配器与后续门槛描述保留底座阶段的决策背景；官方 CLI、订阅和工具引擎仍未实现。
+
 ## 决策
 
 采用 Electron、Vue 3 Composition API、Vite、Pinia；稳定 IPC/运行/审批/存储核心使用 TypeScript。Windows 能力按需通过 .NET 10 helper，不同时引入 Rust。原型提供视觉与交互合同，不把全局 `S`、fixtures 或整页 `innerHTML` 封装进桌面壳。
