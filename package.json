@@ -13,7 +13,7 @@
         "dev:web": "vite --host 127.0.0.1",
         "build": "node scripts/build.mjs",
         "start": "electron .",
-        "typecheck": "tsc --noEmit && npm --prefix ../UI run typecheck",
+        "typecheck": "tsc --noEmit",
         "test": "tsx --test tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs",
         "test:desktop": "node tests/desktop/smoke.mjs",
         "test:endpoints": "node tests/desktop/endpoints.mjs",
@@ -36,7 +36,7 @@
     "dependencies": {
         "pinia": "4.0.3",
         "vue": "3.5.43",
-        "@lingyzh/ui": "file:../UI"
+        "@lingyzh/ui": "0.1.0"
     },
     "devDependencies": {
         "@types/node": "^24.0.0",

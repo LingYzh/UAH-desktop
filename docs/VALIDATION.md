@@ -344,3 +344,11 @@ UAH完整单元165/165通过，新增首次展开reactivity回归后renderer wor
 - UI先行：`D:/UI/USAGE_METER_VALIDATION.md`与usage-meter-qKhMlm六图；`D:/UI/DIALOG_NESTED_VALIDATION.md`与dialog-nested-Avpq9P八图，root均直接查看验收。滚动外壳改clip修复焦点导致的双层滚动空白，无API变化。UI独立嵌套可见性、dialog-scroll及全组件ui.mjs20项全部通过（ui-PHOT1i）。
 - Plan完整桌面回归：`artifacts/plan-mode-0PFDSN/report.json`通过，6请求、零页面错误。旧测试对异步桥的等待不足使下一轮尚处draft时断言proposed；改为Node端等待指定轮次数达到并且明确completed，原行为断言保持，回归通过。
 - 未调用用户真实模型服务，未修改用户项目Git状态。接口兼容服务未上报usage时保持估算/未知；分类估算不代表精确token或账单。未接入Git写操作、压缩或原生CLI。
+
+## npm UI 依赖迁移（2026-09-29）
+
+- `@lingyzh/ui` 从 `file:../UI` 改为固定的 npm `0.1.0`。`package-lock.json` 记录官方 registry tarball 和 integrity；`npm ci` 后 `node_modules/@lingyzh/ui` 是普通目录，不再是指向相邻仓库的 Junction。已确认包内包含 UiDiff、UiMarkdown，UAH 的类型检查不再运行相邻 UI 仓库脚本。
+- Node 24.19.0、npm 10.9.3：`npm ci`、`npm run typecheck`、`npm test`（263/263）、`npm run build` 均通过。构建仍有大 chunk 提示；此次包已包含 Markdown/KaTeX/Mermaid 依赖，生产构建成功。
+- `npm run test:ui` 25 项通过，遍历 npm 包的 33 个文档路由，证据 `artifacts/ui-7OByyC`；`npm run test:desktop` 8 项通过，证据 `artifacts/desktop-fW6brH`。前者包含 Electron 生产界面与独立 UI 文档页；后者覆盖隔离 renderer、目录审批、停止、窄屏、历史和重启。没有用此结果冒称全桌面专项或真人视觉验收。
+- 测试维护：UI 文档新增的长表单弹窗使旧的首个 `dialog` 选择器失效，Markdown demo 使全局 h1 不唯一，异步剪贴板需等待成功反馈；相应断言已修复。Windows Git 检出 CRLF 与内嵌 LF 模板对比失败，单测读取后统一换行符。上述问题均未要求修改 UI 发布包。
+- 迁移前 `package-lock.json` 已有可选平台包 `libc`/`dev` 元数据的本地差异，安装与更新锁文件时保留；本次没有清理这些既有改动。未调用真实模型服务、未改用户运行数据库。

@@ -11,7 +11,8 @@ import type { RunRecord } from '../../src/shared/contracts';
 
 test('GPT vendored modules exactly preserve the user pack; only slots change in bound prompts', () => {
     for (const [name, template] of Object.entries({ 'shared-base': GPT_SHARED_TEMPLATE, 'main-role': GPT_MAIN_TEMPLATE, 'subagent-role': GPT_SUBAGENT_TEMPLATE, 'runtime-context': GPT_RUNTIME_TEMPLATE })) {
-        assert.equal(template, readFileSync(`docs/codex-cli-0.157.1-prompts/portable/${name}.md`, 'utf8'));
+        // Git may check out Markdown with CRLF on Windows while the embedded template uses LF.
+        assert.equal(template, readFileSync(`docs/codex-cli-0.157.1-prompts/portable/${name}.md`, 'utf8').replace(/\r\n/g, '\n'));
     }
     for (const [role, prompt] of [[GPT_MAIN_TEMPLATE, GPT_HARNESS_INSTRUCTIONS], [GPT_SUBAGENT_TEMPLATE, GPT_SUBAGENT_INSTRUCTIONS]]) {
         for (const template of [GPT_SHARED_TEMPLATE, role, GPT_RUNTIME_TEMPLATE]) {

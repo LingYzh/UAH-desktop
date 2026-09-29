@@ -157,7 +157,7 @@ try {
     await openDoc('dialog');
     await page.getByRole('button', { name: '打开示例弹窗' }).click();
     const dialog = page.getByRole('dialog', { name: '共享弹窗' });
-    await page.waitForFunction(() => document.querySelector('dialog').dataset.state === 'open');
+    await page.waitForFunction(() => [...document.querySelectorAll('dialog')].some((element) => element.open && element.dataset.state === 'open' && element.textContent?.includes('共享弹窗')));
     assert.equal(await dialog.evaluate((element) => element.getAnimations().length), 0);
     await page.getByRole('button', { name: '关闭弹窗', exact: true }).click();
     await dialog.waitFor({ state: 'hidden' });
@@ -199,7 +199,7 @@ try {
     passed.push('snackbar supports all six positions, manual close, and independent pointer/focus timer pauses');
     for (const doc of docPages) {
         await openDoc(doc.id);
-        assert.ok((await page.locator('h1').textContent()).includes(doc.title), `document heading: ${doc.id}`);
+        assert.ok((await page.getByRole('heading', { name: new RegExp(doc.title), level: 1 }).first().textContent()).includes(doc.title), `document heading: ${doc.id}`);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `horizontal overflow: ${doc.id}`);
     }
     passed.push(`all ${docPages.length} documentation routes render without page overflow`);
@@ -207,6 +207,7 @@ try {
     const example = page.getByRole('region', { name: '动作层级', exact: true });
     await example.getByRole('tab', { name: '源码', exact: true }).click();
     await example.getByRole('button', { name: '复制源码', exact: true }).click();
+    await example.getByRole('button', { name: '已复制', exact: true }).waitFor();
     assert.equal((await app.evaluate(({ clipboard }) => clipboard.readText())).replace(/\r\n/g, '\n'), docPages.find((doc) => doc.id === 'button').examples[0].code);
     await example.getByRole('button', { name: '自动换行', exact: true }).click();
     assert.equal(await example.locator('pre').evaluate((element) => getComputedStyle(element).whiteSpace), 'pre-wrap');

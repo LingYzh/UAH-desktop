@@ -9,7 +9,6 @@ UAH Windows 桌面底座：**Electron + Vue 3 + Vite + Pinia + TypeScript 核心
 需要 Node.js 24+、npm；构建 Windows 原生观察组件需要 .NET 10 SDK。
 
 ```powershell
-npm --prefix ../UI ci
 npm ci
 npm run build:native
 npm run build
@@ -22,7 +21,7 @@ npm start
 
 开发服务的 `/ui.html` 提供组件分类、搜索、真实示例、源码、API、设计变量和交互约定。`npm run build:ui` 独立构建到 `dist/ui-docs/`，保留目录中的 HTML 与 assets，通过 HTTP 服务预览或部署。
 
-UAH UI 保留原型外观，在按钮与 Tabs 中整合 `@vuetify/v0` 无样式交互基础。组件契约见 [UI README](../UI/README.md)。共享外观修改先更新 UI 库和 demo，经视觉验收后再迁移业务页面；具体规则见 [AGENTS.md](AGENTS.md)。
+UAH UI 保留原型外观，在按钮与 Tabs 中整合 `@vuetify/v0` 无样式交互基础。组件契约见 [UI README](https://github.com/LingYzh/UI#readme)。共享外观修改先更新 UI 库和 demo，经视觉验收、发布新版本后再升级业务依赖；具体规则见 [AGENTS.md](AGENTS.md)。
 
 ## 可验证的链路
 
@@ -66,4 +65,4 @@ npm run test:ui
 
 见 [ADR-001](docs/ADR-001-electron-vue-foundation.md) 与 [版本化功能基线](design/UAH_PC_HARNESS_FUNCTIONAL_DESIGN.md)。
 
-UI 组件和文档已独立到相邻的 `../UI` 仓库（git@github.com:LingYzh/UI.git）。首次安装先在 UI 执行 `npm ci`，再在 UAH 执行 `npm ci`；UAH 使用 `file:../UI` 源码依赖与 Vue dedupe。UI 可在 5174 独立预览；UAH 的 `/ui.html` 仍保留兼容入口。
+UI 组件和文档位于独立的 [UI 仓库](https://github.com/LingYzh/UI)。UAH 固定使用 npm 发布的 `@lingyzh/ui@0.1.0`；只需在 UAH 执行 `npm ci`，不要求相邻 UI 仓库。Vite 保持 Vue dedupe。UI 仓库可在 5174 独立预览；UAH 的 `/ui.html` 仍保留兼容入口。

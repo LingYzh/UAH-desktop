@@ -1,6 +1,6 @@
 # UAH / UI 新会话交接
 
-更新日期：2026-09-28。本文记录历次增量，文末为最新状态；新会话先检查实际 Git 状态和用户最新要求。
+更新日期：2026-09-29。本文记录历次增量，文末为最新状态；新会话先检查实际 Git 状态和用户最新要求。
 
 提交检查点说明：用户现已授权把UI与UAH全部累计改动连同handoff分别提交。下文各阶段的“未提交”是历史记录；以文末2026-09-28提交检查点和实际git log/status为准。当前可用能力包括三协议API、工具/审批/委派、Plan、只读Git和请求上下文，并非开篇历史增量所述的纯文本阶段。
 
@@ -33,22 +33,21 @@
 
 ## UI 如何被 UAH 引用
 
-- UAH 的 package.json 使用 `"@lingyzh/ui": "file:../UI"`，依赖两个目录保持相邻。
-- 当前 `D:/UAH/node_modules/@lingyzh/ui` 是指向 `D:/UI` 的目录联接（Junction）。组件唯一实现保留在 UI，没有复制回 UAH。
-- UI 的 package.json exports 将包入口映射到 `src/ui/index.ts`，样式映射到 `src/ui/styles.css`。这是私有 Vue/TypeScript 源码包，需要 Vue/Vite 构建，不是已经发布的 npm 包，也不是从 GitHub 在线加载。
+- UAH 的 package.json 固定使用 `"@lingyzh/ui": "0.1.0"`，从 npm registry 安装，不再依赖两个目录相邻。
+- `node_modules/@lingyzh/ui` 是普通安装目录，不是指向 UI 源码仓库的目录联接。组件唯一实现保留在 UI 包，没有复制回 UAH。
+- UI 的 package.json exports 将包入口映射到 `src/ui/index.ts`，样式映射到 `src/ui/styles.css`。npm 包发布 Vue/TypeScript 源码，需要消费端 Vue/Vite 构建。
 - UAH 的 vite.config.ts 配置 `resolve.dedupe: ['vue']`，确保 UI 与宿主使用同一 Vue 实例。
 - 业务文件从 `@lingyzh/ui` 导入组件；UAH 的 `src/renderer/main.js` 先加载业务 styles.css，再加载公共 UI 样式。tokens 也通过包导出引用。
-- 修改 UI 源码会由使用该包的 Vite 项目读取，通常通过 HMR 更新；修改依赖清单、exports 或链接后需重新安装依赖或重启开发服务。生产应用需要重新构建。
+- 修改 UI 源码不会即时改变 UAH；先在 UI 仓库完成验收并发布新版本，再升级 UAH 的依赖与锁文件、重新安装并构建。
 
 ```js
 import { UiButton, UiInput, UiTabs, UiTable, UiDataTableServer, UiPagination } from '@lingyzh/ui';
 import '@lingyzh/ui/styles.css'; // 仅在应用入口加载一次
 ```
 
-首次安装，在 D:/UAH 执行：
+首次安装，在 UAH 项目目录执行：
 
 ```powershell
-npm --prefix ../UI ci
 npm ci
 ```
 
@@ -262,3 +261,9 @@ UI盘点和先行验收已完成：新增D:/UI UiUsageMeter及真实demo/文档�
 ### 后续范围和限制
 
 原生 Codex CLI/订阅运行时、自动上下文压缩、长期记忆、MCP及Git写操作仍未实现。token分类为本地估算，未提供容量的模型显示未知。Git防护不构成对恶意并发修改 `.git/config` 的原子沙箱。构建仍有既有的大 chunk 提示。继续开发前先读对应能力文档、检查两个仓库实际状态，遵循组件盘点→UI库/demo/视觉验收→业务接入的顺序。
+
+## 2026-09-29 npm 依赖迁移（最新）
+
+UI 库已公开发布为 `@lingyzh/ui@0.1.0`。UAH 的 package.json 和 package-lock.json 固定使用该 npm 版本，已移除 `file:../UI` 链接；`npm run typecheck` 仅检查 UAH 自身。按本节及上文“UI 如何被 UAH 引用”的当前说明恢复：在 UAH 运行 `npm ci` 即可，不需要相邻 UI checkout。历史检查点中有关本地 Junction 和 `D:/UI` 的叙述仅用于解释当时状态，不再是安装步骤。共享 UI 修改仍遵循 UI 仓库开发、文档与视觉验收、发布新版本，再更新 UAH 的顺序。
+
+本次用 Node 24.19.0 验证：`npm ci`、`npm run typecheck`、`npm test`（263/263）、`npm run build`、`npm run test:ui`（25 项，33 个文档路由）和 `npm run test:desktop`（8 项）通过。UI 测试更新了多弹窗场景的选择器、文档正文中的标题定位和异步剪贴板等待；Windows 检出 CRLF 时 GPT 模板单测统一换行符。证据目录与边界见 `docs/VALIDATION.md` 最新节。
