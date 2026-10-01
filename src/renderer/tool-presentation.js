@@ -1,5 +1,5 @@
 const titles = { read_file: '读取文件', list_directory: '浏览目录', search_files: '搜索文件', write_file: '编辑文件', run_command: '执行命令', spawn_agent: '启动子代理', wait_agents: '等待子代理', list_agent_presets: '查询子代理角色', enter_plan_mode: '进入规划模式', write_plan: '写入计划文件', read_plan: '读取计划文件', submit_plan: '提交实施计划' };
-Object.assign(titles, { git_status: '查看 Git 状态', git_diff: '查看 Git 差异', git_log: '查看近期提交' });
+Object.assign(titles, { git_status: '查看 Git 状态', git_diff: '查看 Git 差异', git_log: '查看近期提交', read_file_range: '分段读取文件', read_artifact_range: '分段读取产物', apply_patch: '应用文件补丁' });
 import { filePathKey } from './file-changes.js';
 
 const states = { starting: '正在启动', running: '运行中', approval: '等待审批', completed: '已完成', failed: '失败', stopped: '已中止', stopping: '正在停止' };
@@ -75,10 +75,12 @@ export function presentTool(activity, artifacts = [], context = {}) {
         case 'git_status': usage = '只读查询当前目录的本地 Git 状态'; break;
         case 'git_diff': usage = `查看 ${path} · ${args.staged ? '已暂存（索引对 HEAD）' : '未暂存（工作区对索引）'}`; break;
         case 'git_log': usage = '读取影响当前目录的最近至多 20 条本地提交'; break;
+        case 'read_file_range':
         case 'read_file': usage = `读取 ${path} · 第 ${(Number.isInteger(args.offset) ? args.offset : 0) + 1} 个字符起，最多 ${Number.isInteger(args.limit) ? args.limit : 16000} 个字符`; break;
         case 'list_directory': usage = `列出 ${path} 的直接子项`; break;
         case 'search_files': usage = `在 ${path} 搜索字面文本：${text(args.query)}`; break;
         case 'write_file': usage = `${args.expectedContent === null ? '创建' : '替换'} ${path}`; break;
+        case 'apply_patch': usage = `核对文件版本后应用 ${Array.isArray(args.edits) ? args.edits.length : 0} 处补丁 · ${path}`; break;
         case 'run_command': usage = text(args.command) || '命令详情不可用。'; break;
         case 'spawn_agent': {
             const agent = object(args.agent) ? args.agent : {};
@@ -97,9 +99,9 @@ export function presentTool(activity, artifacts = [], context = {}) {
         case 'submit_plan': usage = '保存实施计划供审阅，等待用户批准执行或提出修改意见。'; break;
     }
     const presentation = { title: titles[name], usage, result: resultText(name, text(metadata.result), metadata.isError || activity.status === 'failed') };
-    if (['read_file', 'write_file', 'list_directory', 'search_files'].includes(name)) presentation.path = path;
+    if (['read_file', 'read_file_range', 'write_file', 'apply_patch', 'list_directory', 'search_files'].includes(name)) presentation.path = path;
     if (name === 'run_command') presentation.language = 'powershell';
-    if (name === 'write_file') {
+    if (['write_file', 'apply_patch'].includes(name)) {
         let artifact = typeof metadata.artifactId === 'string' ? artifacts.find(item => item.id === metadata.artifactId) : undefined;
         if (!Object.hasOwn(metadata, 'artifactId') && activity.status === 'completed' && typeof context.runId === 'string'
             && (args.expectedContent === null || typeof args.expectedContent === 'string') && typeof args.content === 'string') {

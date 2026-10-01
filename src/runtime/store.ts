@@ -11,10 +11,55 @@ import type {
     Snapshot,
 } from '../shared/contracts.js';
 import type { RequestContextDetail } from '../shared/request-context';
+import type { TranscriptEvent } from '../shared/harness-contracts';
+import type { WorkspaceOverview } from '../shared/snapshot-view';
+import { sessionHasFileChanges } from '../shared/run-effects';
+import { eraseSessionRows } from './session-purge-data';
 
-const SCHEMA_VERSION = 2;
+export const RUNTIME_SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = RUNTIME_SCHEMA_VERSION;
 const MAX_SESSIONS = 5_000;
-const MAX_RUNS = 500;
+const DEFAULT_MAX_RUNS = 100_000;
+const DEFAULT_MAX_DATABASE_BYTES = 2 * 1024 * 1024 * 1024;
+
+export interface RuntimeStoreOptions {
+    maxRuns?: number;
+    maxDatabaseBytes?: number;
+}
+
+export interface RunPageCursor {
+    createdAt: string;
+    id: string;
+}
+
+export interface RunPageOptions {
+    sessionId?: string;
+    before?: RunPageCursor;
+    limit?: number;
+}
+
+export interface HistoryCapacity {
+    count: number;
+    maxRuns: number;
+    databaseBytes: number;
+    maxDatabaseBytes: number;
+}
+
+function validateOptions(value: unknown, keys: readonly string[], name: string): asserts value is Record<string, unknown> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)
+        || ![Object.prototype, null].includes(Object.getPrototypeOf(value))
+        || Reflect.ownKeys(value).some((key) => typeof key !== 'string' || !keys.includes(key)
+            || !Object.hasOwn(Object.getOwnPropertyDescriptor(value, key)!, 'value'))) {
+        throw new Error(`Invalid ${name} options`);
+    }
+}
+
+function positiveInteger(value: unknown, name: string): number {
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) {
+        throw new Error(`Invalid ${name}: expected a positive safe integer`);
+    }
+    return value;
+}
 
 export interface StoreCommit {
     contexts?: RequestContextDetail[];
@@ -24,6 +69,7 @@ export interface StoreCommit {
     approvals?: ApprovalRecord[];
     artifacts?: ArtifactSnapshot[];
     events?: RuntimeEvent[];
+    journal?: TranscriptEvent[];
 }
 
 function serialize(value: unknown): string {
@@ -40,16 +86,28 @@ function parseRow<T>(json: string, table: string): T {
 
 export class RuntimeStore {
     private readonly database: DatabaseSync;
+    private readonly maxRuns: number;
+    private readonly maxDatabaseBytes: number;
     private closed = false;
 
-    constructor(dataDirectory: string) {
+    constructor(dataDirectory: string, options: RuntimeStoreOptions = {}) {
+        validateOptions(options, ['maxRuns', 'maxDatabaseBytes'], 'runtime store');
+        this.maxRuns = options.maxRuns === undefined ? DEFAULT_MAX_RUNS : positiveInteger(options.maxRuns, 'maxRuns');
+        this.maxDatabaseBytes = options.maxDatabaseBytes === undefined ? DEFAULT_MAX_DATABASE_BYTES : positiveInteger(options.maxDatabaseBytes, 'maxDatabaseBytes');
         const directory = resolve(dataDirectory);
         mkdirSync(directory, { recursive: true });
         this.database = new DatabaseSync(resolve(directory, 'runtime.sqlite'));
-        this.database.exec('PRAGMA foreign_keys = ON;');
-        this.database.exec('PRAGMA journal_mode = WAL;');
-        this.database.exec('PRAGMA synchronous = FULL;');
-        this.initializeSchema();
+        try {
+            // Refuse newer databases before any connection configuration can persist changes.
+            this.assertSupportedSchema();
+            this.database.exec('PRAGMA foreign_keys = ON;');
+            this.database.exec('PRAGMA journal_mode = WAL;');
+            this.database.exec('PRAGMA synchronous = FULL;');
+            this.initializeSchema();
+        } catch (error) {
+            this.database.close();
+            throw error;
+        }
     }
 
     assertCanCreateSession(): void {
@@ -63,25 +121,256 @@ export class RuntimeStore {
     }
 
     assertCanCreateRun(): void {
-        this.assertOpen();
-        const row = this.database.prepare('SELECT COUNT(*) AS count FROM runs').get() as {
-            count: number;
-        };
-        if (Number(row.count) >= MAX_RUNS) {
-            throw new Error(`Run history limit reached (${MAX_RUNS}); existing history was preserved`);
+        const capacity = this.historyCapacity();
+        if (capacity.count >= capacity.maxRuns) {
+            throw new Error(`Run history capacity quota reached (${capacity.maxRuns} runs); existing history was preserved`);
+        }
+        if (capacity.databaseBytes >= capacity.maxDatabaseBytes) {
+            throw new Error(`Database capacity quota reached (${capacity.maxDatabaseBytes} bytes); existing history was preserved`);
         }
     }
 
-    readSnapshot(): Snapshot {
+    /** Logical SQLite allocation, including pages visible through WAL; excludes WAL/SHM file overhead. */
+    historyCapacity(): HistoryCapacity {
         this.assertOpen();
+        const row = this.database.prepare('SELECT COUNT(*) AS count FROM runs').get() as { count: number };
+        const pages = this.database.prepare('PRAGMA page_count').get() as { page_count: number };
+        const size = this.database.prepare('PRAGMA page_size').get() as { page_size: number };
+        return { count: Number(row.count), maxRuns: this.maxRuns,
+            databaseBytes: Number(pages.page_count) * Number(size.page_size), maxDatabaseBytes: this.maxDatabaseBytes };
+    }
+
+    readRunPage(options: RunPageOptions = {}): { runs: RunRecord[]; nextCursor: RunPageCursor | null } {
+        this.assertOpen();
+        validateOptions(options, ['sessionId', 'before', 'limit'], 'run page');
+        if (options.sessionId !== undefined && (typeof options.sessionId !== 'string' || !options.sessionId)) {
+            throw new Error('Invalid run page sessionId');
+        }
+        const limit = options.limit === undefined ? 50 : positiveInteger(options.limit, 'run page limit');
+        if (limit > 200) throw new Error('Invalid run page limit: maximum is 200');
+        const clauses: string[] = [];
+        const parameters: Array<string | number> = [];
+        if (options.sessionId !== undefined) {
+            clauses.push('session_id = ?');
+            parameters.push(options.sessionId);
+        }
+        if (options.before !== undefined) {
+            validateOptions(options.before, ['createdAt', 'id'], 'run page cursor');
+            if (typeof options.before.createdAt !== 'string' || !options.before.createdAt
+                || typeof options.before.id !== 'string' || !options.before.id) {
+                throw new Error('Invalid run page cursor');
+            }
+            clauses.push('(created_at, id) < (?, ?)');
+            parameters.push(options.before.createdAt, options.before.id);
+        }
+        parameters.push(limit + 1);
+        const rows = this.database.prepare(`SELECT id, created_at, data FROM runs
+            ${clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''}
+            ORDER BY created_at DESC, id DESC LIMIT ?`).all(...parameters) as Array<{ id: string; created_at: string; data: string }>;
+        const page = rows.slice(0, limit);
+        const last = page.at(-1);
+        return { runs: page.map((row) => parseRow<RunRecord>(row.data, 'runs')),
+            nextCursor: rows.length > limit && last ? { createdAt: last.created_at, id: last.id } : null };
+    }
+
+    /** Point lookup; callers retain current in-memory execution state separately. */
+    readRun(runId: string): RunRecord | undefined {
+        this.assertOpen();
+        if (typeof runId !== 'string' || !runId || runId.length > 200 || /[\u0000-\u001f\u007f-\u009f]/.test(runId)) throw new Error('Invalid run identity');
+        const row = this.database.prepare('SELECT data FROM runs WHERE id = ?').get(runId) as { data: string } | undefined;
+        return row ? parseRow<RunRecord>(row.data, 'runs') : undefined;
+    }
+
+    readSessionRuns(sessionId: string): RunRecord[] {
+        this.assertOpen();
+        if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 200 || /[\u0000-\u001f\u007f-\u009f]/.test(sessionId)) throw new Error('Invalid session identity');
+        const rows = this.database.prepare('SELECT data FROM runs WHERE session_id = ? ORDER BY rowid ASC').all(sessionId) as Array<{ data: string }>;
+        return rows.map(row => parseRow<RunRecord>(row.data, 'runs'));
+    }
+
+    /** Session-scoped history projection; does not verify artifact hashes or event manifests. */
+    readSessionSnapshot(sessionId: string, verifyArtifacts = false): Snapshot {
+        this.assertOpen();
+        if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 200 || /[\u0000-\u001f\u007f-\u009f]/.test(sessionId)) {
+            throw new Error('Invalid session snapshot sessionId');
+        }
+        const read = <T>(sql: string, table: string, ...parameters: string[]): T[] => {
+            const rows = this.database.prepare(sql).all(...parameters) as Array<{ data: string }>;
+            return rows.map(row => parseRow<T>(row.data, table));
+        };
+        const snapshot: Snapshot = {
+            sessions: read<SessionRecord>('SELECT data FROM sessions WHERE id = ? ORDER BY rowid ASC', 'sessions', sessionId),
+            runs: read<RunRecord>('SELECT data FROM runs WHERE session_id = ? ORDER BY rowid ASC', 'runs', sessionId),
+            approvals: read<ApprovalRecord>('SELECT data FROM approvals WHERE run_id IN (SELECT id FROM runs WHERE session_id = ?) ORDER BY rowid ASC', 'approvals', sessionId),
+            artifacts: read<ArtifactSnapshot>('SELECT data FROM artifacts WHERE session_id = ? AND run_id IN (SELECT id FROM runs WHERE session_id = ?) ORDER BY rowid ASC', 'artifacts', sessionId, sessionId),
+        };
+        if (!verifyArtifacts) return snapshot;
+        const rows = this.database.prepare("SELECT data FROM events WHERE session_id = ? AND type = 'artifact-created' ORDER BY id ASC").all(sessionId) as Array<{ data: string }>;
+        return this.verifyArtifactSnapshot(snapshot, rows.map(row => parseRow<RuntimeEvent>(row.data, 'events')));
+    }
+
+    /** Chat tail plus dependency closure; history/model queries remain full-session. */
+    readSessionWindow(sessionId: string, limit: number, verifyArtifacts = false): Snapshot & { historyWindow: { total: number; limit: number; rootIds: string[]; hasFileChanges: boolean } } {
+        this.assertOpen();
+        if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 200 || /[\u0000-\u001f\u007f-\u009f]/.test(sessionId)) throw new Error('Invalid session window sessionId');
+        if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100_000) throw new Error('Invalid session window limit');
+        if (typeof verifyArtifacts !== 'boolean') throw new Error('Invalid session window verifyArtifacts');
+        const identities = `WITH RECURSIVE
+            scoped AS MATERIALIZED (
+                SELECT rowid AS ordinal, id, state, json_extract(data, '$.parentRunId') AS parent,
+                    json_extract(data, '$.retryOfRunId') AS retry,
+                    json_extract(data, '$.plan.executionRunId') AS execution,
+                    json_extract(data, '$.requestContext') IS NOT NULL AS has_context
+                FROM runs WHERE session_id = ?1
+            ), visible AS MATERIALIZED (
+                SELECT * FROM scoped root WHERE parent IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM scoped retry WHERE retry.parent IS NULL AND retry.retry = root.id)
+            ), tail AS MATERIALIZED (SELECT id, ordinal FROM visible ORDER BY ordinal DESC LIMIT ?2)`;
+        const info = this.database.prepare(`${identities}
+            SELECT (SELECT COUNT(*) FROM visible) AS total,
+                (SELECT json_group_array(id) FROM (SELECT id FROM tail ORDER BY ordinal ASC)) AS roots`).get(sessionId, limit) as { total: number; roots: string };
+        const rootIds = JSON.parse(info.roots) as string[];
+        const rows = this.database.prepare(`${identities}, seeds(id) AS (
+                SELECT id FROM tail UNION SELECT id FROM scoped WHERE state NOT IN ('completed', 'failed', 'stopped')
+                UNION SELECT id FROM (SELECT id FROM scoped WHERE parent IS NULL ORDER BY ordinal ASC LIMIT 1)
+                UNION SELECT id FROM (SELECT id FROM scoped WHERE parent IS NULL AND has_context ORDER BY ordinal DESC LIMIT 1)
+                UNION SELECT scoped.id FROM scoped JOIN sessions ON sessions.id = ?1
+                    AND scoped.id = json_extract(sessions.data, '$.activePlanRunId')
+            ), edges(source, target) AS MATERIALIZED (
+                SELECT parent, id FROM scoped WHERE parent IS NOT NULL
+                UNION ALL SELECT id, parent FROM scoped WHERE parent IS NOT NULL
+                UNION ALL SELECT id, retry FROM scoped WHERE retry IS NOT NULL
+                UNION ALL SELECT execution, id FROM scoped WHERE execution IS NOT NULL
+            ), selected(id) AS (
+                SELECT id FROM seeds UNION
+                SELECT related.id FROM selected JOIN edges ON edges.source = selected.id
+                    JOIN scoped related ON related.id = edges.target
+            ) SELECT runs.id, runs.data FROM runs JOIN selected ON selected.id = runs.id
+                WHERE runs.session_id = ?1 ORDER BY runs.rowid ASC`).all(sessionId, limit) as Array<{ id: string; data: string }>;
+        const runs = rows.map(row => parseRow<RunRecord>(row.data, 'runs'));
+        const ids = JSON.stringify(rows.map(row => row.id));
+        const sessionRows = this.database.prepare('SELECT data FROM sessions WHERE id = ?').all(sessionId) as Array<{ data: string }>;
+        const approvalRows = this.database.prepare('SELECT data FROM approvals WHERE run_id IN (SELECT value FROM json_each(?)) ORDER BY rowid ASC').all(ids) as Array<{ data: string }>;
+        const artifactRows = this.database.prepare('SELECT data FROM artifacts WHERE session_id = ? AND run_id IN (SELECT value FROM json_each(?)) ORDER BY rowid ASC').all(sessionId, ids) as Array<{ data: string }>;
+        let hasFileChanges = !!this.database.prepare(`SELECT 1 FROM artifacts WHERE session_id = ?
+            AND (json_type(data, '$.oldContent') IS NOT json_type(data, '$.newContent')
+                OR json_extract(data, '$.oldContent') IS NOT json_extract(data, '$.newContent')) LIMIT 1`).get(sessionId);
+        if (!hasFileChanges) {
+            const activities = this.database.prepare(`SELECT activity.value AS data FROM runs,
+                json_each(json_extract(runs.data, '$.activities')) activity WHERE runs.session_id = ?
+                AND COALESCE(json_extract(activity.value, '$.tool.name'), json_extract(activity.value, '$.title'))
+                    IN ('write_file', 'apply_patch', 'run_command')`).iterate(sessionId);
+            for (const row of activities) {
+                const activity = parseRow<NonNullable<RunRecord['activities']>[number]>(row.data as string, 'run activities');
+                if (sessionHasFileChanges({ sessions: [], approvals: [], artifacts: [], runs: [{ sessionId, activities: [activity] } as RunRecord] }, sessionId)) { hasFileChanges = true; break; }
+            }
+        }
+        const snapshot: Snapshot = { sessions: sessionRows.map(row => parseRow<SessionRecord>(row.data, 'sessions')), runs,
+            approvals: approvalRows.map(row => parseRow<ApprovalRecord>(row.data, 'approvals')),
+            artifacts: artifactRows.map(row => parseRow<ArtifactSnapshot>(row.data, 'artifacts')) };
+        if (verifyArtifacts) {
+            const manifests = this.database.prepare(`SELECT data FROM events WHERE session_id = ? AND type = 'artifact-created'
+                AND run_id IN (SELECT value FROM json_each(?)) ORDER BY id ASC`).all(sessionId, ids) as Array<{ data: string }>;
+            this.verifyArtifactSnapshot(snapshot, manifests.map(row => parseRow<RuntimeEvent>(row.data, 'events')));
+        }
+        return { ...snapshot, historyWindow: { total: Number(info.total), limit, rootIds, hasFileChanges } };
+    }
+
+    /** Small global status projection; run text, activities and Agent instructions stay in SQLite. */
+    readOverview(): WorkspaceOverview {
+        this.assertOpen();
+        const states = (roots: boolean) => {
+            const rows = this.database.prepare(`SELECT id, session_id, state FROM runs WHERE rowid IN
+                (SELECT MAX(rowid) FROM runs ${roots ? "WHERE json_extract(data, '$.parentRunId') IS NULL" : ''} GROUP BY session_id)`)
+                .all() as Array<{ id: string; session_id: string; state: RunRecord['state'] }>;
+            return Object.fromEntries(rows.map(row => [row.session_id, { id: row.id, state: row.state }]));
+        };
+        const active = this.database.prepare("SELECT id FROM runs WHERE state NOT IN ('completed', 'failed', 'stopped') ORDER BY rowid ASC").all() as Array<{ id: string }>;
+        return { rootStates: states(true), latestStates: states(false), activeRunIds: active.map(row => row.id) };
+    }
+
+    readSnapshot(options: { verifyArtifacts?: boolean } = {}): Snapshot {
+        this.assertOpen();
+        validateOptions(options, ['verifyArtifacts'], 'snapshot');
+        if (options.verifyArtifacts !== undefined && typeof options.verifyArtifacts !== 'boolean') {
+            throw new Error('Invalid snapshot verifyArtifacts');
+        }
         const sessions = this.readRows<SessionRecord>('sessions');
         const runs = this.readRows<RunRecord>('runs');
         const approvals = this.readRows<ApprovalRecord>('approvals');
         const artifacts = this.readRows<ArtifactSnapshot>('artifacts');
+        if (options.verifyArtifacts === false) return { sessions, runs, approvals, artifacts };
         const artifactEvents = this.database
             .prepare("SELECT data FROM events WHERE type = 'artifact-created' ORDER BY id ASC")
             .all() as Array<{ data: string }>;
         const manifests = artifactEvents.map((row) => parseRow<RuntimeEvent>(row.data, 'events'));
+        return this.verifyArtifactSnapshot({ sessions, runs, approvals, artifacts }, manifests);
+    }
+
+    /** Startup projection: retain recovery candidates, stream every historical integrity check. */
+    readRecoverySnapshot(uncertainRunIds: ReadonlySet<string>): Snapshot {
+        this.assertOpen();
+        const sessions = this.readRows<SessionRecord>('sessions');
+        const approvals = this.readRows<ApprovalRecord>('approvals');
+        const pendingRunIds = new Set(approvals.filter(approval => approval.status === 'pending').map(approval => approval.runId));
+        const runs: RunRecord[] = [];
+        // Parsing one record at a time also preserves readSnapshot's rejection of
+        // malformed JSON in unrelated terminal history, without retaining its body.
+        for (const row of this.database.prepare('SELECT data FROM runs ORDER BY rowid ASC').iterate()) {
+            const run = parseRow<RunRecord>(row.data as string, 'runs');
+            if (!['completed', 'failed', 'stopped'].includes(run.state) || pendingRunIds.has(run.id) || uncertainRunIds.has(run.id)) runs.push(run);
+        }
+
+        // Match the full snapshot verifier's JSON identity map (including its
+        // last-record-wins behavior), but retain only identities and row locators.
+        const artifactRows = new Map<string, string>();
+        const artifactQuery = 'SELECT CAST(rowid AS TEXT) AS locator, data FROM artifacts ORDER BY rowid ASC';
+        for (const row of this.database.prepare(artifactQuery).iterate()) {
+            const artifact = parseRow<ArtifactSnapshot>(row.data as string, 'artifacts');
+            artifactRows.set(artifact.id, row.locator as string);
+        }
+        const artifactByRow = this.database.prepare('SELECT data FROM artifacts WHERE rowid = ?');
+        const expectedIds = new Set<string>();
+        for (const row of this.database.prepare("SELECT data FROM events WHERE type = 'artifact-created' ORDER BY id ASC").iterate()) {
+            const event = parseRow<RuntimeEvent>(row.data as string, 'events');
+            if (event.type !== 'artifact-created') throw new Error('Artifact event history is malformed');
+            const manifest = event.payload.artifact;
+            expectedIds.add(manifest.id);
+            const locator = artifactRows.get(manifest.id);
+            const savedRow = locator === undefined ? undefined : artifactByRow.get(locator);
+            if (!savedRow) throw new Error(`Artifact snapshot is missing: ${manifest.id}`);
+            const saved = parseRow<ArtifactSnapshot>(savedRow.data as string, 'artifacts');
+            // Every event is checked: duplicate IDs can carry contradictory evidence.
+            if (saved.hash !== manifest.hash || saved.newContent !== manifest.newContent) throw new Error(`Artifact snapshot manifest mismatch: ${manifest.id}`);
+        }
+        for (const row of this.database.prepare(artifactQuery).iterate()) {
+            const artifact = parseRow<ArtifactSnapshot>(row.data as string, 'artifacts');
+            if (!expectedIds.has(artifact.id)) throw new Error(`Artifact snapshot has no event manifest: ${artifact.id}`);
+            const actualHash = createHash('sha256').update(artifact.newContent, 'utf8').digest('hex');
+            if (actualHash !== artifact.hash) throw new Error(`Artifact snapshot integrity check failed: ${artifact.id}`);
+        }
+        return { sessions, runs, approvals, artifacts: [] };
+    }
+
+    /** Legacy coverage identities only; empty sessions do not require a legacy marker. */
+    readLegacyJournalSessionIds(): Set<string> {
+        this.assertOpen();
+        const invalid = this.database.prepare(`SELECT id FROM runs WHERE
+            json_extract(data, '$.id') IS NOT id OR json_extract(data, '$.sessionId') IS NOT session_id LIMIT 1`).get();
+        if (invalid) throw new Error('Invalid legacy run identity');
+        const rows = this.database.prepare(`WITH accepted AS MATERIALIZED (
+            SELECT DISTINCT session_id, json_extract(data, '$.run.runId') AS run_id FROM canonical_events
+            WHERE json_extract(data, '$.type') = 'message.accepted'
+        ) SELECT DISTINCT runs.session_id FROM runs JOIN sessions ON sessions.id = runs.session_id
+            WHERE NOT EXISTS (SELECT 1 FROM accepted WHERE accepted.session_id = runs.session_id AND accepted.run_id = runs.id)`)
+            .iterate();
+        const sessions = new Set<string>();
+        for (const row of rows) sessions.add(row.session_id as string);
+        return sessions;
+    }
+
+    private verifyArtifactSnapshot(snapshot: Snapshot, manifests: RuntimeEvent[]): Snapshot {
+        const { sessions, runs, approvals, artifacts } = snapshot;
         const snapshotsById = new Map(artifacts.map((artifact) => [artifact.id, artifact]));
         const expectedIds = new Set<string>();
 
@@ -192,6 +481,17 @@ export class RuntimeStore {
                     );
             }
 
+            for (const event of changes.journal ?? []) {
+                this.validateJournalEvent(event);
+                const expected = this.nextSessionSeq(event.run.sessionId);
+                if (event.sessionSeq !== expected) {
+                    throw new Error(`Journal sequence gap for ${event.run.sessionId}: expected ${expected}, received ${event.sessionSeq}`);
+                }
+                this.database.prepare(`INSERT INTO canonical_events
+                    (event_id, session_id, session_seq, data) VALUES (?, ?, ?, ?)`)
+                    .run(event.eventId, event.run.sessionId, event.sessionSeq, serialize(event));
+            }
+
             this.database.exec('COMMIT;');
         } catch (error) {
             try {
@@ -201,6 +501,47 @@ export class RuntimeStore {
             }
             throw error;
         }
+    }
+
+    beginSessionPurge(sessionId: string, intent: Record<string, unknown>): void {
+        this.assertOpen();
+        if (typeof sessionId !== 'string' || !sessionId) throw new Error('Invalid session identity');
+        if (!intent || typeof intent !== 'object' || Array.isArray(intent)
+            || ![Object.prototype, null].includes(Object.getPrototypeOf(intent))) throw new Error('Invalid session purge intent');
+        const data = serialize(intent);
+        const serialized = JSON.parse(data);
+        if (!serialized || typeof serialized !== 'object' || Array.isArray(serialized)) throw new Error('Invalid session purge intent');
+        this.database.exec('PRAGMA secure_delete = ON;');
+        this.database.exec('BEGIN IMMEDIATE;');
+        try {
+            if (this.database.prepare('SELECT 1 FROM session_purges WHERE session_id = ?').get(sessionId)) throw new Error('Session purge already pending');
+            if (!this.database.prepare('SELECT 1 FROM sessions WHERE id = ?').get(sessionId)) throw new Error('Session does not exist');
+            eraseSessionRows(this.database, sessionId);
+            this.database.prepare('INSERT INTO session_purges (session_id, data) VALUES (?, ?)').run(sessionId, data);
+            this.database.exec('COMMIT;');
+        } catch (error) {
+            try { this.database.exec('ROLLBACK;'); } catch { /* Preserve the original purge failure. */ }
+            throw error;
+        }
+    }
+
+    readSessionPurges(): Array<{ sessionId: string; intent: Record<string, unknown> }> {
+        this.assertOpen();
+        return (this.database.prepare('SELECT session_id, data FROM session_purges ORDER BY rowid').all() as Array<{ session_id: string; data: string }>)
+            .map(row => ({ sessionId: row.session_id, intent: parseRow<Record<string, unknown>>(row.data, 'session_purges') }));
+    }
+
+    completeSessionPurge(sessionId: string): void {
+        this.assertOpen();
+        if (typeof sessionId !== 'string' || !sessionId) throw new Error('Invalid session identity');
+        this.database.prepare('DELETE FROM session_purges WHERE session_id = ?').run(sessionId);
+    }
+
+    /** Flush logical deletion to the main file; this does not promise physical unrecoverability. */
+    checkpointAfterPurge(): void {
+        this.assertOpen();
+        const row = this.database.prepare('PRAGMA wal_checkpoint(TRUNCATE)').get() as { busy: number };
+        if (Number(row.busy) !== 0) throw new Error('Session purge checkpoint is busy');
     }
 
     close(): void {
@@ -217,7 +558,104 @@ export class RuntimeStore {
         return row ? parseRow<RequestContextDetail>(row.data, 'request_contexts') : null;
     }
 
-    private initializeSchema(): void {
+    /** Synchronous owner only: read, assemble and commit without an asynchronous gap.
+     * This does not reserve a number, so a failed transaction cannot leave a hole. */
+    nextSessionSeq(sessionId: string): number {
+        return this.journalWatermark(sessionId).durableSeq + 1;
+    }
+
+    readJournal(sessionId: string, afterSeq = 0, limit = 1000): TranscriptEvent[] {
+        this.assertOpen();
+        if (!Number.isSafeInteger(afterSeq) || afterSeq < 0 || !Number.isSafeInteger(limit) || limit < 1) {
+            throw new Error('Invalid journal range');
+        }
+        const rows = this.database.prepare(`SELECT data FROM canonical_events
+            WHERE session_id = ? AND session_seq > ? ORDER BY session_seq ASC LIMIT ?`)
+            .all(sessionId, afterSeq, limit) as Array<{ data: string }>;
+        return rows.map((row) => parseRow<TranscriptEvent>(row.data, 'canonical_events'));
+    }
+
+    /** Stream only recovery identities, never materialize request/response/tool-result bodies in JS. */
+    readUnresolvedDispatchRuns(): Set<string> {
+        this.assertOpen();
+        const unresolved = new Map<string, { sessionId: string; runId: string; seq: number }>();
+        const rows = this.database.prepare(`SELECT session_id, session_seq,
+            json_extract(data, '$.type') AS type,
+            json_extract(data, '$.run.runId') AS run_id,
+            json_extract(data, '$.payload.runIds') AS reviewed_runs,
+            json_extract(data, '$.payload.throughSeq') AS reviewed_through,
+            CASE json_extract(data, '$.type') WHEN 'tool.dispatch'
+                THEN json_extract(data, '$.payload.identity.invocationId')
+                ELSE json_extract(data, '$.payload.invocationId') END AS invocation_id
+            FROM canonical_events WHERE json_extract(data, '$.type') IN ('tool.dispatch', 'tool.result', 'recovery.reviewed')
+            ORDER BY session_id, session_seq`).iterate();
+        for (const row of rows) {
+            if (row.type === 'recovery.reviewed') {
+                const ids: unknown = typeof row.reviewed_runs === 'string' ? JSON.parse(row.reviewed_runs) : null;
+                if (!Array.isArray(ids) || !ids.length || ids.some(id => typeof id !== 'string' || !id)
+                    || typeof row.reviewed_through !== 'number' || !Number.isSafeInteger(row.reviewed_through)
+                    || row.reviewed_through < 0 || row.reviewed_through >= Number(row.session_seq)) throw new Error('Invalid recovery review boundary');
+                const reviewed = new Set(ids);
+                for (const [key, dispatch] of unresolved) if (dispatch.sessionId === row.session_id && dispatch.seq <= row.reviewed_through && reviewed.has(dispatch.runId)) unresolved.delete(key);
+                continue;
+            }
+            if (typeof row.session_id !== 'string' || !row.session_id || typeof row.run_id !== 'string' || !row.run_id
+                || typeof row.invocation_id !== 'string' || !row.invocation_id) throw new Error('Invalid recovery invocation identity');
+            const key = JSON.stringify([row.session_id, row.run_id, row.invocation_id]);
+            if (row.type === 'tool.dispatch') unresolved.set(key, { runId: row.run_id, sessionId: row.session_id, seq: Number(row.session_seq) });
+            else unresolved.delete(key);
+        }
+        return new Set([...unresolved.values()].map(item => item.runId));
+    }
+
+    journalWatermark(sessionId: string): { durableSeq: number; exportedSeq: number } {
+        this.assertOpen();
+        const row = this.database.prepare(`SELECT
+            COALESCE((SELECT MAX(session_seq) FROM canonical_events WHERE session_id = ?), 0) AS durable,
+            COALESCE((SELECT exported_seq FROM journal_exports WHERE session_id = ?), 0) AS exported`)
+            .get(sessionId, sessionId) as { durable: number; exported: number };
+        return { durableSeq: Number(row.durable), exportedSeq: Number(row.exported) };
+    }
+
+    /** Outstanding JSONL UTF-8 bytes (including each LF), without parsing the journal. */
+    journalBacklog(sessionId: string): { events: number; bytes: number } {
+        this.assertOpen();
+        const row = this.database.prepare(`SELECT COUNT(*) AS events,
+            COALESCE(SUM(length(CAST(data AS BLOB)) + 1), 0) AS bytes FROM canonical_events
+            WHERE session_id = ? AND session_seq >
+                COALESCE((SELECT exported_seq FROM journal_exports WHERE session_id = ?), 0)`)
+            .get(sessionId, sessionId) as { events: number; bytes: number };
+        return { events: Number(row.events), bytes: Number(row.bytes) };
+    }
+
+    /** Call only after the projection's fsync has succeeded. */
+    markExported(sessionId: string, seq: number): void {
+        this.assertOpen();
+        const { durableSeq, exportedSeq } = this.journalWatermark(sessionId);
+        if (!Number.isSafeInteger(seq) || seq < exportedSeq || seq > durableSeq) {
+            throw new Error(`Invalid exported journal watermark: ${seq} (exported ${exportedSeq}, durable ${durableSeq})`);
+        }
+        this.database.prepare(`INSERT INTO journal_exports (session_id, exported_seq) VALUES (?, ?)
+            ON CONFLICT(session_id) DO UPDATE SET exported_seq = excluded.exported_seq`).run(sessionId, seq);
+    }
+
+    private validateJournalEvent(event: TranscriptEvent): void {
+        if (event.schemaVersion !== 1 || !Number.isSafeInteger(event.sessionSeq) || event.sessionSeq < 1
+            || typeof event.eventId !== 'string' || !event.eventId
+            || typeof event.timestamp !== 'string' || !event.timestamp
+            || typeof event.processEpochId !== 'string' || !event.processEpochId
+            || typeof event.type !== 'string' || !event.type
+            || !event.run || typeof event.run.sessionId !== 'string' || !event.run.sessionId
+            || typeof event.run.runId !== 'string' || !event.run.runId
+            || typeof event.run.rootRunId !== 'string' || !event.run.rootRunId
+            || typeof event.run.turnId !== 'string' || !event.run.turnId
+            || !(event.run.parentRunId === null || typeof event.run.parentRunId === 'string')
+            || !event.payload || typeof event.payload !== 'object') {
+            throw new Error('Invalid canonical journal event envelope');
+        }
+    }
+
+    private assertSupportedSchema(): number {
         const row = this.database.prepare('PRAGMA user_version').get() as {
             user_version: number;
         };
@@ -227,9 +665,11 @@ export class RuntimeStore {
                 `Runtime database schema ${currentVersion} is newer than supported schema ${SCHEMA_VERSION}`,
             );
         }
-        if (currentVersion === SCHEMA_VERSION) {
-            return;
-        }
+        return currentVersion;
+    }
+
+    private initializeSchema(): void {
+        const currentVersion = this.assertSupportedSchema();
 
         this.database.exec('BEGIN EXCLUSIVE;');
         try {
@@ -247,7 +687,6 @@ export class RuntimeStore {
                     sequence INTEGER NOT NULL,
                     data TEXT NOT NULL
                 );
-                CREATE INDEX runs_created_at ON runs(created_at, id);
                 CREATE TABLE approvals (
                     request_id TEXT PRIMARY KEY,
                     run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
@@ -274,13 +713,30 @@ export class RuntimeStore {
                 CREATE UNIQUE INDEX events_run_sequence
                     ON events(run_id, sequence) WHERE run_id <> '';
             `);
-            this.database.exec(`
+            if (currentVersion < 2) this.database.exec(`
                 CREATE TABLE request_contexts (
                     run_id TEXT PRIMARY KEY REFERENCES runs(id) ON DELETE CASCADE,
                     data TEXT NOT NULL
                 );
-                PRAGMA user_version = ${SCHEMA_VERSION};
             `);
+            if (currentVersion < SCHEMA_VERSION) this.database.exec(`
+                CREATE TABLE canonical_events (
+                    event_id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    session_seq INTEGER NOT NULL CHECK(session_seq > 0),
+                    data TEXT NOT NULL,
+                    UNIQUE(session_id, session_seq)
+                );
+                CREATE TABLE journal_exports (
+                    session_id TEXT PRIMARY KEY,
+                    exported_seq INTEGER NOT NULL CHECK(exported_seq >= 0)
+                );
+            `);
+            // Additive index repair on v3 shares the same atomic boundary as older-schema upgrades.
+            this.database.exec('CREATE TABLE IF NOT EXISTS session_purges (session_id TEXT PRIMARY KEY, data TEXT NOT NULL);');
+            this.database.exec(`CREATE INDEX IF NOT EXISTS runs_created_at ON runs(created_at, id);
+                CREATE INDEX IF NOT EXISTS runs_session_created_at ON runs(session_id, created_at, id);`);
+            if (currentVersion < SCHEMA_VERSION) this.database.exec(`PRAGMA user_version = ${SCHEMA_VERSION};`);
             this.database.exec('COMMIT;');
         } catch (error) {
             try {

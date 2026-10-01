@@ -1,6 +1,6 @@
 # UAH / UI 新会话交接
 
-更新日期：2026-09-29。本文记录历次增量，文末为最新状态；新会话先检查实际 Git 状态和用户最新要求。
+更新日期：2026-10-01。本文记录历次增量，文末为最新状态；新会话先检查实际 Git 状态和用户最新要求。
 
 提交检查点说明：用户现已授权把UI与UAH全部累计改动连同handoff分别提交。下文各阶段的“未提交”是历史记录；以文末2026-09-28提交检查点和实际git log/status为准。当前可用能力包括三协议API、工具/审批/委派、Plan、只读Git和请求上下文，并非开篇历史增量所述的纯文本阶段。
 
@@ -267,3 +267,109 @@ UI盘点和先行验收已完成：新增D:/UI UiUsageMeter及真实demo/文档�
 UI 库已公开发布为 `@lingyzh/ui@0.1.0`。UAH 的 package.json 和 package-lock.json 固定使用该 npm 版本，已移除 `file:../UI` 链接；`npm run typecheck` 仅检查 UAH 自身。按本节及上文“UI 如何被 UAH 引用”的当前说明恢复：在 UAH 运行 `npm ci` 即可，不需要相邻 UI checkout。历史检查点中有关本地 Junction 和 `D:/UI` 的叙述仅用于解释当时状态，不再是安装步骤。共享 UI 修改仍遵循 UI 仓库开发、文档与视觉验收、发布新版本，再更新 UAH 的顺序。
 
 本次用 Node 24.19.0 验证：`npm ci`、`npm run typecheck`、`npm test`（263/263）、`npm run build`、`npm run test:ui`（25 项，33 个文档路由）和 `npm run test:desktop`（8 项）通过。UI 测试更新了多弹窗场景的选择器、文档正文中的标题定位和异步剪贴板等待；Windows 检出 CRLF 时 GPT 模板单测统一换行符。证据目录与边界见 `docs/VALIDATION.md` 最新节。
+
+## 2026-10-01 桌面 Harness 升级开工：D00 基础
+
+用户要求依据 `UAH-DESKTOP-HARNESS-UPGRADE-PLAN-2026-10-01.md` 开始工作。本会话采用保守均衡调度，以 GPT-6.1 Sol 替换 Terra 工位；两项规格明确的基准/样本执行使用 GPT-6.1 Sol medium，root 负责契约设计与验收，没有 Luna 参与决策或美学工作。
+
+开工核验：UAH HEAD `7fcce00`，原有两份升级计划未跟踪；UI HEAD `3f99b1a`、工作区干净，UAH 固定 npm `@lingyzh/ui@0.1.0`。本轮无 UI、依赖升级、真实模型请求、用户数据库操作或提交/推送。
+
+新增 `src/shared/harness-contracts.ts`，提供 v1 身份、细分运行状态、ToolOutcome、RequestSnapshot、TranscriptEvent/Manifest、UsageRecord 与保守旧协议投影。旧审批 requestId 不复用为模型请求身份，旧 run.sequence 不改为会话序号；工具 callId 以 attempt 分区，未知计数与外部内容证据保持 null。共享类型从 contracts/tool-protocol 导出，但生产 Supervisor/store 未切换新路径。
+
+`tests/fixtures/harness-v1.json` 是跨端黄金样本，`tests/runtime/harness-contracts.test.ts` 覆盖兼容函数及样本不变量；usage 向量不表示 D04 账本 reducer 已实现。迁移/回退、提示词核对与 UI 盘点见 `HARNESS-D00-CONTRACTS.md`。没有注册新工具，现有条件提示词及两品牌精确迁移源保持不变。
+
+`scripts/benchmark-harness.ts` 使用真实 RuntimeStore 和当前 Supervisor 提交形状，在独立 artifacts 数据库测量 5000 个 delta、工具大结果、父子任务和 500/501 run 边界。证据及限制见 `HARNESS-D00-BASELINE.md`。计量区分累计 JSON 序列化、物化 JSON、数据库/WAL 文件长度；不是累计物理磁盘写入。D00 的 Electron 长列表/UI延迟、取消延迟与产品 flush/配额阈值仍未验收，不能将此存储基线称为完整性能门槛通过。
+
+验证：既有全量测试263/263通过，新增契约定向9/9通过，最终typecheck通过，生产build通过（保留既有大chunk提示）。root核验实际diff、兼容边界和基准提交形状；本轮不涉及可视变化，未重复运行Electron视觉专项。
+
+下一工作入口：补齐D00剩余性能维度；D01先让workspace-tools与Supervisor消费ToolOutcome，机器化区分已发生副作用和记录失败并阻止不安全继续；随后D02命令生命周期与D03事务journal/最终请求捕获。新契约没有实现durable ack、进程树取消、完整transcript或自动恢复；D01–D09仍待实现。
+
+## 2026-10-01 Harness 持续实现检查点（覆盖上节开工状态）
+
+用户追加“继续工作，直到遇到阻塞”，并将 UI npm 依赖升级为固定 `@lingyzh/ui@0.2.1`。仍使用 GPT-6.1 Sol medium 执行已定规格；root 负责架构、界面与最终验收。未调用付费 Provider，未发布、提交或推送；所有 API 验证使用本地 SSE fixture，数据库均为隔离测试数据。
+
+当前 D00–D04 已接生产路径：ToolOutcome 区分副作用与记录失败，原批次停止并持久限制后续写入；独立 Windows ExecutionHelper 以 Job Object 管理进程树，ExecutionBackend 提供 start/poll/wait/cancel/release，命令原始输出保存为 artifact；SQLite schema 3 的 canonical_events 与状态同事务，RunJournal 批量文字、关键边界确认，JSONL/manifest 可重建且保持事件身份；最终协议请求、原生响应、用量与 application-scoped 连接测试账本均接入。离线 validate/stats/trace/replay/export 与完整/分享导出可用，日志 UI 复用真实组件，已验收浅深主题、窄屏、125%与键盘。
+
+D05 已实现持久 ModelFrame、跨轮与重启原生续接、公开编辑 fallback 和独立分支 artifact 副本；endpoint revision 纳入兼容命名空间。SQLite 增量索引、复合游标分页、默认 100000 runs/2 GiB 逻辑数据库准入配额已实现，不自动删除旧事实，也不因达到准入额度阻止当前任务落盘。聊天区分批挂载最近 50 轮，继续加载保持阅读位置；**runtime 内存及 IPC 快照仍全量，不能称长期历史优化全部完成**。D06 新增严格 UTF-8/BOM 的 hash range read 与持锁 apply_patch；复用审批、身份、链接和副作用保护。D07 预算模块与 D08 持久子结果投递回执在推进，尚未完成压缩、预算恢复、完整调度/steer。
+
+证据：D03 基准 `artifacts/harness-d03-dP79OX/summary.json`，原生生命周期 `artifacts/native-execution-RIC5AE`，日志界面 `artifacts/journal-desktop-kyypTU`（56 项），端点 `artifacts/endpoints-0Seyqm`（9 场景），100k delta/500 runs 桌面基准 `artifacts/harness-desktop-performance-nROWGO`。100k/5000 delta 仅 2 次 snapshot IPC；500 runs renderer working set 约 540 MiB，数字为单次观察，不是稳定 SLA。1000 runs 与分批挂载专项正在重新采样。最新分项：历史集成6/6，D06 workspace+Supervisor29/29，store基础47/47，application/request/transport/history57/57；全量最终回归仍待所有并行改动收敛后运行。
+
+恢复要求：重启完整 Electron 以加载 native/main/preload/runtime；Windows 构建需要 .NET 10 helper，npm build 自动构建。旧数据标 legacy_partial，未知 dispatch 不自动重放。新表/字段为增量迁移，不支持把升级后的唯一事实自动覆盖回旧备份。受限原生块当前是本地受限目录中的明文文件，不宣称 DPAPI 加密；完整 PTY、原生订阅 Runtime、MCP、后台自动恢复、物理不可恢复删除、轮转/GC 和真实 Provider 效率基准未完成。详见 HARNESS 各专项文档，文档中的早期限制应按对应阶段理解。
+
+### 同日后续：D05–D08 与故障回归
+
+已继续接入公开 artifact 范围读取、分支截止点内的独立公开输出副本、任务树预算、确定性公开历史压缩事务、有限网络退避、共享读写调度与运行中补充指令。D07压缩保留当前native工具尾部，候选/原窗口/约束及TaskState先保存，再原子切换版本；不适配则rollback暂停。完整与分享导出均验证嵌套引用闭包。网络最多两次有限退避，每次新attempt和预算账目；收到任何provider frame或发生记录失败就不重试。
+
+D08调度保持结果记录到达确认边界后才放写锁；记录失败期间停止状态保存异常也必须完成所属执行清理，终态保留recording_failed。Steer绑定当前run/step，过期旧审批、停止旧子任务、跳过未dispatch旧工具，保存queued/applied事实；应用表示加入后续上下文，不冒充Provider消费确认。Plan/子任务不开放此入口。接受补充不撤销已有副作用、不提升权限，重启不自动发送。动态提示词反映此真实范围，品牌精确迁移源未改。
+
+最新全量测试514/514（artifacts/harness-full-steer.log）；随后新增通知边界同步steer回归，steer专项9/9、typecheck通过。原有失败历史fixture改用不可重试HTTP400，以保留“失败后历史与重新生成”测试含义；新增retry专项10项独立覆盖HTTP500/503和严格重试上限。目标性验证：压缩集成3项含重启/rollback/recording_failed/full/share；共享调度13项；artifact/真实70k输出17项；离线26项。所有Provider测试是本地fixture。
+
+最新桌面证据：journal-desktop-qLDbCY 60项（含中文预算停止原因）；tool-chat-3ToWQu 六场景（含取消与重启）；steer-desktop-eqlqnl 23项，root已验收浅色1440、深色900×800/125%。1000 runs分页挂载专项 harness-desktop-performance-exzmo0 21项：初始50轮，点击100、Enter150，加载位置偏差0.1875px，1001轮仍可准入，renderer working set约303000 KiB。数字为单次观察，runtime与IPC仍全量，不宣称完成全部长期历史优化。UI仍固定npm0.2.1，D:/UI未修改。
+
+剩余范围：runtime/IPC真正分页与按访问加载、轮转/引用GC与正文捕获设置、持久预算恢复及核对后继续、模型纠错/无进展控制、独立目标验证；D09按实际需求接入，未自动开启原生订阅/MCP。全量最后回归应在所有并行文件收敛后再确认。本会话仍无提交、发布、推送或用户数据库操作。
+
+### 同日后续：输出隐私与有限纠错
+
+原生helper新增已知ASCII凭据落盘前过滤，跨读取块/重叠匹配也不会先写入原始密钥。outputRedacted=true时所有预览、range、导出及释放后spool均使用过滤字节，coverage保守partial；未匹配二进制保持原始字节/hash。原生完整21/21（artifacts/native-execution-vMqIfW），实际Supervisor/native隐私2/2；对应全量528/528（artifacts/harness-full-verified.log）、生产构建通过。最新当时桌面journal-desktop-uYOswP60项、steer-desktop-mVpuPs23项、tool-chat-XSpLb7六场景通过，无页面/控制台错误；root复核深色900×800/125%的补充指令状态截图。UI仍为npm0.2.1，D:/UI干净。
+
+会话历史7处入口改用readSessionSnapshot，只查询所属session；原生artifact访问仍验证。Supervisor内存和IPC快照仍全量。显式journal.project重新验证artifact，自动增量flush继续使用缓存；已知凭据过滤及缓存失效回归均已通过。
+
+随后新增独立工具纠错计数：累计6失败批次或连续3同参数/错误/资源版本/结果证据全失败批次暂停；成功、取消或可能已写效果打断连续判断，steer不退还累计额度。progress.updated与Run.toolProgress同事务；离线replay只还原事实。纯模块8项、动态提示词及原有回归形成537/537检查点（artifacts/harness-full-progress.log），集成验证仍在进行，不能视为最终验收。
+
+网络重试身份修正为同一逻辑requestId/stepId、新attemptId，下一工具轮/应用steer才新建requestId。日志用量按attempt独立分行，详情精确选择attempt；旧request-only多尝试查询明确拒绝歧义。13项retry/IPC测试通过；后续最终全量和桌面验收需核对最新记录。预算恢复、核对后继续、长期分页和保留管理仍未完成，没有自动重放未知副作用。
+
+纠错及attempt详情合并后全量545/545（artifacts/harness-full-progress-final.log）、typecheck/build通过；journal-desktop-uRtYCK新增重试三个attempt和无进展暂停专项通过，root验收深色900/125%的三行用量、精确尝试详情和中文暂停理由。一次早期中断fixture留下Temp/uah-tool-progress-OjjCxM，自动审批拒绝删除（blocked by policy），没有绕过；与产品运行数据无关。
+
+继续D05：RunCache取代全量常驻runs Map，普通终态LRU128，live及当前进程无法可靠保存的recording_failed视图不被驱逐；点查/会话查询保留历史和副作用gate，historyGuard改以单调会话修订判断，避免LRU重读造成对象引用误判。既有545/545通过（harness-full-run-cache.log），新cache6项、scoped view后端4项合计10/10通过；1000条历史启动普通终态resident0，查询全量兼容snapshot不会填满cache。harness-desktop-performance-Hnij4V通过，runtime working set约77040KiB为单次观察。
+
+会话范围snapshot目前已接main/preload/runtime可选view；普通renderer迁移正在进行。返回当前session完整runs/approvals/artifacts、跨会话状态摘要，不传播其他会话正文或分支复制历史；所选会话artifact仍校验。无view的旧完整snapshot保持兼容；启动recovery仍全量扫描，当前会话内部尚未真正分页，不能宣称D05完成。
+
+### 2026-10-02：会话范围界面接入与桌面验收
+
+renderer已使用session view：初始化先读概览再读选中会话，快速切换及迟到响应按generation/session校验，后台delta不拉取其他会话正文，跨会话状态通过overview更新。选中分支保留公开branchMessages与锁定Agent，非选中会话不携带复制正文，原生branchHistory不传renderer。桌面回归发现并修复了早期投影遗漏继承消息的问题；root验收saved-branch.png的继承消息、保存状态及输入区。
+
+全量564/564（harness-full-scoped.log），renderer定向30项通过；分支修复后snapshot-view三项和build通过。桌面journal-desktop-CrNj3L67项、search-o3u7MU6场景、plan-mode-mI7owP、tool-chat-LBh2uJ6场景、turn-actions-N5lO9q均通过。harness-desktop-performance-GGw2nG21项通过：100k/5000 delta仅2次snapshot IPC，1000轮默认50、加载100/150，滚动锚点偏差0.1875px；仅单次本地观察。UI固定npm0.2.1，D:/UI保持干净，无共享视觉改动。
+
+后续恢复扫描改为SQLite流式投影工具身份，不再将所有canonical请求/响应正文读入JavaScript；按session/run/invocation配对，缺失身份明确拒绝。全量565/565（harness-full-recovery.log）通过，typecheck通过。SQLite仍扫描JSON，启动基础snapshot仍全量读取和校验文件证据，尚不是完整启动分页。
+
+d02_native与d03_store后续调用因Selected model is at capacity退出，已完成文件保留；未完成文档由root接手，不构成项目阻塞。d01继续完成限定范围桌面验证。
+
+后续启动投影已进一步替换Supervisor的全量snapshot：逐条扫描历史runs，只保留非终态、pending审批所属及未配对dispatch所属候选；全部文件artifact/manifest仍逐条校验，包括重复矛盾证据，不保留整组正文数组。RunJournal旧覆盖识别使用一次物化的message.accepted身份CTE，执行计划确认canonical扫描一次。sessions/approvals和少量身份索引仍全量，历史JSON仍需逐条解析；应用连接测试独立账本仍有全量启动路径，不宣称全部启动成本已消除。新store13项加恢复/历史共24项通过；集成测试禁止Supervisor启动调用旧readSnapshot。
+
+日志面板用量改为复用离线usage reducer，最高revision覆盖旧值，同revision矛盾明确拒绝，状态仍按原事件顺序显示。新定向测试通过。合并后全量579/579（harness-full-startup.log）、typecheck（harness-recovery-view-typecheck.log）和build（harness-startup-build.log）通过；该构建桌面复验正在进行。
+
+该构建桌面复验完成：journal-desktop-YtflTz67项、harness-desktop-performance-EeR5Mi21项通过，错误数组为空。后者仍为单次本地观察：snapshot IPC2、1000轮50/100/150与锚点0.1875px通过。随后连接测试账本在恢复完及每次请求结算后移除内存run引用（SQLite事实保留），不再积累已结束probe正文；application专项7/7、最新typecheck/build（harness-application-resident-*）通过，未对这一小改动重复全部Electron测试。
+
+### 2026-10-02：持久预算与显式核对续接
+
+失败/停止的最新 API 根任务可核对后创建关联的新运行，保留历史预算累计，不自动重放旧工具。文件变化、无法核对资源和未知副作用要求人工结论；结论不是目标 verified。确认绑定日志水位、资源版本、权限及当前端点公开配置，变更后失效。historyTurns=0 时续接仍携带原任务、补充要求、工具证据与核对说明。记录失败、Plan、子任务、非最新和活动任务拒绝此入口。详见 HARNESS-D08-RECOVERY.md。
+
+全量604/604（harness-recovery-final-test.log）、typecheck/build通过。recovery-desktop-mQQ9Zg完成10项检查，本地SSE三次请求，页面错误为空；root验收浅色1440、深色900×800/125%和键盘续接。D:/UI仍干净，依赖固定0.2.1，没有新增共享样式。下一步继续会话内部按需加载、独立目标验证、保留管理及发布故障矩阵；D09仍按实际需求，不声称整个方案已完成。没有提交、推送、发布或使用真实Provider。
+
+### 2026-10-02：按需窗口、人工验收与原始日志策略
+
+普通聊天现在使用 SQLite 实际尾部窗口：默认 50 个可见根轮次，按需加载 100/150，另带当前上下文、首轮 Agent 锁定及父子/重试/Plan 依赖；IPC 不再携带会话中间全部正文，resident cache 不会夹带窗口外历史。文件/计划/Agent 全历史面板打开时明确等待完整会话视图。generation/view key 防止旧窗口或旧会话响应覆盖新选择，加载较早轮次保持滚动锚点。全量626/626（harness-window-full.log），桌面 harness-desktop-performance-TlIxXS 22项，100k delta 仅2次snapshot IPC，滚动偏差0.1875px。root已验收截图。大量依赖树、全部历史面板、继承消息仍可能较大，不宣称无限历史零成本。
+
+独立目标验收为 method=user_review：用户填写验收依据，宿主核对最新根任务、日志与文件证据；不冒充自动模型评审或执行命令验收。scope/resource fingerprint 随新任务、编辑或文件漂移失效；goal.verified 与 Run 状态同事务，离线 replay 明确未检查当前新鲜度。动态环境模块v5准确声明该边界。专项10/10，桌面 goal-verification-desktop-DXkxcc 15项，root验收浅深主题与125%。详见 HARNESS-D08-VERIFICATION.md。
+
+用户明确选择“仅关闭额外请求/响应原始日志，聊天记录和文件快照仍保存”。全局开关接入模型请求及连接测试，每次尝试固定策略；关闭后 body=null、无provider.frame，保留必要原生续接并标partial/native；正常脱敏缺失不得因此获准native。初始化见证防止单独丢失设置JSON后重启静默开启。原始捕获14/14，设置9通过/1文件symlink权限跳过，桌面 journal-policy-desktop-OzY2qr 20项，5次本地HTTP；root已验收四种主题/状态中的代表截图。详见 HARNESS-LOG-POLICY.md。
+
+全量检查点660通过/1跳过（harness-policy-full-final.log）。初次全量一个本地fixture命中Fetch禁用端口，按当前Node内置Fetch列表补齐fixture端口排除后通过，未放宽产品网络规则；tool-chat-uLNEtP六场景通过，测试用真实终态轮询替代不可靠异步wait表达式。
+
+后续正推进无引用文件检查/确认清理、升级前一致性备份与迁移故障矩阵。store事务修复专项48/48：未来schema在写PRAGMA前拒绝；索引和schema同事务，真实DDL碰撞不留下半升级；legacy Plan/审批/文件快照/消息黄金投影保持。GC、备份新代码尚待单独最终验收。仍未实现完整会话彻底删除与事件分片轮转，不自动删除仍有引用的唯一事实。没有提交、推送、发布或调用真实Provider。
+
+### 2026-10-02：存储维护与分片收尾
+
+上段待办已完成：GC 检查/确认、SQLite backup API 升级备份与迁移回滚、永久会话删除、浏览器分区清理及持久失败重试、8 MiB 完整行分片、离线分片校验与平铺导出均已接入。详见 HARNESS-MAINTENANCE.md；原始日志开关严格采用用户确认的范围，聊天记录和文件快照继续保存。
+
+GC 桌面 journal-gc-desktop-5F1ujm 15 项；浏览器独立 browser-purge-bgMXdB 7 项；永久删除 session-purge-desktop-7HsQ7D 23 项。root 已验收浅深主题与 125% 截图。删除包含 SQL、受控日志/计划/命令 spool、浏览器数据及受控升级备份的目标会话记录；独立分支、原工作目录和外部导出保留。失败留下持久 intent，重启后明确重试，不重放工具。同数据目录第二桌面实例退出，不同数据目录保持独立。
+
+备份专项 9/9；迁移 7/7；永久删除 store/files/loop 31/31；轮转 10/10；离线分片 8/8。分片合并后的全量 736 项：734 通过、2 文件 symlink 权限跳过、零失败（artifacts/harness-final-full.log），typecheck 通过。两项权限跳过不代表链接边界无验证，hardlink/junction 场景实测通过。此检查点早于最终 shell provenance 补齐；最终记录见下文。
+
+工作区保留全部未提交实现，D:/UI 实际干净、npm 固定 0.2.1。D09、PTY、多写者 worktree、自动重放未知副作用及真实 Provider 效率基准不在本轮交付中。没有提交、推送、发布或操作用户实际数据库。
+
+最终核对补齐命令 provenance：实际 shell 路径及可执行文件版本（明确不是 PowerShell 引擎版本）、cwd、固定启动参数、命令/输出编码及限额进入执行证据；启动应答丢失仍保留未确认事实。EncodedCommand 正文始终省略，逻辑参数沿用既有脱敏记录，不新增 Base64 凭据通道。删除 renderer 新增 7 项回归，并修复成功重试仍显示旧失败提示。
+
+最终全量 **746 项，744 通过、2 权限跳过、零失败**（artifacts/harness-release-final-full.log），最终 typecheck（harness-release-final-typecheck.log）与 build（harness-final-build.log）通过。构建仍有既有 >500 kB chunk 提示。该构建 Electron 日志 journal-desktop-zZSgh8 与工具 tool-chat-73bIC5 六场景通过；root 再次检查日志深色900/125%截图，关闭/导出按钮可见，内部滚动无越界。本轮 D00–D08 约定实现与维护收尾完成，保留上述明确边界；D09 按真实需求另行安排。
+
+最后原生生命周期复验 21/21（native-execution-mt0fyD、native-credential-filter-jHTq40），涵盖连续执行/释放容量、后代树退出、取消、EOF/helper 崩溃、限额及跨片段凭据过滤；shell 文件版本与实际 exe 一致。后端/managed 定向 28/28、真实 native 隐私回归 2/2。所有子代理已完成，无待写或阻塞。

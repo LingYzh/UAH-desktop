@@ -108,10 +108,12 @@ onBeforeUnmount(() => { epoch++; observer?.disconnect(); hideBrowser(); });
         <header class="panel-header"><strong>工作面板</strong><UiButton variant="ghost" size="sm" class="text-button panel-close" aria-label="关闭工作面板" @click="workspace.panel.open = false"><Icon name="close" /></UiButton></header>
         <UiScrollArea label="工作面板标签" axis="horizontal" :rounded="false" class="flex-shrink-0"><UiTabs dense variant="underline" v-model="workspace.panel.tab" class="panel-tabs" style="width: max-content; min-width: 100%" id-prefix="workspace" :items="tabs" aria-label="工作面板内容"><template #default="{ item }"><Icon :name="item.icon" />{{ item.label }}</template></UiTabs></UiScrollArea>
         <div v-if="error" class="inline-error" role="alert">{{ error }}</div>
-        <UiTabPanel :model-value="workspace.panel.tab" value="agents" id-prefix="workspace" class="overflow-hidden" style="display: flex; flex-direction: column; flex: 1; min-height: 0"><SubagentPanel /></UiTabPanel>
-        <UiTabPanel :model-value="workspace.panel.tab" value="plans" id-prefix="workspace" class="panel-content"><PlanFiles /></UiTabPanel>
+        <UiTabPanel :model-value="workspace.panel.tab" value="agents" id-prefix="workspace" class="overflow-hidden" style="display: flex; flex-direction: column; flex: 1; min-height: 0"><SubagentPanel v-if="workspace.historyPanelReady" /><p v-else role="status">正在加载会话历史…</p></UiTabPanel>
+        <UiTabPanel :model-value="workspace.panel.tab" value="plans" id-prefix="workspace" class="panel-content"><PlanFiles v-if="workspace.historyPanelReady" /><p v-else role="status">正在加载会话历史…</p></UiTabPanel>
         <UiTabPanel :model-value="workspace.panel.tab" value="git" id-prefix="workspace" class="panel-content"><GitPanel v-if="workspace.panel.tab === 'git' && workspace.panel.open && workspace.page === 'chat'" /></UiTabPanel>
         <UiTabPanel :model-value="workspace.panel.tab" value="files" id-prefix="workspace" class="panel-content">
+            <p v-if="!workspace.historyPanelReady" role="status">正在加载会话历史…</p>
+            <template v-else>
             <UiFileChanges v-if="changeRun && !artifact" :title="changeTitle" :items="changeItems" @select="workspace.panel.artifactId = $event" @view-all="workspace.panel.artifactId = null" />
             <UiButton v-if="changeRun && artifact" variant="ghost" size="sm" @click="workspace.panel.artifactId = null">全部文件改动</UiButton>
             <template v-if="artifact">
@@ -125,6 +127,7 @@ onBeforeUnmount(() => { epoch++; observer?.disconnect(); hideBrowser(); });
                 <details><summary>快照身份</summary><p class="muted small break-word">{{ changeRun ? `关联 ${artifact.artifactIds.length} 个已保存快照` : `轮次 ${artifact.turnId}` }}<br />SHA-256 {{ artifact.hash }}</p></details>
             </template>
             <div v-else-if="!changeRun" class="empty-state"><Icon name="history" /><h3>还没有文件快照</h3><p>批准文件改动后，该轮次的内容会保存在这里。磁盘后续修改不会覆盖历史。</p></div>
+            </template>
         </UiTabPanel>
         <UiTabPanel :model-value="workspace.panel.tab" value="browser" id-prefix="workspace" class="browser-panel">
             <div class="browser-controls"><label class="field-label" for="browser-address">手动浏览 · 当前会话独立登录态</label><div class="button-row"><UiInput id="browser-address" v-model="address" type="url" placeholder="https://" @keydown.enter="openBrowser" /><UiButton :disabled="busy || !workspace.selectedId || !workspace.connected" @click="openBrowser"><Icon name="external" />打开</UiButton><UiButton v-if="browserReady" :disabled="busy" aria-label="关闭网页" title="关闭网页" @click="closeBrowser"><Icon name="close" /></UiButton></div><p class="muted small">Agent 操作未授权。网站没有 UAH 文件和运行权限。</p></div>

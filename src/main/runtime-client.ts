@@ -3,6 +3,9 @@ import { randomUUID } from 'node:crypto';
 import type { Command, RuntimeEvent, Snapshot } from '../shared/contracts';
 import type { ApiConnection, ModelCatalog, ApiTestResult } from '../shared/endpoints';
 import type { AgentCommand, AgentSettings } from '../shared/agents';
+import type { JournalViewQuery, JournalExportResult } from '../shared/journal-view';
+
+export interface RuntimeClientOptions { executionHelperPath?: string }
 
 export class RuntimeClient {
     private child: UtilityProcess;
@@ -11,14 +14,18 @@ export class RuntimeClient {
     private exited: Promise<void>;
     private dead = false;
 
-    constructor(workerPath: string, dataDirectory: string, onEvent: (event: RuntimeEvent) => void, resolveConnection: (id: string) => ApiConnection) {
-        this.child = utilityProcess.fork(workerPath, [dataDirectory], { serviceName: 'UAH Runtime Supervisor', stdio: 'pipe' });
+    constructor(workerPath: string, dataDirectory: string, onEvent: (event: RuntimeEvent) => void, resolveConnection: (id: string) => ApiConnection, options: RuntimeClientOptions = {}) {
+        const argumentsForWorker = options.executionHelperPath ? [dataDirectory, options.executionHelperPath] : [dataDirectory];
+        this.child = utilityProcess.fork(workerPath, argumentsForWorker, { serviceName: 'UAH Runtime Supervisor', stdio: 'pipe' });
         // Never relay raw runtime stdout/stderr to the renderer.
         this.child.stdout?.resume();
         this.child.stderr?.resume();
         this.ready = new Promise((resolve, reject) => {
             const timer = setTimeout(() => reject(new Error('运行进程启动超时。')), 15000);
             this.child.on('message', (message) => {
+                // A live SQLite backup reports progress while preserving the
+                // startup barrier; no command is accepted until migration ends.
+                if (message?.kind === 'startup-progress') timer.refresh();
                 if (message?.kind === 'ready') { clearTimeout(timer); resolve(); }
                 if (message?.kind === 'fatal') { clearTimeout(timer); reject(new Error(message.error || '运行进程初始化失败。')); }
             });
@@ -56,9 +63,9 @@ export class RuntimeClient {
         }));
     }
 
-    async execute(command: Command): Promise<Snapshot> {
+    async execute(command: Command, view?: import('../shared/snapshot-view').SnapshotView): Promise<Snapshot> {
         await this.ready;
-        return this.request({ kind: 'command', command });
+        return this.request({ kind: 'command', command, view });
     }
     async git(query: import('../shared/git').GitQuery): Promise<import('../shared/git').GitResult> {
         await this.ready;
@@ -67,6 +74,30 @@ export class RuntimeClient {
     async requestContext(query: { runId: string }): Promise<import('../shared/request-context').RequestContextDetail | null> {
         await this.ready;
         return this.request({ kind: 'request-context', query });
+    }
+    async journal(query: JournalViewQuery): Promise<unknown> {
+        await this.ready;
+        return this.request({ kind: 'journal-view', query }, 30_000);
+    }
+    async beginSessionPurge(query: Extract<import('../shared/journal-view').JournalQuery, { action: 'purge-confirm' }>): Promise<void> {
+        await this.ready;
+        return this.request({ kind: 'session-purge-begin', query }, 120_000);
+    }
+    async finishSessionPurge(sessionId: string, browserCleared: boolean): Promise<import('../shared/session-purge').SessionPurgeResult> {
+        await this.ready;
+        return this.request({ kind: 'session-purge-finish', sessionId, browserCleared }, 120_000);
+    }
+    async journalPolicy(command: import('../shared/journal-policy').JournalPolicyCommand): Promise<import('../shared/journal-policy').JournalPolicy> {
+        await this.ready;
+        return this.request({ kind: 'journal-policy', command });
+    }
+    async journalSessionDirectory(query: { sessionId: string }): Promise<string> {
+        await this.ready;
+        return this.request<string>({ kind: 'journal-session-directory', query }, 30_000);
+    }
+    async journalExport(query: { sessionId: string; destination: string; mode: 'full' | 'share' }): Promise<JournalExportResult> {
+        await this.ready;
+        return this.request<JournalExportResult>({ kind: 'journal-export', query }, 60_000);
     }
     async delegationPreview(value: { parentRunId: string; request: import('../shared/delegation').DelegationRequest }): Promise<import('../shared/delegation').DelegationPlan> {
         await this.ready;

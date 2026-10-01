@@ -352,3 +352,31 @@ UAH完整单元165/165通过，新增首次展开reactivity回归后renderer wor
 - `npm run test:ui` 25 项通过，遍历 npm 包的 33 个文档路由，证据 `artifacts/ui-7OByyC`；`npm run test:desktop` 8 项通过，证据 `artifacts/desktop-fW6brH`。前者包含 Electron 生产界面与独立 UI 文档页；后者覆盖隔离 renderer、目录审批、停止、窄屏、历史和重启。没有用此结果冒称全桌面专项或真人视觉验收。
 - 测试维护：UI 文档新增的长表单弹窗使旧的首个 `dialog` 选择器失效，Markdown demo 使全局 h1 不唯一，异步剪贴板需等待成功反馈；相应断言已修复。Windows Git 检出 CRLF 与内嵌 LF 模板对比失败，单测读取后统一换行符。上述问题均未要求修改 UI 发布包。
 - 迁移前 `package-lock.json` 已有可选平台包 `libc`/`dev` 元数据的本地差异，安装与更新锁文件时保留；本次没有清理这些既有改动。未调用真实模型服务、未改用户运行数据库。
+
+## Harness 会话范围快照与恢复身份扫描（2026-10-02）
+
+- UI固定npm `@lingyzh/ui@0.2.1`，D:/UI干净；复用已验收组件，本轮仅调整数据投影与状态合并，没有新组件或共享样式变更。
+- 会话范围renderer集成后全量564项通过（`artifacts/harness-full-scoped.log`）；恢复身份投影后全量565项通过（`artifacts/harness-full-recovery.log`）。最新typecheck/build分别为`harness-final-scope-typecheck.log`、`harness-final-scope-build.log`，均通过，构建保留既有chunk提示。
+- Electron日志`journal-desktop-CrNj3L`67项、搜索`search-o3u7MU`6场景、Plan `plan-mode-mI7owP`、工具/子任务`tool-chat-LBh2uJ`6场景均通过。分支首次回归发现selected session遗漏branchMessages，修复后`turn-actions-N5lO9q`通过，root目视复核`saved-branch.png`的继承消息、保存提示和输入区。
+- `harness-desktop-performance-GGw2nG`21项通过：100k正文与5000个delta保持一致，仅2次应用snapshot IPC；1000轮初始挂载50，加载到100/150，滚动锚点漂移0.1875px。正文流帧p95为18.2ms、长列表12.2ms，仅单次本地样本，不表示稳定SLA或相对改善百分比。该桌面构建在恢复身份扫描改动之前，恢复改动另由565项自动测试覆盖。
+- 当前会话内部runs/approvals/artifacts仍完整查询，启动基本snapshot仍全量校验；canonical恢复身份使用流式SQL，但SQLite仍读取JSON，不冒称完整分页。无真实Provider请求、无用户数据库操作、无提交发布或推送。
+
+后续启动恢复改用流式候选snapshot，保留全部逐条artifact完整性检查，旧数据识别CTE一次物化；新增store13项，联合恢复/历史24项通过。日志面板最高用量revision专项通过。全量579/579（`harness-full-startup.log`）、typecheck（`harness-recovery-view-typecheck.log`）、构建（`harness-startup-build.log`）通过。仍需扫描历史JSON及常驻sessions/approvals，不把降低峰值内存称为完全分页；应用独立连接测试账本仍使用原启动读取。
+
+该构建Electron复验`journal-desktop-YtflTz`67项与`harness-desktop-performance-EeR5Mi`21项通过，错误为空；仍是本地单次性能样本。随后独立应用账本清理已结算probe的内存引用，SQLite记录不删除；application专项7/7（`harness-application-resident.log`）、typecheck及build通过。579项全量和上述桌面构建早于这项局部引用释放修改。
+
+2026-10-02显式续接：全量604/604（harness-recovery-final-test.log）、typecheck/build通过；recovery-desktop-mQQ9Zg十项，root验收浅色1440、深色900/125%。详见HARNESS-D08-RECOVERY.md。
+
+随后会话窗口：全量626/626（harness-window-full.log），store12、renderer9及后端缓存边界通过。窗口typecheck/build通过，desktop性能TlIxXS22项，默认50根及必要依赖，加载100/150位置偏差0.1875px；Plan DcdUxB、回复/分支8ALVLG、工具F9ebu4六场景通过。工具首次jG6Flf最后请求读取断言失败，增加诊断记录后复验通过，未放宽断言，尚不能确定该次失败原因。详见HARNESS-D05-HISTORY.md的边界记录。
+
+## Harness 维护、隐私与分片（2026-10-02）
+
+- 人工目标验收专项 10/10、goal-verification-desktop-DXkxcc 15 项；原始捕获专项 14/14、journal-policy-desktop-OzY2qr 20 项。root 已检查真实 UI 截图。关闭捕获只影响额外请求/响应原始日志，保留聊天/文件快照和必要续接。
+- GC 桌面 journal-gc-desktop-5F1ujm 15 项，实际候选删除、引用不变和活动任务拒绝；永久删除 session-purge-desktop-7HsQ7D 23 项，含键盘、浏览器清理、独立分支、真实失败跨重启重试和单实例；browser-purge-bgMXdB 7 项。均零新增工具重放，页面/控制台错误为空。root 验收浅深主题、窄窗和 125%。
+- 备份 9/9、迁移 7/7、永久删除后端 31/31、分片轮转 10/10、离线分片 8/8。维护整合 716 通过/2 跳过（harness-purge-full.log），分片整合 734 通过/2 跳过（harness-final-full.log），两次均零失败；最新分片 typecheck 通过。跳过仅 Windows 文件 symlink 权限，硬链接/junction 已实测。最终命令 provenance 改动之后另记最终检查点。
+- tool-chat-uLNEtP 六场景通过：测试以 Node 轮询真实终态替代不可靠的异步 wait 表达式。早期全量 fixture 偶遇 Fetch 禁止端口，已按当前 Node 内置端口名单修正 fixture，不改变产品网络策略。
+- 新生命周期及限制见 HARNESS-MAINTENANCE.md。全部网络为隔离本地服务，未使用真实付费 Provider；未提交或发布。既有大 chunk 构建提示仍需按实际构建报告区分，不作为运行错误。
+
+最终检查点：命令 provenance 与删除 renderer 收尾后，`harness-release-final-full.log` 共 746 项，744 通过/2 文件 symlink 权限跳过/零失败；`harness-release-final-typecheck.log` 与 `harness-final-build.log` 通过。Electron `journal-desktop-zZSgh8` 与 `tool-chat-73bIC5` 六场景复验通过，root 再看日志深色900/125%截图确认内部滚动、底部动作可达。新增 renderer 删除 7/7 包含成功重试清除旧错误、响应丢失和迟到 snapshot；命令记录不保存额外 EncodedCommand 正文。此为本轮最终代码检查点，不代表已提交或发布。
+
+最终原生复验：21/21，证据 `native-execution-mt0fyD`、`native-credential-filter-jHTq40`；连续执行/释放、树退出、超时/取消/EOF/crash、输出限额及凭据边界通过，exe 文件版本按真实文件核对。后端/managed 28/28、真实命令隐私 2/2。D:/UI 干净，安装依赖固定 @lingyzh/ui 0.2.1，git diff --check 通过（仅既有换行转换提示）。

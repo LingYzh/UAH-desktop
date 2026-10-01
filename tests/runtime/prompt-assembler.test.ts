@@ -87,7 +87,8 @@ test('context providers are optional escaped data at the end; unchanged inputs a
     assert.match(after.instructions, /\\u003c!-- UAH_PROMPT_PROFILE/);
     assert.equal(after.profile, 'gpt');
     assert.equal(before.instructions.split('<!-- UAH_MODULE:context.')[0], after.instructions.split('<!-- UAH_MODULE:context.')[0]);
-    assert.ok(after.modules.every(item => item.version === 1 && (!item.included ? item.characters === 0 : item.characters > 0)));
+    const revised = new Set(['host.contract', 'history.frames', 'workspace.command', 'context.environment']);
+    assert.ok(after.modules.every(item => item.version === (item.id === 'context.environment' ? 5 : revised.has(item.id) ? 2 : 1) && (!item.included ? item.characters === 0 : item.characters > 0)));
     assert.equal(after.totalCharacters, after.instructions.length);
 });
 

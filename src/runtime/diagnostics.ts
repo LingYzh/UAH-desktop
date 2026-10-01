@@ -16,6 +16,8 @@ const PROMPT_PROFILES = new Set(['gpt', 'claude', 'coding', 'generic']);
 
 export interface PromptAssemblySummary {
     runId: string;
+    requestId?: string;
+    attemptId?: string;
     round: number;
     profile: string;
     totalCharacters: number;
@@ -100,9 +102,9 @@ function promptCode(value: unknown): string | undefined {
 export function recordPromptAssembly(protocol: string, summary: PromptAssemblySummary): void {
     try {
         const fields: Record<string, unknown> = {};
-        const runId = fieldValue(summary, 'runId');
-        if (typeof runId === 'string' && runId.length === 36 && UUID.test(runId)) {
-            fields.runId = runId;
+        for (const name of ['runId', 'requestId', 'attemptId']) {
+            const value = fieldValue(summary, name);
+            if (typeof value === 'string' && value.length === 36 && UUID.test(value)) fields[name] = value;
         }
         for (const name of ['round', 'totalCharacters']) {
             const value = nonnegativeNumber(fieldValue(summary, name));
@@ -132,7 +134,8 @@ export function recordPromptAssembly(protocol: string, summary: PromptAssemblySu
         fields.modules = safeModules;
         append(`${JSON.stringify({
             time: new Date().toISOString(),
-            requestId: randomUUID(),
+            requestId: fields.requestId ?? randomUUID(),
+            ...(fields.attemptId ? { attemptId: fields.attemptId } : {}),
             operation: 'prompt',
             protocol: PROTOCOLS.has(protocol) ? protocol : 'unknown',
             event: 'prompt.assembled',
@@ -193,8 +196,12 @@ export function configureDiagnostics(directory: string, options?: { maxBytes?: n
 export function createDiagnosticTrace(
     operation: 'models' | 'stream' | 'test',
     protocol: string,
+    identity?: { requestId: string; attemptId: string },
 ): { id: string; event(event: string, fields?: DiagnosticFields): void } {
-    const id = randomUUID();
+    const requestId = fieldValue(identity, 'requestId');
+    const attemptId = fieldValue(identity, 'attemptId');
+    const id = typeof requestId === 'string' && UUID.test(requestId) ? requestId : randomUUID();
+    const safeAttemptId = typeof attemptId === 'string' && UUID.test(attemptId) ? attemptId : undefined;
     const safeOperation = OPERATIONS.has(operation) ? operation : 'unknown';
     const safeProtocol = PROTOCOLS.has(protocol) ? protocol : 'unknown';
     return {
@@ -204,6 +211,7 @@ export function createDiagnosticTrace(
             append(`${JSON.stringify({
                 time: new Date().toISOString(),
                 requestId: id,
+                ...(safeAttemptId ? { attemptId: safeAttemptId } : {}),
                 operation: safeOperation,
                 protocol: safeProtocol,
                 event: safeEvent,

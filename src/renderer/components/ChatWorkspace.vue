@@ -8,14 +8,44 @@ import RunActions from './RunActions.vue';
 import PlanReview from './PlanReview.vue';
 import { UiButton, UiSelect, UiMarkdown, UiFileChanges, UiUsageMeter } from '@lingyzh/ui';
 import RequestContextDialog from './RequestContextDialog.vue';
+import JournalDialog from './JournalDialog.vue';
+import RecoveryDialog from './RecoveryDialog.vue';
+import GoalVerificationDialog from './GoalVerificationDialog.vue';
 import { useGit } from '../composables/use-git';
 import { openMarkdownLink } from '../markdown-links';
 import { roundFileChanges } from '../file-changes';
 import { fileChangeItem } from '../change-presentation';
 import { currentPlanRun, planStatusLabels, planRunInput } from '../plan-presentation';
+import { visibleRootRuns } from '../../shared/conversation-history';
 
 const workspace = useWorkspace();
+const journalOpen = ref(false);
+const recoveryRun = ref(null);
+const verificationRun = ref(null);
 const { selected, selectedId, runs, activeRun, currentInput } = storeToRefs(workspace);
+const canSteer = computed(() => activeRun.value?.effective?.runtimeId === 'api' && activeRun.value?.effective?.permissionMode !== 'plan'
+    && ['running', 'approval'].includes(activeRun.value?.state));
+const renderedRuns = computed(() => runs.value.slice(-workspace.historyLimit));
+const hiddenTurns = computed(() => Math.max(0, workspace.historyTotal - renderedRuns.value.length));
+async function loadEarlierTurns() {
+    const element = scroll.value;
+    const previousHeight = element?.scrollHeight ?? 0;
+    const previousTop = element?.scrollTop ?? 0;
+    const anchor = element && [...element.querySelectorAll('[data-run-id]')].find(item => item.getBoundingClientRect().bottom > element.getBoundingClientRect().top);
+    const anchorId = anchor?.dataset.runId;
+    const anchorTop = anchor?.getBoundingClientRect().top;
+    following.value = false;
+    const sessionId = selectedId.value;
+    await workspace.loadEarlier();
+    if (selectedId.value !== sessionId) return;
+    await nextTick();
+    if (element) {
+        const restored = [...element.querySelectorAll('[data-run-id]')].find(item => item.dataset.runId === anchorId);
+        element.scrollTop = restored && anchorTop !== undefined
+            ? element.scrollTop + restored.getBoundingClientRect().top - anchorTop
+            : previousTop + element.scrollHeight - previousHeight;
+    }
+}
 const scroll = ref(null);
 const messages = ref(null);
 const composer = ref(null);
@@ -33,7 +63,7 @@ const gitLabel = computed(() => {
     return ({ 'no-directory': '没有仓库', 'not-repository': '非 Git 仓库', unavailable: 'Git 不可用', error: 'Git 读取失败' })[snapshot.state];
 });
 const contextOpen = ref(false);
-const contextRun = computed(() => activeRun.value?.requestContext ? activeRun.value : runs.value.filter(run => run.requestContext).at(-1));
+const contextRun = computed(() => activeRun.value?.requestContext ? activeRun.value : visibleRootRuns(workspace.snapshot.runs, selectedId.value).filter(run => run.requestContext).at(-1));
 const contextSummary = computed(() => contextRun.value?.requestContext);
 watch(selectedId, () => { contextOpen.value = false; }, { flush: 'sync' });
 function showGit() { workspace.panel.tab = 'git'; workspace.panel.open = true; }
@@ -141,7 +171,8 @@ watch(() => currentPlan.value ? `${selectedId.value}:${currentPlan.value.plan.id
 function keydown(event) {
     if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
         event.preventDefault();
-        workspace.send();
+        if (canSteer.value) workspace.steer();
+        else workspace.send();
     }
 }
 function showChanges(run, id = null) {
@@ -195,8 +226,13 @@ onBeforeUnmount(() => { rememberScroll(); composerObserver?.disconnect(); messag
                     </article>
                     <p class="muted small">以下为此分支的新对话</p>
                 </template>
-                <article v-for="(run, index) in runs" :key="run.id" class="turn" :aria-label="`第 ${index + 1} 轮`">
+                <UiButton v-if="hiddenTurns" variant="ghost" size="sm" :disabled="workspace.historyLoading" @click="loadEarlierTurns">加载更早的对话（还有 {{ hiddenTurns }} 轮）</UiButton>
+                <article v-for="(run, index) in renderedRuns" :key="run.id" :data-run-id="run.id" class="turn" :aria-label="`第 ${hiddenTurns + index + 1} 轮`">
                     <div class="user-message"><UiMarkdown :source="planRunInput(run, workspace.snapshot)" @link-click="openMarkdownLink" /></div>
+                    <div v-for="steer in run.steering || []" :key="steer.id" class="user-message" aria-label="补充指令">
+                        <span class="muted small">{{ steer.status === 'applied' ? '已加入后续上下文' : ['completed', 'failed', 'stopped'].includes(run.state) ? '本轮未应用' : '等待安全边界' }}</span>
+                        <UiMarkdown :source="steer.input" @link-click="openMarkdownLink" />
+                    </div>
                     <div class="assistant-heading"><img class="small-mark" src="/assets/uah-mark.svg" alt="" /><strong>UAH</strong><span class="muted ellipsis" :title="run.effective?.modelId">{{ run.effective?.runtimeId === 'api' ? run.effective.modelId : '本地验证' }}</span><span class="status" :data-state="run.state">{{ stateLabels[run.state] }}</span></div>
                     <RunContent v-if="!run.history?.deleted" :run="run" />
                     <p v-else class="muted small">回复记录已删除</p>
@@ -205,6 +241,10 @@ onBeforeUnmount(() => { rememberScroll(); composerObserver?.disconnect(); messag
                         <span class="muted small">{{ run.plan.title || '实施计划' }} · {{ planStatusLabels[run.plan.status] }}</span>
                     </div>
                     <div v-if="run.error" class="inline-error" role="alert">{{ run.error }}</div>
+                    <p v-if="run.stopReason" class="muted small" role="status">停止理由：{{ run.stopReason }}</p>
+                    <p v-if="run.resumeOfRunId" class="muted small">本轮由先前任务核对后继续，历史记录和消耗保持不变。</p>
+                    <UiButton v-if="run === runs.at(-1) && !activeRun && run.effective?.runtimeId === 'api' && !run.plan && ['failed', 'stopped'].includes(run.state)" variant="ghost" size="sm" :disabled="workspace.busy" @click="recoveryRun = run">核对并继续</UiButton>
+                    <UiButton v-if="run.goalVerification || (run === runs.at(-1) && run.state === 'completed' && !run.plan && !run.history?.deleted)" variant="ghost" size="sm" :disabled="workspace.busy || !!activeRun" @click="verificationRun = run">{{ run.goalVerification ? '查看目标验收记录' : '目标验收' }}</UiButton>
                     <div v-for="approval in pendingApprovals(run)" :key="approval.requestId" class="approval-card">
                         <div class="eyebrow">需要你的批准</div>
                         <h3>{{ approval.summary }}</h3>
@@ -212,8 +252,8 @@ onBeforeUnmount(() => { rememberScroll(); composerObserver?.disconnect(); messag
                         <p>仅授权本次文件创建。查看面板不会批准操作。</p>
                         <div class="button-row"><UiButton variant="primary" :disabled="workspace.busy" @click="workspace.resolve(approval, 'approve')">批准本次操作</UiButton><UiButton :disabled="workspace.busy" @click="workspace.resolve(approval, 'reject')">拒绝</UiButton></div>
                     </div>
-                    <UiFileChanges v-if="changes[run.id].length || ['completed', 'stopped', 'failed'].includes(run.state)" :title="`第 ${index + 1} 轮文件改动`" :items="changes[run.id]" @select="showChanges(run, $event)" @view-all="showChanges(run)" />
-                    <RunActions v-if="!run.history?.deleted && ['completed', 'stopped', 'failed'].includes(run.state)" :run="run" :index="index" />
+                    <UiFileChanges v-if="changes[run.id].length || ['completed', 'stopped', 'failed'].includes(run.state)" :title="`第 ${hiddenTurns + index + 1} 轮文件改动`" :items="changes[run.id]" @select="showChanges(run, $event)" @view-all="showChanges(run)" />
+                    <RunActions v-if="!run.history?.deleted && ['completed', 'stopped', 'failed'].includes(run.state)" :run="run" :index="hiddenTurns + index" />
                 </article>
             </div>
         </div>
@@ -230,7 +270,8 @@ onBeforeUnmount(() => { rememberScroll(); composerObserver?.disconnect(); messag
             <div v-else class="composer">
                 <div class="composer-main" :class="{ multiline }">
                     <button class="icon-button attach-trigger" aria-label="添加附件与上下文" title="附件功能尚未接入" disabled><Icon name="plus" /></button>
-                    <textarea ref="composer" v-model="currentInput" rows="1" aria-label="消息" :placeholder="!selected ? '描述任务或提出问题…' : activeRun ? '补充想法，停止当前任务后发送…' : '继续这段对话…'" :maxlength="20000" @keydown="keydown"></textarea>
+                    <textarea ref="composer" v-model="currentInput" rows="1" aria-label="消息" :placeholder="!selected ? '描述任务或提出问题…' : canSteer ? '补充指令，将在安全边界加入…' : activeRun ? '补充想法，停止当前任务后发送…' : '继续这段对话…'" :maxlength="20000" @keydown="keydown"></textarea>
+                    <UiButton v-if="canSteer" variant="ghost" size="sm" :disabled="workspace.busy || !activeRun.activeStepId || !currentInput.trim()" title="停止尚未派发的旧工具，在安全边界加入；已执行的更改不会自动撤销" @click="workspace.steer">补充指令</UiButton>
                     <button v-if="activeRun" class="send-button stop-button" :disabled="workspace.busy || ['stopping', 'cancelRequested'].includes(activeRun.state)" aria-label="停止当前任务" title="停止当前任务" @click="workspace.stop(activeRun)"><Icon name="stop" /></button>
                     <button v-else class="send-button" :disabled="!available || !currentInput.trim() || !workspace.modelAvailable || !workspace.agentAvailable || !workspace.configurationReady" aria-label="发送消息" title="发送消息" @click="workspace.send"><Icon name="arrow" /></button>
                 </div>
@@ -249,9 +290,13 @@ onBeforeUnmount(() => { rememberScroll(); composerObserver?.disconnect(); messag
                 <UiSelect compact ghost placeholder="选择权限" :model-value="workspace.sessionControls.permissionMode" :items="permissionItems" menu-title="Mode · 权限模式" aria-label="权限模式" :disabled="!available || Boolean(activeRun) || !apiMode" title="仅影响本会话的后续轮次；Auto 命令执行仍需审批，文件操作按权限执行" @update:model-value="workspace.setSessionControl('permissionMode', $event)" />
                 <UiSelect compact ghost placeholder="思考强度" :model-value="workspace.sessionControls.reasoningEffort" :items="effortItems" menu-title="思考强度" aria-label="思考强度" :disabled="!available || Boolean(activeRun) || !apiMode" title="保存到会话，下一轮请求生效；支持的档位取决于模型和协议" @update:model-value="workspace.setSessionControl('reasoningEffort', $event)" />
                 <UiUsageMeter compact label="最近请求上下文" :used="contextSummary?.usage?.inputTokens ?? contextSummary?.estimatedInputTokens" :capacity="contextSummary?.capacity" :estimated="Boolean(contextSummary && contextSummary.usage?.inputTokens === undefined)" @inspect="contextOpen = true" />
+                <UiButton size="sm" variant="ghost" :disabled="!selectedId" @click="journalOpen = true">会话日志</UiButton>
             </div>
             <div class="composer-foot">{{ reviewPlan ? '计划正文与版本历史显示在右侧；批准后才会开始实施' : !workspace.configurationReady ? '首次使用请手动选择 Agent、模型、权限、思考强度和目录（可选无目录）' : !workspace.agentAvailable ? '请选择可用的主 Agent；当前角色已停用或删除' : workspace.modelAvailable ? (apiMode ? 'Enter 发送 · 按会话配置发送消息，工具操作受当前权限约束' : 'Enter 发送 · Shift+Enter 换行 · 当前为本地验证，不调用 AI') : '请选择可用模型；端点停用、模型移除或端点删除后不能发送' }}</div>
         </div>
         <RequestContextDialog v-model:open="contextOpen" :initial-run-id="contextRun?.id || ''" />
+        <JournalDialog v-model:open="journalOpen" />
+        <RecoveryDialog :run="recoveryRun" @close="recoveryRun = null" />
+        <GoalVerificationDialog :run="verificationRun" @close="verificationRun = null" />
     </section>
 </template>

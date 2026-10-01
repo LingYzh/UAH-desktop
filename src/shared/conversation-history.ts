@@ -24,7 +24,7 @@ export function interruptedRunSummary(snapshot: Snapshot, run: RunRecord): strin
         if (item.id !== run.id) lines.push(`Child ${item.id}: ${item.state}${item.error ? '; error=' + boundedHistoryText(item.error, 500) : ''}${item.stopReason ? '; stop reason=' + boundedHistoryText(item.stopReason, 500) : ''}.`);
         for (const activity of item.activities || []) {
             if (activity.tool?.name === 'run_command' && activity.status !== 'approval') lines.push(`Command activity ${activity.id}: ${activity.status}; execution or side effects may have occurred and are not verified. Do not automatically replay it.`);
-            if (activity.tool?.name === 'write_file' && !activity.tool.artifactId && activity.status !== 'approval') lines.push(`Write activity ${activity.id}: ${activity.status}; no persisted artifact evidence; any modification is unconfirmed.`);
+            if (['write_file', 'apply_patch'].includes(activity.tool?.name ?? '') && !activity.tool?.artifactId && activity.status !== 'approval') lines.push(`Write activity ${activity.id}: ${activity.status}; no persisted artifact evidence; any modification is unconfirmed.`);
         }
     }
     return boundedHistoryText(lines.join('\n'), 12000);
@@ -66,6 +66,7 @@ export function conversationMessages(snapshot: Snapshot, sessionId: string, opti
     }
     for (const run of roots) {
         const turn: ApiMessage[] = [{ role: 'user', content: run.input }];
+        for (const steer of run.steering ?? []) turn.push({ role: 'user', content: steer.input });
         if (!run.history?.deleted) {
             if (run.state === 'completed') turn.push({ role: 'assistant', content: displayedReply(run) });
             else {

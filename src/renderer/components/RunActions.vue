@@ -15,7 +15,7 @@ const actions = computed(() => [
     { id: 'copy', icon: 'copy', label: '复制回复', disabled: !displayedReply(props.run) },
     { id: 'edit', icon: 'edit', label: '编辑历史回复', disabled: !idle.value },
     { id: 'branch', icon: 'branch', label: '从此回复创建分支', disabled: !idle.value },
-    ...(!sessionHasFileChanges(workspace.snapshot, props.run.sessionId) ? [{ id: 'regenerate', icon: 'refresh', label: '重新生成最新回复', disabled: !idle.value || workspace.runs.at(-1)?.id !== props.run.id }] : []),
+    ...(!(workspace.snapshot.historyWindow?.hasFileChanges || sessionHasFileChanges(workspace.snapshot, props.run.sessionId)) ? [{ id: 'regenerate', icon: 'refresh', label: '重新生成最新回复', disabled: !idle.value || workspace.runs.at(-1)?.id !== props.run.id }] : []),
     { id: 'delete', icon: 'trash', label: '删除回复记录', disabled: !idle.value },
 ]);
 const label = computed(() => {

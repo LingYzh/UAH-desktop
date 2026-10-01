@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { defaultSessionControls } from '../../shared/session-controls';
 import { permissionModes } from '../../shared/permissions';
 import { visibleRootRuns } from '../../shared/conversation-history';
+import { applyRunEvent, mergeRunSnapshot } from '../run-events.js';
 
 export const activeStates = ['running', 'approval', 'cancelRequested', 'stopping'];
 export const stateLabels = { running: '运行中', approval: '等待审批', cancelRequested: '已请求取消', stopping: '正在停止', stopped: '已中止', completed: '已完成', failed: '失败' };
@@ -42,6 +43,8 @@ function isInitialConfig(value) {
 export const useWorkspace = defineStore('workspace', () => {
     const snapshot = ref({ sessions: [], runs: [], approvals: [], artifacts: [] });
     const selectedId = ref(null);
+    const historyLimit = ref(50);
+    const historyLoading = ref(false);
     const draft = ref({ input: '', directory: null, directoryChosen: false, model: '' });
     const draftControls = ref(blankDraftControls());
     const inputs = ref({});
@@ -76,6 +79,7 @@ export const useWorkspace = defineStore('workspace', () => {
         value: JSON.stringify([endpoint.id, modelId]), label: `${endpoint.name} · ${modelId}`, endpointId: endpoint.id, modelId,
     }))));
     const selected = computed(() => snapshot.value.sessions.find((item) => item.id === selectedId.value));
+    const viewLoaded = computed(() => !Object.hasOwn(snapshot.value, 'viewSessionId') || snapshot.value.viewSessionId === selectedId.value);
     const sessionControls = computed(() => {
         if (!selected.value) return draftControls.value;
         const saved = selected.value.controls || selected.value.initialConfig?.controls || sessionControlOverrides.value[selected.value.id];
@@ -91,7 +95,7 @@ export const useWorkspace = defineStore('workspace', () => {
         };
     });
     async function setSessionControl(key, value) {
-        if (busy.value || activeRun.value || currentModel.value === 'local-verification') return;
+        if (!viewLoaded.value || busy.value || activeRun.value || currentModel.value === 'local-verification') return;
         const controls = { ...sessionControls.value, [key]: value };
         if (!selected.value) { draftControls.value = controls; return; }
         const sessionId = selected.value.id;
@@ -99,7 +103,7 @@ export const useWorkspace = defineStore('workspace', () => {
         await perform(() => command({ type: 'set-session-controls', sessionId, controls, revision }));
     }
     const lockedAgent = computed(() => snapshot.value.runs.find(item => item.sessionId === selectedId.value && !item.parentRunId)?.effective || selected.value?.branchAgent);
-    const agentLocked = computed(() => Boolean(lockedAgent.value));
+    const agentLocked = computed(() => Boolean(lockedAgent.value) || (selectedId.value !== null && !viewLoaded.value));
     const currentAgent = computed({
         get: () => {
             if (lockedAgent.value) return lockedAgent.value.agentId;
@@ -137,17 +141,23 @@ export const useWorkspace = defineStore('workspace', () => {
             return '';
         },
         set: (value) => {
+            if (!viewLoaded.value) return;
             if (lockedAgent.value && ((lockedAgent.value.runtimeId === 'api') === (value === 'local-verification'))) return;
             if (selected.value) sessionModels.value[selectedId.value] = value;
             else draft.value.model = value;
         },
     });
-    const runs = computed(() => visibleRootRuns(snapshot.value.runs, selectedId.value));
-    const activeRun = computed(() => runs.value.find((item) => activeStates.includes(item.state)));
+    const runs = computed(() => {
+        const roots = visibleRootRuns(snapshot.value.runs, selectedId.value);
+        const ids = snapshot.value.historyWindow?.rootIds;
+        return ids ? roots.filter(run => ids.includes(run.id)) : roots;
+    });
+    const activeRun = computed(() => snapshot.value.runs.find(item => item.sessionId === selectedId.value && !item.parentRunId && activeStates.includes(item.state)));
     const modelAvailable = computed(() => {
         return currentModel.value === 'local-verification' || modelOptions.value.some((item) => item.value === currentModel.value);
     });
     const configurationReady = computed(() => {
+        if (!viewLoaded.value) return false;
         if (selected.value) return modelAvailable.value && agentAvailable.value
             && permissionModes.includes(sessionControls.value.permissionMode)
             && reasoningEfforts.includes(sessionControls.value.reasoningEffort);
@@ -169,32 +179,67 @@ export const useWorkspace = defineStore('workspace', () => {
     });
     let unsubscribe;
     let refreshTimer;
-    let refreshing = false;
-    let dirty = false;
-    const sequences = new Map();
+    let refreshJob;
     let selectionGeneration = 0;
+    let knownHistoryTotal = null;
+    const fullHistory = computed(() => panel.value.open && ['files', 'plans', 'agents'].includes(panel.value.tab));
+    const historyPanelReady = computed(() => viewLoaded.value && !snapshot.value.historyWindow);
+    const historyTotal = computed(() => snapshot.value.historyWindow?.total ?? runs.value.length);
+    function snapshotView(sessionId) {
+        return { sessionId, ...(sessionId !== null && !fullHistory.value ? { turnLimit: historyLimit.value } : {}) };
+    }
+    function retainLoadedBoundary(reply, sessionId) {
+        if (sessionId === null) return false;
+        const total = reply.historyWindow?.total ?? visibleRootRuns(reply.runs, sessionId).length;
+        const increase = knownHistoryTotal === null ? 0 : Math.max(0, total - knownHistoryTotal);
+        knownHistoryTotal = total;
+        if (!increase) return false;
+        const previous = historyLimit.value;
+        historyLimit.value = Math.min(100000, previous + increase);
+        return !!reply.historyWindow && historyLimit.value !== previous;
+    }
+    watch(fullHistory, () => { if (ready.value) refresh(); });
+    async function loadEarlier() {
+        if (historyLoading.value) return;
+        const generation = selectionGeneration;
+        historyLoading.value = true;
+        historyLimit.value = Math.min(100000, historyLimit.value + 50);
+        try { await refresh(); }
+        finally { if (generation === selectionGeneration) historyLoading.value = false; }
+    }
 
-    async function refresh() {
+    function refresh() {
         if (!window.uah) return;
-        if (refreshing) { dirty = true; return; }
-        refreshing = true;
-        try {
-            do {
-                dirty = false;
-                snapshot.value = await window.uah.command({ type: 'snapshot' });
-            } while (dirty);
-        } catch (cause) { error.value = cause.message; }
-        finally { refreshing = false; }
+        if (refreshJob?.generation === selectionGeneration && refreshJob.sessionId === selectedId.value) { refreshJob.dirty = true; return refreshJob.promise; }
+        const job = { generation: selectionGeneration, sessionId: selectedId.value, dirty: false };
+        job.promise = (async () => {
+            try {
+                do {
+                    job.dirty = false;
+                    const view = snapshotView(job.sessionId);
+                    const reply = await window.uah.command({ type: 'snapshot' }, view);
+                    if (job.generation !== selectionGeneration || job.sessionId !== selectedId.value) return;
+                    if (JSON.stringify(view) !== JSON.stringify(snapshotView(job.sessionId))) { job.dirty = true; continue; }
+                    if (retainLoadedBoundary(reply, job.sessionId)) { job.dirty = true; continue; }
+                    snapshot.value = mergeRunSnapshot(snapshot.value, reply, job.sessionId);
+                } while (job.dirty);
+            } catch (cause) {
+                if (job.generation === selectionGeneration && job.sessionId === selectedId.value) error.value = cause.message;
+            } finally {
+                if (refreshJob === job) refreshJob = undefined;
+            }
+        })();
+        refreshJob = job;
+        return job.promise;
     }
 
     async function initialize() {
         if (!window.uah) { ready.value = true; return; }
         unsubscribe = window.uah.onEvent((event) => {
-            const key = `${event.sessionId}/${event.runId}`;
-            if (event.runId && event.sequence <= (sequences.get(key) || 0)) return;
-            sequences.set(key, event.sequence);
+            const result = applyRunEvent(snapshot.value, event);
+            if (result !== 'refresh') return;
             clearTimeout(refreshTimer);
-            refreshTimer = setTimeout(refresh, event.type === 'delta' ? 25 : 0);
+            refreshTimer = setTimeout(refresh, 0);
         });
         await refresh();
         if (window.uah.endpoints) {
@@ -206,16 +251,22 @@ export const useWorkspace = defineStore('workspace', () => {
             catch (cause) { error.value = cause.message; }
         }
         selectedId.value = newestSession(snapshot.value.sessions)?.id || null;
+        if (Object.hasOwn(snapshot.value, 'viewSessionId') && snapshot.value.viewSessionId !== selectedId.value) await refresh();
         seedDraftFromLatestInitialConfig();
         ready.value = true;
     }
 
     async function command(value) {
         if (!window.uah) throw new Error('请在桌面应用中运行此操作。');
-        snapshot.value = await window.uah.command(value);
+        const generation = selectionGeneration; const sessionId = selectedId.value;
+        const view = snapshotView(sessionId);
+        const reply = await window.uah.command(value, view);
+        if (generation === selectionGeneration && sessionId === selectedId.value && JSON.stringify(view) === JSON.stringify(snapshotView(sessionId))
+            && !retainLoadedBoundary(reply, sessionId)) snapshot.value = mergeRunSnapshot(snapshot.value, reply, sessionId);
         // A coalesced refresh also observes any event that raced with this reply.
         clearTimeout(refreshTimer);
         refreshTimer = setTimeout(refresh, 0);
+        return reply;
     }
 
     async function endpointCommand(value) {
@@ -269,17 +320,17 @@ export const useWorkspace = defineStore('workspace', () => {
         await perform(async () => {
             if (!targetSessionId) {
                 const previous = new Set(snapshot.value.sessions.map((item) => item.id));
-                await command({ type: 'create-session', title: input.slice(0, 48), directory: sourceDraft.directory,
+                const created = await command({ type: 'create-session', title: input.slice(0, 48), directory: sourceDraft.directory,
                     ...(sourceDraft.branchFromRunId ? { branchFromRunId: sourceDraft.branchFromRunId } : {}),
                     ...(agentId ? { agentId } : {}),
                     ...(controls ? { controls, selection: { endpointId: selectedModel.endpointId, modelId: selectedModel.modelId } } : {}) });
-                targetSessionId = snapshot.value.sessions.find((item) => !previous.has(item.id))?.id;
+                targetSessionId = created.sessions.find((item) => !previous.has(item.id))?.id;
                 if (!targetSessionId) throw new Error('新会话未能保存。');
                 if (agentId) sessionAgents.value[targetSessionId] = agentId;
                 if (controls) sessionControlOverrides.value[targetSessionId] = controls;
                 sessionModels.value[targetSessionId] = selectedModelValue;
                 inputs.value[targetSessionId] = sourceDraft.input === submittedText ? submittedText : sourceDraft.input;
-                if (generation === selectionGeneration) selectedId.value = targetSessionId;
+                if (generation === selectionGeneration) select(targetSessionId);
                 if (draft.value === sourceDraft) draft.value.input = '';
             }
             await command({ type: 'start-run', sessionId: targetSessionId, input, ...(hasModelOverride ? { selection } : {}), ...(agentId ? { agentId } : {}) });
@@ -287,10 +338,27 @@ export const useWorkspace = defineStore('workspace', () => {
         });
     }
 
-    function select(id) { selectionGeneration++; selectedId.value = id; page.value = 'chat'; }
+    async function steer() {
+        const run = activeRun.value;
+        const submittedText = currentInput.value;
+        if (!run?.activeStepId || run.effective?.permissionMode === 'plan' || !submittedText.trim()) return;
+        await perform(async () => {
+            await command({ type: 'steer-run', runId: run.id, expectedStepId: run.activeStepId, input: submittedText.trim() });
+            if (inputs.value[run.sessionId] === submittedText) inputs.value[run.sessionId] = '';
+        });
+    }
+    function select(id) {
+        knownHistoryTotal = null;
+        historyLimit.value = 50; historyLoading.value = false;
+        selectionGeneration++; selectedId.value = id; page.value = 'chat';
+        if (Object.hasOwn(snapshot.value, 'viewSessionId')) return refresh();
+    }
     function newSession() {
+        knownHistoryTotal = null;
+        historyLimit.value = 50; historyLoading.value = false;
         selectionGeneration++;
         selectedId.value = null;
+        refresh();
         page.value = 'chat';
         draft.value = { input: '', directory: null, directoryChosen: false, model: '' };
         seedDraftFromLatestInitialConfig();
@@ -320,20 +388,55 @@ export const useWorkspace = defineStore('workspace', () => {
         const controls = { ...sessionControls.value };
         await perform(async () => {
             const previous = new Set(snapshot.value.sessions.map(item => item.id));
-            await command({ type: 'create-session', title: `${source.title.slice(0, 42)} · 分支`, directory: source.directory,
+            const created = await command({ type: 'create-session', title: `${source.title.slice(0, 42)} · 分支`, directory: source.directory,
                 branchFromRunId: run.id,
                 ...(!local ? { selection: { endpointId: model.endpointId, modelId: model.modelId }, controls, agentId: run.effective.agentId } : {}) });
-            const branch = snapshot.value.sessions.find(item => !previous.has(item.id) && item.branchFromRunId === run.id);
+            const branch = created.sessions.find(item => !previous.has(item.id) && item.branchFromRunId === run.id);
             if (!branch) throw new Error('分支会话未能保存。');
             if (generation === selectionGeneration) select(branch.id);
         });
     }
     function historyCommand(value) { return perform(() => command(value)); }
+    async function purgeSession(sessionId, fingerprint) {
+        if (busy.value) throw new Error('请等待当前操作完成。');
+        error.value = '';
+        busy.value = true;
+        try {
+            const result = await window.uah.journal(fingerprint
+                ? { action: 'purge-confirm', sessionId, fingerprint, confirmation: '永久删除' }
+                : { action: 'purge-retry', sessionId });
+            return result;
+        } finally {
+            // Resolve an ambiguous IPC failure from fresh authority too. Invalidate
+            // all older view replies before discarding any loaded conversation.
+            selectionGeneration++;
+            try {
+                const fresh = await window.uah.command({ type: 'snapshot' }, { sessionId: null });
+                const remains = fresh.sessions.some(item => item.id === sessionId);
+                snapshot.value = fresh;
+                if (!remains) {
+                    delete inputs.value[sessionId]; delete sessionModels.value[sessionId]; delete sessionAgents.value[sessionId];
+                    if (selectedId.value === sessionId) {
+                        selectedId.value = null; panel.open = false;
+                        knownHistoryTotal = null; historyLimit.value = 50; historyLoading.value = false;
+                        draft.value = { input: '', directory: null, directoryChosen: false, model: '' };
+                        seedDraftFromLatestInitialConfig();
+                    }
+                }
+                await refresh();
+            } catch (cause) { error.value = `无法刷新删除状态，请重启确认：${cause.message}`; }
+            busy.value = false;
+        }
+    }
+    async function retryPurge(sessionId) {
+        try { const result = await purgeSession(sessionId); if (!result.completed) error.value = result.error || '删除尚未完成，请检查后重试。'; }
+        catch (cause) { error.value = cause.message; }
+    }
     function stop(run, reason) { return perform(() => command({ type: 'stop-run', runId: run.id, ...(reason?.trim() ? { reason: reason.trim() } : {}) })); }
     function resolve(approval, decision) {
         const { runtimeId, sessionId, runId, turnId, requestId, policyVersion } = approval;
         return perform(() => command({ type: 'resolve-approval', identity: { runtimeId, sessionId, runId, turnId, requestId, policyVersion }, decision }));
     }
     function dispose() { unsubscribe?.(); clearTimeout(refreshTimer); }
-    return { branchFrom, historyCommand, activityView, sessionControls, setSessionControl, agentLocked, lockedAgent, currentModelParameters, agentSettings, agentCommand, currentAgent, agentOptions, agentAvailable, snapshot, selectedId, draft, inputs, panel, page, busy, error, connected, ready, endpoints, modelGroups, modelOptions, currentModel, modelAvailable, configurationReady, endpointCommand, selected, runs, activeRun, currentInput, initialize, send, select, newSession, chooseDirectory, chooseNoDirectory, stop, resolve, dispose };
+    return { purgeSession, retryPurge, historyLimit, historyLoading, historyTotal, historyPanelReady, loadEarlier, steer, branchFrom, historyCommand, activityView, sessionControls, setSessionControl, agentLocked, lockedAgent, currentModelParameters, agentSettings, agentCommand, currentAgent, agentOptions, agentAvailable, snapshot, selectedId, draft, inputs, panel, page, busy, error, connected, ready, endpoints, modelGroups, modelOptions, currentModel, modelAvailable, configurationReady, endpointCommand, selected, runs, activeRun, currentInput, initialize, send, select, newSession, chooseDirectory, chooseNoDirectory, stop, resolve, dispose };
 });

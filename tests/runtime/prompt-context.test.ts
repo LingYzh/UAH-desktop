@@ -44,3 +44,47 @@ test('plain custom prompts and absent slots stay unchanged; oversized context fa
     assert.equal(renderPromptContext(slot, {}), slot);
     assert.throws(() => renderPromptContext(slot, { MEMORY_CONTEXT: 'x'.repeat(6001) }), /6000/);
 });
+
+test('task budget context reflects the current request without mutating stored instructions', () => {
+    const run: RunRecord = { id: 'run', sessionId: 'session', turnId: 'turn', state: 'running', input: 'task', output: '', sequence: 0, createdAt: '2026-10-01T00:00:00Z',
+        effective: { runtimeId: 'api', agentId: 'agent', policyVersion: 1, modelId: 'fixture', agentInstructions: 'unchanged' }, budgetState: { requestsUsed: 1, tokensReserved: 10 } };
+    const first = runtimePromptContext(run, null, []);
+    const later = runtimePromptContext({ ...run, budgetState: { requestsUsed: 2, tokensReserved: 0 } }, null, []);
+    assert.match(JSON.stringify(first), /"requestsUsed":1/);
+    assert.match(JSON.stringify(later), /"requestsUsed":2/);
+    assert.equal(run.effective.agentInstructions, 'unchanged');
+    assert.deepEqual(run.budgetState, { requestsUsed: 1, tokensReserved: 10 });
+});
+
+test('tool correction context is dynamic and available only for the API loop', () => {
+    const run = { effective: { runtimeId: 'api' }, toolProgress: { failedBatches: 2, repeatedFailureBatches: 1, lastFailureFingerprint: 'a'.repeat(64), stopCode: null } } as RunRecord;
+    const before = JSON.stringify(run);
+    const current = runtimePromptContext(run, null, ['read_file']);
+    assert.match(JSON.stringify(current.ENVIRONMENT_CONTEXT), /"failedBatches":2/);
+    assert.match(JSON.stringify(current.ENVIRONMENT_CONTEXT), /累计6个失败工具批次/);
+    const next = runtimePromptContext({ ...run, toolProgress: { ...run.toolProgress!, failedBatches: 3 } }, null, ['read_file']);
+    assert.match(JSON.stringify(next.ENVIRONMENT_CONTEXT), /"failedBatches":3/);
+    assert.equal(JSON.stringify(run), before);
+    assert.match(JSON.stringify(runtimePromptContext({ ...run, effective: { ...run.effective, runtimeId: 'mock' } }, null, []).ENVIRONMENT_CONTEXT), /未接入工具纠错计数/);
+});
+
+test('explicit continuation context retains source identity without claiming replay or verified completion', () => {
+    const run = { resumeOfRunId: 'previous-run', effective: { runtimeId: 'api' } } as RunRecord;
+    const before = JSON.stringify(run);
+    const context = JSON.stringify(runtimePromptContext(run, null, []).ENVIRONMENT_CONTEXT);
+    assert.match(context, /"resumeOfRunId":"previous-run"/);
+    assert.match(context, /旧工具不自动重放/);
+    assert.match(context, /用户核对不等于工具成功或目标已验证/);
+    assert.equal(JSON.stringify(run), before);
+});
+
+test('goal acceptance is separate from engine completion and never presented as a fresh automatic proof', () => {
+    const run = { effective: { runtimeId: 'api' }, goalVerification: { id: 'review', method: 'user_review' } } as RunRecord;
+    const before = JSON.stringify(run);
+    const context = JSON.stringify(runtimePromptContext(run, null, []).ENVIRONMENT_CONTEXT);
+    assert.match(context, /本轮提示词未重新检查/);
+    assert.match(context, /运行completed与目标验收分开/);
+    assert.match(context, /不能自动证明目标通过/);
+    assert.equal(JSON.stringify(run), before);
+    assert.match(JSON.stringify(runtimePromptContext({ ...run, parentRunId: 'parent' }, null, []).ENVIRONMENT_CONTEXT), /当前运行不支持核对续接/);
+});

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { mkdir, mkdtemp, writeFile, readFile, access } from 'node:fs/promises';
 import path from 'node:path';
+import { randomInt } from 'node:crypto';
 
 const root = process.cwd();
 await mkdir('artifacts', { recursive: true });
@@ -24,8 +25,9 @@ const server = http.createServer(async (request, response) => {
     response.writeHead(200, { 'content-type': 'text/event-stream' });
     const names = body.tools?.map(tool => tool.function.name) || [];
     const planning = names.includes('submit_plan');
-    const tools = body.messages.filter(message => message.role === 'tool');
-    const input = body.messages.filter(message => message.role === 'user').at(-1).content;
+    const taskIndex = body.messages.findLastIndex(message => message.role === 'user' && typeof message.content === 'string' && !message.content.startsWith('[UAH'));
+    const tools = body.messages.slice(taskIndex + 1).filter(message => message.role === 'tool');
+    const input = body.messages[taskIndex].content;
     let calls;
     if (planning) {
         assert.ok(!names.includes('write_file'));
@@ -39,7 +41,18 @@ const server = http.createServer(async (request, response) => {
     const delta = calls ? { tool_calls: calls.map(([id, name, args], index) => ({ index, id, type: 'function', function: { name, arguments: JSON.stringify(args) } })) } : { content: '计划已实施并完成验证。' };
     response.end(sse({ choices: [{ delta, finish_reason: calls ? 'tool_calls' : 'stop' }] }) + 'data: [DONE]\n\n');
 });
-await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+for (let attempt = 0; attempt < 32; attempt++) {
+    try {
+        await new Promise((resolve, reject) => {
+            const failed = error => { server.off('listening', listening); reject(error); };
+            const listening = () => { server.off('error', failed); resolve(); };
+            server.once('error', failed); server.once('listening', listening);
+            server.listen(randomInt(20000, 60000), '127.0.0.1');
+        });
+        break;
+    } catch (error) { if (error.code !== 'EADDRINUSE') throw error; }
+}
+assert.ok(server.address() && server.address().port >= 20000, 'local fixture uses a Fetch-safe port');
 const env = { ...process.env, UAH_DATA_DIR: path.join(evidence, 'data') };
 delete env.ELECTRON_RUN_AS_NODE;
 delete env.UAH_DEV_URL;

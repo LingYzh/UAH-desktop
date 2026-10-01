@@ -1,13 +1,14 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
-import { useWorkspace, activeStates, stateLabels } from './stores/workspace';
+import { useWorkspace, stateLabels } from './stores/workspace';
+import { overviewForSnapshot } from './run-events';
 import ChatWorkspace from './components/ChatWorkspace.vue';
 import Icon from './components/Icon.vue';
 import WorkspacePanel from './components/WorkspacePanel.vue';
 import SearchDialog from './components/SearchDialog.vue';
 import EndpointManager from './components/EndpointManager.vue';
 import AgentManager from './components/AgentManager.vue';
-import { UiButton, UiSelect, UiSwitch, UiField, UiTabs, UiTabPanel, UiDialog, UiSnackbarHost, UiCollapse, snackbar } from '@lingyzh/ui';
+import { UiAlert, UiButton, UiSelect, UiSwitch, UiField, UiTabs, UiTabPanel, UiDialog, UiSnackbarHost, UiCollapse, snackbar } from '@lingyzh/ui';
 
 const workspace = useWorkspace();
 const width = ref(window.innerWidth);
@@ -40,8 +41,9 @@ const navWidth = computed(() => compact.value ? 57 : 254);
 const maxPanelWidth = computed(() => Math.max(260, width.value - navWidth.value - 5 - 370));
 const panelWidth = computed(() => Math.min(maxPanelWidth.value, Math.max(260, workspace.panel.width)));
 const layoutStyle = computed(() => ({ '--nav-width': `${navWidth.value}px`, '--panel-width': `${panelWidth.value}px` }));
-const lastRun = (sessionId) => workspace.snapshot.runs.filter((run) => run.sessionId === sessionId && !run.parentRunId).at(-1);
-const activeCount = computed(() => workspace.snapshot.runs.filter((run) => activeStates.includes(run.state)).length);
+const overview = computed(() => overviewForSnapshot(workspace.snapshot));
+const lastRun = (sessionId) => overview.value.rootStates[sessionId];
+const activeCount = computed(() => overview.value.activeRunIds.length);
 const futureFeatures = [
     { label: 'MCP 连接器', icon: 'plug', title: 'MCP 连接器尚未接入' },
     { label: '插件与技能', icon: 'puzzle', title: '插件与技能尚未接入' }
@@ -235,6 +237,10 @@ onBeforeUnmount(() => {
             <main class="main-area" :inert="panelFocus && workspace.page === 'chat'">
                 <div v-if="!workspace.connected" class="preview-banner">网页预览 · 运行、文件与桌面能力请使用 Electron 应用</div>
                 <div v-if="workspace.error" class="global-error" role="alert"><span>{{ workspace.error }}</span><button aria-label="关闭错误提示" @click="workspace.error = ''"><Icon name="close" /></button></div>
+                <UiAlert v-for="id in workspace.snapshot.pendingSessionPurges || []" :key="id" tone="warning" class="ma-3">
+                    会话 {{ id.slice(0, 8) }} 已移出历史，但文件、备份或浏览器清理尚未全部完成。
+                    <UiButton size="sm" :disabled="workspace.busy" @click="workspace.retryPurge(id)">重试删除</UiButton>
+                </UiAlert>
                 <ChatWorkspace v-show="workspace.page === 'chat'" :class="{ 'view-enter': workspace.page === 'chat' }" />
                 <EndpointManager v-if="workspace.page === 'endpoints'" />
                 <AgentManager v-if="workspace.page === 'agents'" />
@@ -272,7 +278,7 @@ onBeforeUnmount(() => {
             <WorkspacePanel :suspended="searchOpen || searchPresent || confirmPresent || Boolean(leaveIntent)" :inert="!panelVisible" :aria-hidden="!panelVisible" />
         </div>
     </div>
-    <SearchDialog ref="searchDialog" :open="searchOpen" :sessions="workspace.snapshot.sessions" :runs="workspace.snapshot.runs" @close="searchOpen = false" @present-change="searchPresent = $event" @select-session="selectSearchSession" @navigate-settings="selectSearchSettings" @navigate-endpoints="selectSearchEndpoints" />
+    <SearchDialog ref="searchDialog" :open="searchOpen" :sessions="workspace.snapshot.sessions" :latest-states="overview.latestStates" @close="searchOpen = false" @present-change="searchPresent = $event" @select-session="selectSearchSession" @navigate-settings="selectSearchSettings" @navigate-endpoints="selectSearchEndpoints" />
     <UiSnackbarHost />
     <UiDialog v-model:open="confirmOpen" @present-change="confirmPresent = $event" @closed="confirmClosed" @update:open="resolveLeave('cancel')" class="confirm-dialog" aria-labelledby="dirty-title"><h2 id="dirty-title">保存设置更改？</h2><p>离开之前，可以保存或放弃本次修改。</p><div class="button-row"><UiButton @click="resolveLeave('cancel')">继续编辑</UiButton><UiButton @click="resolveLeave('discard')">放弃更改</UiButton><UiButton variant="primary" @click="resolveLeave('save')">保存并离开</UiButton></div></UiDialog>
 </template>

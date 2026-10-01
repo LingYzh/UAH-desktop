@@ -49,7 +49,7 @@ function visibleHistory(history: unknown[]): { text: string; omitted: boolean } 
 }
 
 export function captureRequestContext(input: {
-    runId: string; round: number; modelId: string; protocol: ApiProtocol; capacity?: number;
+    runId: string; round: number; modelId: string; protocol: ApiProtocol; capacity?: number; requestId?: string;
     sections: Array<{ id: string; content: string }>;
     messages: ApiMessage[]; continuation?: unknown[]; tools: ToolDefinition[];
 }): RequestContextDetail {
@@ -69,7 +69,7 @@ export function captureRequestContext(input: {
         return { ...section, content, characters: section.content.length, estimatedTokens: estimateVisibleTokens(section.content), truncated: content.length < section.content.length };
     });
     return {
-        requestId: randomUUID(), runId: input.runId, round: input.round, capturedAt: new Date().toISOString(),
+        requestId: input.requestId ?? randomUUID(), runId: input.runId, round: input.round, capturedAt: new Date().toISOString(),
         modelId: input.modelId, protocol: input.protocol,
         ...(Number.isSafeInteger(input.capacity) && input.capacity! > 0 ? { capacity: input.capacity } : {}),
         estimatedInputTokens: sections.reduce((sum, section) => sum + section.estimatedTokens, 0),

@@ -1,3 +1,5 @@
+export type { ToolOutcome, ArtifactReference, ResourceVersion, TimeEvidence } from './harness-contracts';
+
 export interface ToolDefinition {
     name: string;
     description: string;

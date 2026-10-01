@@ -1,0 +1,759 @@
+{
+    "schemaVersion": 1,
+    "description": "Synthetic cross-platform D00 contract samples. No credentials or user data. Usage expected sections are D04 acceptance vectors, not evidence that a ledger reducer exists.",
+    "artifactCases": [
+        {
+            "availability": "external_reference_only",
+            "relativePath": null,
+            "sha256": null,
+            "byteLength": null,
+            "externalReference": "provider-file:synthetic-file-1",
+            "mediaType": "application/octet-stream",
+            "missingReason": "Provider file reference retained; bytes were unavailable."
+        },
+        {
+            "availability": "missing",
+            "relativePath": "artifacts/missing-result.txt",
+            "sha256": null,
+            "byteLength": null,
+            "mediaType": "text/plain",
+            "missingReason": "Recording failed before hash and byte length were known."
+        }
+    ],
+    "toolCases": [
+        {
+            "id": "written-recording-failed",
+            "identity": {
+                "sessionId": "session-golden-1",
+                "runId": "run-root",
+                "parentRunId": null,
+                "rootRunId": "run-root",
+                "turnId": "turn-root",
+                "stepId": "step-write",
+                "requestId": "request-write",
+                "attemptId": "attempt-write-1",
+                "toolCallId": "provider-call-reused",
+                "invocationId": "invocation-write-1"
+            },
+            "runState": "recording_failed",
+            "expectedLegacyRunState": "failed",
+            "outcome": {
+                "schemaVersion": 1,
+                "status": "succeeded",
+                "effectState": "confirmed",
+                "recordingState": "failed",
+                "retryClass": "reconcile_first",
+                "idempotencyKey": null,
+                "errorCode": "RECORDING_FAILED",
+                "exitCode": null,
+                "preview": "File written; result journal failed.",
+                "artifactRefs": [],
+                "truncation": {
+                    "truncated": false,
+                    "reason": null
+                },
+                "resources": [
+                    {
+                        "uri": "workspace:///sample.txt",
+                        "beforeHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        "afterHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                    }
+                ],
+                "time": {
+                    "processEpochId": "epoch-1",
+                    "startedAt": "2026-10-01T01:00:00.000Z",
+                    "finishedAt": "2026-10-01T01:00:00.005Z",
+                    "durationMs": 5
+                }
+            },
+            "expectedLegacyToolResult": {
+                "id": "provider-call-reused",
+                "content": "File written; result journal failed.",
+                "isError": true
+            }
+        },
+        {
+            "id": "cancelled-effect-unknown",
+            "identity": {
+                "sessionId": "session-golden-1",
+                "runId": "run-root",
+                "parentRunId": null,
+                "rootRunId": "run-root",
+                "turnId": "turn-root",
+                "stepId": "step-write",
+                "requestId": "request-write",
+                "attemptId": "attempt-write-2",
+                "toolCallId": "provider-call-reused",
+                "invocationId": "invocation-write-2"
+            },
+            "runState": "needs_reconciliation",
+            "expectedLegacyRunState": "failed",
+            "outcome": {
+                "schemaVersion": 1,
+                "status": "cancelled",
+                "effectState": "possible",
+                "recordingState": "durable",
+                "retryClass": "reconcile_first",
+                "idempotencyKey": null,
+                "errorCode": "CANCELLED_EFFECT_UNKNOWN",
+                "exitCode": null,
+                "preview": "Cancelled after dispatch; side effect remains unknown.",
+                "artifactRefs": [],
+                "truncation": {
+                    "truncated": false,
+                    "reason": null
+                },
+                "resources": [
+                    {
+                        "uri": "workspace:///sample.txt",
+                        "beforeHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "afterHash": null
+                    }
+                ],
+                "time": {
+                    "processEpochId": "epoch-2",
+                    "startedAt": "2026-10-01T01:01:00.000Z",
+                    "finishedAt": null,
+                    "durationMs": null
+                }
+            },
+            "expectedLegacyToolResult": {
+                "id": "provider-call-reused",
+                "content": "Cancelled after dispatch; side effect remains unknown.",
+                "isError": true
+            }
+        }
+    ],
+    "eventOrdering": {
+        "events": [
+            {
+                "schemaVersion": 1,
+                "eventId": "event-1",
+                "sessionSeq": 1,
+                "timestamp": "2026-10-01T01:02:01.000Z",
+                "processEpochId": "epoch-2",
+                "run": {
+                    "sessionId": "session-golden-1",
+                    "runId": "run-root",
+                    "parentRunId": null,
+                    "rootRunId": "run-root",
+                    "turnId": "turn-root"
+                },
+                "type": "run.state",
+                "payload": {
+                    "state": "waiting_model",
+                    "reason": null
+                }
+            },
+            {
+                "schemaVersion": 1,
+                "eventId": "event-2",
+                "sessionSeq": 2,
+                "timestamp": "2026-10-01T01:02:02.000Z",
+                "processEpochId": "epoch-2",
+                "run": {
+                    "sessionId": "session-golden-1",
+                    "runId": "run-child",
+                    "parentRunId": "run-root",
+                    "rootRunId": "run-root",
+                    "turnId": "turn-child"
+                },
+                "type": "run.state",
+                "payload": {
+                    "state": "waiting_model",
+                    "reason": null
+                }
+            },
+            {
+                "schemaVersion": 1,
+                "eventId": "event-3",
+                "sessionSeq": 3,
+                "timestamp": "2026-10-01T01:02:03.000Z",
+                "processEpochId": "epoch-2",
+                "run": {
+                    "sessionId": "session-golden-1",
+                    "runId": "run-root",
+                    "parentRunId": null,
+                    "rootRunId": "run-root",
+                    "turnId": "turn-root"
+                },
+                "type": "run.state",
+                "payload": {
+                    "state": "running_tools",
+                    "reason": null
+                }
+            },
+            {
+                "schemaVersion": 1,
+                "eventId": "event-4",
+                "sessionSeq": 4,
+                "timestamp": "2026-10-01T01:02:04.000Z",
+                "processEpochId": "epoch-2",
+                "run": {
+                    "sessionId": "session-golden-1",
+                    "runId": "run-child",
+                    "parentRunId": "run-root",
+                    "rootRunId": "run-root",
+                    "turnId": "turn-child"
+                },
+                "type": "run.state",
+                "payload": {
+                    "state": "completed",
+                    "reason": null
+                }
+            }
+        ],
+        "legacyRunSequences": [
+            {
+                "runId": "run-root",
+                "sequence": 1
+            },
+            {
+                "runId": "run-child",
+                "sequence": 1
+            },
+            {
+                "runId": "run-root",
+                "sequence": 2
+            },
+            {
+                "runId": "run-child",
+                "sequence": 2
+            }
+        ],
+        "expectedSessionSeq": [
+            1,
+            2,
+            3,
+            4
+        ]
+    },
+    "usageCases": [
+        {
+            "id": "openai-chat-cumulative-final-repeat",
+            "snapshots": [
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-openai-chat",
+                    "attemptId": "attempt-openai-chat-1",
+                    "revision": 1,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "openai-chat",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "prompt_tokens": 2
+                    },
+                    "counters": {
+                        "inputTokens": 2,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-openai-chat",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                },
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-openai-chat",
+                    "attemptId": "attempt-openai-chat-1",
+                    "revision": 2,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "openai-chat",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "prompt_tokens": 10
+                    },
+                    "counters": {
+                        "inputTokens": 10,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-openai-chat",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                },
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-openai-chat",
+                    "attemptId": "attempt-openai-chat-1",
+                    "revision": 3,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "openai-chat",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "prompt_tokens": 15
+                    },
+                    "counters": {
+                        "inputTokens": 15,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-openai-chat",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                },
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-openai-chat",
+                    "attemptId": "attempt-openai-chat-1",
+                    "revision": 3,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "openai-chat",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "prompt_tokens": 15
+                    },
+                    "counters": {
+                        "inputTokens": 15,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-openai-chat",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                }
+            ],
+            "expected": {
+                "effectiveCounters": {
+                    "inputTokens": 15,
+                    "outputTokens": null,
+                    "cachedInputTokens": null,
+                    "cacheCreationInputTokens": null,
+                    "totalTokens": null
+                },
+                "uniqueAttemptCount": 1,
+                "acceptedRevisions": [
+                    1,
+                    2,
+                    3
+                ],
+                "duplicateSnapshotIndexes": [
+                    3
+                ],
+                "knownInputTokensSubtotal": 15,
+                "unknownCounterFields": [
+                    "outputTokens",
+                    "cachedInputTokens",
+                    "cacheCreationInputTokens",
+                    "totalTokens"
+                ]
+            }
+        },
+        {
+            "id": "openai-responses-cumulative-final-repeat",
+            "snapshots": [
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-openai-responses",
+                    "attemptId": "attempt-openai-responses-1",
+                    "revision": 1,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "openai-responses",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "input_tokens": 2
+                    },
+                    "counters": {
+                        "inputTokens": 2,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-openai-responses",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                },
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-openai-responses",
+                    "attemptId": "attempt-openai-responses-1",
+                    "revision": 2,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "openai-responses",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "input_tokens": 10
+                    },
+                    "counters": {
+                        "inputTokens": 10,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-openai-responses",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                },
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-openai-responses",
+                    "attemptId": "attempt-openai-responses-1",
+                    "revision": 3,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "openai-responses",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "input_tokens": 15
+                    },
+                    "counters": {
+                        "inputTokens": 15,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-openai-responses",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                },
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-openai-responses",
+                    "attemptId": "attempt-openai-responses-1",
+                    "revision": 3,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "openai-responses",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "input_tokens": 15
+                    },
+                    "counters": {
+                        "inputTokens": 15,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-openai-responses",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                }
+            ],
+            "expected": {
+                "effectiveCounters": {
+                    "inputTokens": 15,
+                    "outputTokens": null,
+                    "cachedInputTokens": null,
+                    "cacheCreationInputTokens": null,
+                    "totalTokens": null
+                },
+                "uniqueAttemptCount": 1,
+                "acceptedRevisions": [
+                    1,
+                    2,
+                    3
+                ],
+                "duplicateSnapshotIndexes": [
+                    3
+                ],
+                "knownInputTokensSubtotal": 15,
+                "unknownCounterFields": [
+                    "outputTokens",
+                    "cachedInputTokens",
+                    "cacheCreationInputTokens",
+                    "totalTokens"
+                ]
+            }
+        },
+        {
+            "id": "anthropic-cumulative-final-repeat",
+            "snapshots": [
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-anthropic",
+                    "attemptId": "attempt-anthropic-1",
+                    "revision": 1,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "anthropic",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "input_tokens": 2
+                    },
+                    "counters": {
+                        "inputTokens": 2,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-anthropic",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                },
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-anthropic",
+                    "attemptId": "attempt-anthropic-1",
+                    "revision": 2,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "anthropic",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "input_tokens": 10
+                    },
+                    "counters": {
+                        "inputTokens": 10,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-anthropic",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                },
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-anthropic",
+                    "attemptId": "attempt-anthropic-1",
+                    "revision": 3,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "anthropic",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "input_tokens": 15
+                    },
+                    "counters": {
+                        "inputTokens": 15,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-anthropic",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                },
+                {
+                    "schemaVersion": 1,
+                    "requestId": "request-anthropic",
+                    "attemptId": "attempt-anthropic-1",
+                    "revision": 3,
+                    "purpose": "agent",
+                    "scope": {
+                        "kind": "session",
+                        "sessionId": "session-golden-1",
+                        "runId": "run-root"
+                    },
+                    "protocol": "anthropic",
+                    "adapterVersion": "golden-adapter-v1",
+                    "source": "provider",
+                    "completeness": "partial",
+                    "rawUsage": {
+                        "input_tokens": 15
+                    },
+                    "counters": {
+                        "inputTokens": 15,
+                        "outputTokens": null,
+                        "cachedInputTokens": null,
+                        "cacheCreationInputTokens": null,
+                        "totalTokens": null
+                    },
+                    "providerResponseId": "response-anthropic",
+                    "accountNamespace": "fixture-account",
+                    "reportedCost": null,
+                    "estimatedCost": null
+                }
+            ],
+            "expected": {
+                "effectiveCounters": {
+                    "inputTokens": 15,
+                    "outputTokens": null,
+                    "cachedInputTokens": null,
+                    "cacheCreationInputTokens": null,
+                    "totalTokens": null
+                },
+                "uniqueAttemptCount": 1,
+                "acceptedRevisions": [
+                    1,
+                    2,
+                    3
+                ],
+                "duplicateSnapshotIndexes": [
+                    3
+                ],
+                "knownInputTokensSubtotal": 15,
+                "unknownCounterFields": [
+                    "outputTokens",
+                    "cachedInputTokens",
+                    "cacheCreationInputTokens",
+                    "totalTokens"
+                ]
+            }
+        }
+    ],
+    "unknownUsageCase": {
+        "snapshot": {
+            "schemaVersion": 1,
+            "requestId": "request-unknown",
+            "attemptId": "attempt-unknown",
+            "revision": 1,
+            "purpose": "agent",
+            "scope": {
+                "kind": "session",
+                "sessionId": "session-golden-1",
+                "runId": "run-root"
+            },
+            "protocol": "openai-chat",
+            "adapterVersion": "golden-adapter-v1",
+            "source": "unavailable",
+            "completeness": "unknown",
+            "rawUsage": null,
+            "counters": {
+                "inputTokens": null,
+                "outputTokens": null,
+                "cachedInputTokens": null,
+                "cacheCreationInputTokens": null,
+                "totalTokens": null
+            },
+            "providerResponseId": null,
+            "accountNamespace": "fixture-account",
+            "reportedCost": null,
+            "estimatedCost": null
+        },
+        "expected": {
+            "unknownAttemptCount": 1,
+            "knownInputTokensSubtotal": null,
+            "unknownCounterFields": [
+                "inputTokens",
+                "outputTokens",
+                "cachedInputTokens",
+                "cacheCreationInputTokens",
+                "totalTokens"
+            ]
+        }
+    },
+    "connectionTestCase": {
+        "snapshot": {
+            "schemaVersion": 1,
+            "requestId": "request-connection",
+            "attemptId": "attempt-connection",
+            "revision": 1,
+            "purpose": "connection_test",
+            "scope": {
+                "kind": "application"
+            },
+            "protocol": "openai-responses",
+            "adapterVersion": "golden-adapter-v1",
+            "source": "provider",
+            "completeness": "partial",
+            "rawUsage": {
+                "input_tokens": 3
+            },
+            "counters": {
+                "inputTokens": 3,
+                "outputTokens": null,
+                "cachedInputTokens": null,
+                "cacheCreationInputTokens": null,
+                "totalTokens": null
+            },
+            "providerResponseId": "response-connection",
+            "accountNamespace": "fixture-account",
+            "reportedCost": null,
+            "estimatedCost": null
+        },
+        "expected": {
+            "applicationKnownInputTokensSubtotal": 3,
+            "sessionKnownInputTokensSubtotal": null,
+            "sessionAttemptCount": 0
+        }
+    }
+}

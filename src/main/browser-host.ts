@@ -5,8 +5,53 @@ import { remoteUrl } from './security';
 export class BrowserHost {
     private views = new Map<string, WebContentsView>();
     private current: string | null = null;
+    private purged = new Set<string>();
+    private purging = new Map<string, Promise<void>>();
+    private retiring = new Map<string, WebContentsView>();
 
     constructor(private window: BrowserWindow) {}
+
+    private assertAvailable(sessionId: string): void {
+        if (typeof sessionId !== 'string' || !/^[\w-]{1,128}$/.test(sessionId)) throw new Error('会话标识无效。');
+        if (this.purged.has(sessionId)) throw new Error('此会话浏览器已清除，不能继续访问。');
+    }
+
+    /** Blocks the identity before any await; failures remain blocked for retry. */
+    async purgeSession(sessionId: string): Promise<void> {
+        if (typeof sessionId !== 'string' || !/^[\w-]{1,128}$/.test(sessionId)) throw new Error('会话标识无效。');
+        this.purged.add(sessionId);
+        const pending = this.purging.get(sessionId);
+        if (pending) return pending;
+        const operation = this.clearSession(sessionId);
+        this.purging.set(sessionId, operation);
+        try { await operation; } finally { this.purging.delete(sessionId); }
+    }
+
+    private async clearSession(sessionId: string): Promise<void> {
+        const attached = this.views.get(sessionId);
+        const view = attached ?? this.retiring.get(sessionId);
+        this.views.delete(sessionId);
+        if (this.current === sessionId) this.current = null;
+        if (view) {
+            this.retiring.set(sessionId, view);
+            if (attached) this.window.contentView.removeChildView(view);
+            const contents = view.webContents;
+            if (!contents.isDestroyed()) await new Promise<void>((resolve, reject) => {
+                const destroyed = () => { clearTimeout(timer); resolve(); };
+                const timer = setTimeout(() => { contents.off('destroyed', destroyed); reject(new Error('会话浏览器尚未确认关闭。')); }, 10000);
+                contents.once('destroyed', destroyed);
+                try { contents.close({ waitForBeforeUnload: false }); }
+                catch (error) { clearTimeout(timer); contents.off('destroyed', destroyed); reject(error); }
+            });
+            this.retiring.delete(sessionId);
+        }
+        const profile = session.fromPartition(`persist:uah-browser-${sessionId}`);
+        await profile.closeAllConnections();
+        await profile.clearStorageData();
+        await profile.clearAuthCache();
+        await profile.clearCache();
+        await profile.closeAllConnections();
+    }
 
     async execute(action: BrowserAction): Promise<BrowserState> {
         if (action.type === 'hide' || action.type === 'close') {
@@ -22,9 +67,11 @@ export class BrowserHost {
             }
             return { url: current ? current.webContents.isDestroyed() ? '' : current.webContents.getURL() : '', visible: false };
         }
+        this.assertAvailable(action.sessionId);
         let view = this.views.get(action.sessionId);
         if (action.type === 'open') {
             await this.execute({ type: 'hide' });
+            this.assertAvailable(action.sessionId);
             if (!view) {
                 if (this.views.size >= 8) throw new Error('最多同时保留 8 个会话浏览器，请先关闭一个。');
                 const profile = session.fromPartition(`persist:uah-browser-${action.sessionId}`);
@@ -51,13 +98,18 @@ export class BrowserHost {
             try {
                 await view.webContents.loadURL(remoteUrl(action.url));
             } catch {
+                this.assertAvailable(action.sessionId);
                 return { url: action.url, visible: false, error: '页面加载失败，请检查地址或网络。' };
             }
+            this.assertAvailable(action.sessionId);
+            if (view.webContents.isDestroyed() || this.views.get(action.sessionId) !== view) return { url: '', visible: false, error: '浏览器已关闭。' };
             return { url: view.webContents.getURL(), visible: false };
         }
         if (!view) return { url: '', visible: false };
         if (this.current !== action.sessionId) {
             await this.execute({ type: 'hide' });
+            this.assertAvailable(action.sessionId);
+            if (view.webContents.isDestroyed() || this.views.get(action.sessionId) !== view) return { url: '', visible: false };
             this.current = action.sessionId;
         }
         const [width, height] = this.window.getContentSize();
@@ -78,5 +130,8 @@ export class BrowserHost {
             if (!view.webContents.isDestroyed()) view.webContents.close();
         }
         this.views.clear();
+        for (const view of this.retiring.values()) if (!view.webContents.isDestroyed()) view.webContents.close({ waitForBeforeUnload: false });
+        this.retiring.clear();
+        this.current = null;
     }
 }

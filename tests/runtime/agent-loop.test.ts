@@ -7,10 +7,12 @@ import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
 import { DatabaseSync } from 'node:sqlite';
 import { Supervisor } from '../../src/runtime/supervisor';
+import { RuntimeStore } from '../../src/runtime/store';
 import { defaultAgentSettings } from '../../src/shared/agents';
 import { parsePromptProfile } from '../../src/shared/conditional-prompts';
 import { parseCommand, type Snapshot, type RuntimeEvent, type ApprovalIdentity } from '../../src/shared/contracts';
 import type { PermissionMode } from '../../src/shared/permissions';
+import type { TranscriptEvent } from '../../src/shared/harness-contracts';
 
 interface Message { role: string; content?: string; tool_call_id?: string; }
 interface Body { model: string; messages: Message[]; tools?: unknown[]; reasoning_effort?: string; }
@@ -22,13 +24,13 @@ function answer(response: ServerResponse, text: string, calls: Call[] = [], reas
     response.write(`data: ${JSON.stringify({ choices: [{ index: 0, delta: {}, finish_reason: calls.length ? 'tool_calls' : 'stop' }] })}\n\n`);
     response.end('data: [DONE]\n\n');
 }
-async function fixture(t: { after: (fn: () => Promise<void>) => void }, handler: (body: Body, response: ServerResponse, number: number) => void, mode: PermissionMode = 'manual', toolsSupported?: boolean) {
+async function fixture(t: { after: (fn: () => Promise<void>) => void }, handler: (body: Body, response: ServerResponse, number: number) => void | Promise<void>, mode: PermissionMode = 'manual', toolsSupported?: boolean) {
     const root = mkdtempSync(join(tmpdir(), 'uah-loop-')); const project = join(root, 'project'); mkdirSync(project);
     const requests: Body[] = []; const errors: unknown[] = []; const events: RuntimeEvent[] = [];
     const settings = defaultAgentSettings(); settings.subagents.enabled = true; settings.profiles[0].instructions = 'ROOT INSTRUCTIONS';
     const server = createServer(async (request, response) => {
         const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
-        try { const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as Body; requests.push(body); handler(body, response, requests.length); }
+        try { const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as Body; requests.push(body); await handler(body, response, requests.length); }
         catch (error) { errors.push(error); if (!response.headersSent) response.writeHead(500); response.end(); }
     });
     await new Promise<void>(resolveListen => server.listen(0, '127.0.0.1', resolveListen));
@@ -50,6 +52,39 @@ async function fixture(t: { after: (fn: () => Promise<void>) => void }, handler:
 function identity(value: ApprovalIdentity): ApprovalIdentity { const { runtimeId, sessionId, runId, turnId, requestId, policyVersion } = value; return { runtimeId, sessionId, runId, turnId, requestId, policyVersion }; }
 const toolMessages = (body: Body) => body.messages.filter(message => message.role === 'tool');
 
+test('applied write with failed artifact recording stops the batch and persists a reconciliation gate', async t => {
+    const original = RuntimeStore.prototype.commit;
+    t.mock.method(RuntimeStore.prototype, 'commit', function(this: RuntimeStore, changes: Parameters<RuntimeStore['commit']>[0]) {
+        if (changes.artifacts?.length) throw new Error('fixture private disk failure');
+        return original.call(this, changes);
+    });
+    const f = await fixture(t, (body, response, number) => {
+        if (number === 1) answer(response, '', [
+            { name: 'write_file', args: { path: 'first.txt', content: 'applied', expectedContent: null } },
+            { name: 'write_file', args: { path: 'second.txt', content: 'must not happen', expectedContent: null } },
+        ]);
+        else {
+            const names = (body.tools as Array<{ function: { name: string } }>).map(tool => tool.function.name);
+            assert.ok(!names.includes('write_file') && !names.includes('run_command') && !names.includes('spawn_agent'));
+            answer(response, 'Read-only followup.');
+        }
+    }, 'accept-edits');
+    const run = await f.start();
+    const failed = await f.wait(state => state.runs.find(item => item.id === run.id)?.state === 'failed');
+    const saved = failed.runs.find(item => item.id === run.id)!;
+    assert.equal(saved.harnessState, 'recording_failed');
+    assert.equal(saved.activities?.find(item => item.kind === 'tool')?.tool?.outcome?.effectState, 'confirmed');
+    assert.equal(saved.activities?.find(item => item.kind === 'tool')?.tool?.outcome?.recordingState, 'failed');
+    assert.equal(readFileSync(join(f.project, 'first.txt'), 'utf8'), 'applied');
+    assert.equal(existsSync(join(f.project, 'second.txt')), false);
+    assert.equal(f.requests.length, 1);
+    assert.ok(!JSON.stringify(saved).includes('fixture private disk failure'));
+    await f.restart();
+    const followup = await f.start('inspect failure');
+    await f.wait(state => state.runs.find(item => item.id === followup.id)?.state === 'completed');
+    assert.equal(f.requests.length, 2);
+});
+
 test('read roundtrip streams reasoning and text, persists ordered activities and restarts terminal history', async t => {
     const f = await fixture(t, (body, response, number) => {
         if (number === 1) answer(response, 'Checking. ', [{ name: 'read_file', args: { path: 'input.txt' } }], 'Need to inspect the file.');
@@ -61,7 +96,10 @@ test('read roundtrip streams reasoning and text, persists ordered activities and
     assert.deepEqual(done.runs[0].activities?.map(activity => activity.kind), ['text', 'reasoning', 'tool', 'text']);
     assert.ok(done.runs[0].activities?.every(activity => activity.status === 'completed'));
     assert.match(done.runs[0].activities!.find(activity => activity.kind === 'tool')!.content, /workspace data/);
-    assert.deepEqual(done.runs[0].activities!.find(activity => activity.kind === 'tool')!.tool, { name: 'read_file', arguments: { path: 'input.txt' }, result: 'workspace data', isError: false });
+    const { outcome, ...legacyTool } = done.runs[0].activities!.find(activity => activity.kind === 'tool')!.tool!;
+    assert.deepEqual(legacyTool, { name: 'read_file', arguments: { path: 'input.txt' }, result: 'workspace data', isError: false });
+    assert.equal(outcome?.recordingState, 'durable');
+    assert.equal(outcome?.effectState, 'not_started');
     assert.equal(done.approvals.length, 0); assert.equal(done.artifacts.length, 0);
     const restored = await f.restart(); assert.deepEqual(restored.runs.find(item => item.id === run.id), done.runs[0]);
 });
@@ -129,7 +167,7 @@ test('stop while write approval is pending expires approval and cannot resume or
     await assert.rejects(f.execute({ type: 'resolve-approval', identity: identity(pending.approvals[0]), decision: 'approve' }), /pending|stale/);
 });
 
-test('inherit, preset and inline children use concrete configurations and real wait results; child output stays out of later root history', async t => {
+test('inherit, preset and inline children preserve correlated wait results without impersonating later root answers', async t => {
     let rootRound = 0;
     const f = await fixture(t, (body, response) => {
         const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
@@ -143,7 +181,11 @@ test('inherit, preset and inline children use concrete configurations and real w
         ]); }
         else if (rootRound === 3) { const ids = toolMessages(body).map(message => { try { return JSON.parse(message.content!).agentId; } catch { return undefined; } }).filter(Boolean); assert.equal(ids.length, 3); answer(response, '', [{ name: 'wait_agents', args: { agentIds: ids } }]); }
         else if (rootRound === 4) { const results = JSON.parse(toolMessages(body).at(-1)!.content!); assert.equal(results.length, 3); assert.ok(results.every((item: { status: string; output: string }) => item.status === 'completed' && item.output.startsWith('PRIVATE CHILD'))); answer(response, 'ROOT FINAL'); }
-        else { assert.ok(!JSON.stringify(body.messages).includes('PRIVATE CHILD')); answer(response, 'SECOND FINAL'); }
+        else {
+            assert.ok(!body.messages.some(message => message.role === 'assistant' && String(message.content).includes('PRIVATE CHILD')));
+            assert.ok(toolMessages(body).some(message => String(message.content).includes('PRIVATE CHILD')));
+            answer(response, 'SECOND FINAL');
+        }
     }, 'accept-edits');
     f.settings.profiles.push({ id: 'preset', name: 'Preset', kind: 'subagent', description: '', instructions: 'PRESET INSTRUCTIONS', enabled: true, allowDelegation: false, model: { endpointId: 'fixture', modelId: 'child-model' } });
     const root = await f.start(); const done = await f.wait(state => state.runs.find(run => run.id === root.id)?.state === 'completed');
@@ -153,8 +195,42 @@ test('inherit, preset and inline children use concrete configurations and real w
         ['default', 'ROOT INSTRUCTIONS', 'root-model', 'accept-edits', 'low'], ['preset', 'PRESET INSTRUCTIONS', 'child-model', 'accept-edits', 'default'], ['inline', 'INLINE INSTRUCTIONS', 'child-model', 'readonly', 'high'],
     ]);
     assert.deepEqual(children[2].contextMessages, [{ role: 'user', content: 'SELECTED HISTORY' }]);
+    const ledger = new RuntimeStore(join(f.root, 'data'));
+    try {
+        const events = ledger.readJournal(root.sessionId, 0, 1000);
+        for (const child of children) {
+            const receipts = events.filter((event): event is Extract<TranscriptEvent, { type: 'delegation.delivery' }> => event.type === 'delegation.delivery' && event.payload.childRunId === child.id);
+            assert.deepEqual(receipts.map(event => event.payload.stage), ['delivered', 'prepared', 'sent', 'consumed']);
+            assert.equal(new Set(receipts.map(event => event.payload.deliveryId)).size, 1);
+            assert.ok(events.some(event => event.eventId === receipts[0].payload.resultEventId && event.run.runId === child.id && event.type === 'run.state'));
+            const consumed = receipts.at(-1)!;
+            assert.ok(events.some(event => event.type === 'response.terminal' && event.payload.attemptId === consumed.payload.attemptId && event.payload.status === 'completed' && event.sessionSeq < consumed.sessionSeq));
+        }
+    } finally { ledger.close(); }
     assert.equal(done.runs[0].activities?.filter(item => item.kind === 'agent').length, 3);
     const second = await f.start('SECOND ROOT'); await f.wait(state => state.runs.find(run => run.id === second.id)?.state === 'completed');
+});
+
+test('failed response after child delivery leaves durable receipt unconsumed', async t => {
+    let parentRound = 0;
+    const f = await fixture(t, (body, response) => {
+        const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        if (user === 'CHILD RECEIPT') { answer(response, 'Child complete.'); return; }
+        parentRound++;
+        if (parentRound === 1) answer(response, '', [{ name: 'spawn_agent', args: { prompt: 'CHILD RECEIPT', agent: { type: 'inherit' }, permissionMode: 'readonly' } }]);
+        else if (parentRound === 2) answer(response, 'Provisional parent answer.');
+        else { response.writeHead(500); response.end('fixture request failed'); }
+    });
+    const run = await f.start();
+    await f.wait(state => state.runs.find(item => item.id === run.id)?.state === 'failed');
+    const ledger = new RuntimeStore(join(f.root, 'data'));
+    try {
+        const receipts = ledger.readJournal(run.sessionId, 0, 1000).filter((event): event is Extract<TranscriptEvent, { type: 'delegation.delivery' }> => event.type === 'delegation.delivery');
+        assert.ok(receipts.some(event => event.payload.stage === 'delivered'));
+        assert.ok(receipts.some(event => event.payload.stage === 'prepared'));
+        assert.ok(!receipts.some(event => event.payload.stage === 'consumed'));
+        assert.equal(new Set(receipts.map(event => event.payload.deliveryId)).size, 1);
+    } finally { ledger.close(); }
 });
 
 test('permission escalation is rejected before any child endpoint request', async t => {
@@ -227,11 +303,11 @@ test('restart recovers interrupted root and child runs and expires stale tool ap
 });
 
 test('root model failure stops owned children and expires their pending approval', async t => {
-    const f = await fixture(t, (body, response) => {
+    const f = await fixture(t, async (body, response) => {
         const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
         if (user === 'CHILD FAILURE') answer(response, '', [{ name: 'write_file', args: { path: 'failure.txt', content: 'x', expectedContent: null } }]);
         else if (!toolMessages(body).length) answer(response, '', [{ name: 'spawn_agent', args: { prompt: 'CHILD FAILURE', agent: { type: 'inherit' }, context: { mode: 'none' } } }]);
-        else setTimeout(() => { response.writeHead(500); response.end('fixture error'); }, 80);
+        else { await f.wait(state => state.approvals.some(item => item.status === 'pending')); response.writeHead(500); response.end('fixture error'); }
     });
     await f.start(); const done = await f.wait(state => state.runs[0].state === 'failed');
     assert.equal(done.runs.length, 2); assert.equal(done.runs.find(item => item.parentRunId)?.state, 'stopped');
@@ -286,7 +362,7 @@ for (const gate of ['enabled', 'global-off', 'agent-off', 'model-off'] as const)
     assert.equal(names.includes('read_file'), gate !== 'model-off');
     const instructions = body.messages.find(message => message.role === 'system')?.content || '';
     assert.ok(instructions.includes(parsePromptProfile(f.settings.profiles[0].instructions).instructions));
-    assert.match(instructions, /UAH_MODULE:host.contract:v1/);
+    assert.match(instructions, /UAH_MODULE:host.contract:v2/);
     assert.match(instructions, /UAH_MODULE:context.tools:v1/);
     for (const module of ['delegation.spawn', 'delegation.wait', 'delegation.presets', 'delegation.limits']) {
         assert.equal(instructions.includes(`UAH_MODULE:${module}:v1`), gate === 'enabled', module);

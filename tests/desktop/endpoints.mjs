@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import http from 'node:http';
 import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 const root = process.cwd();
 const secret = 'fixture-secret-not-for-rendering';
@@ -126,6 +127,16 @@ async function endpointList() {
 
 async function snapshot() {
     return page.evaluate(() => window.uah.command({ type: 'snapshot' }));
+}
+
+async function configureConversationFixture() {
+    // The product intentionally leaves a new draft unconfigured. Select every
+    // required field explicitly instead of relying on old implicit defaults.
+    await page.getByRole('combobox', { name: '主 Agent', exact: true }).selectOption('default');
+    await page.getByRole('combobox', { name: '权限模式', exact: true }).selectOption('readonly');
+    await page.getByRole('combobox', { name: '思考强度', exact: true }).selectOption('default');
+    const noDirectory = page.getByRole('button', { name: '无目录', exact: true });
+    if (await noDirectory.count()) await noDirectory.click();
 }
 
 async function check(name, action) {
@@ -375,6 +386,7 @@ try {
         await captureWindow('model-picker-grouped.png');
         await page.keyboard.press('Escape');
         await picker.selectOption(JSON.stringify([endpointId, 'fixture-model']));
+        await configureConversationFixture();
         await page.getByRole('textbox', { name: '消息', exact: true }).fill('第一轮真实流式');
         await page.getByRole('button', { name: '发送消息', exact: true }).click();
         await page.locator('.turn .status').last().filter({ hasText: '已完成' }).waitFor();
@@ -389,7 +401,8 @@ try {
         await page.getByText('第二轮已经读取历史。', { exact: true }).waitFor();
         const second = requests.findLast((request) => request.body.messages?.at(-1)?.content === '第二轮带历史');
         assert.ok(second);
-        assert.deepEqual(second.body.messages, [
+        assert.equal(second.body.messages.filter(message => message.role === 'system').length, 1);
+        assert.deepEqual(second.body.messages.filter(message => message.role !== 'system'), [
             { role: 'user', content: '第一轮真实流式' },
             { role: 'assistant', content: '你好，第一轮流式回复。' },
             { role: 'user', content: '第二轮带历史' },
@@ -408,6 +421,7 @@ try {
         assert.equal((await snapshot()).sessions.length, firstSessionCount);
         await page.getByRole('button', { name: '新对话', exact: true }).click();
         await page.getByRole('combobox', { name: '运行模型', exact: true }).selectOption(JSON.stringify([endpointId, 'fixture-model']));
+        await configureConversationFixture();
         await page.getByRole('textbox', { name: '消息', exact: true }).fill('重启后的密钥验证');
         await page.getByRole('button', { name: '发送消息', exact: true }).click();
         await page.locator('.turn .status').last().filter({ hasText: '已完成' }).waitFor();
@@ -509,6 +523,21 @@ try {
         assert.ok((await snapshot()).sessions.length >= firstSessionCount);
     });
 
+    await check('application connection-test usage remains separate from user sessions and conversation usage', async () => {
+        const current = await snapshot();
+        assert.ok(current.sessions.every(session => session.id !== 'application'));
+        const application = new DatabaseSync(path.join(evidence, 'data', 'application-journal', 'runtime.sqlite'), { readOnly: true });
+        const user = new DatabaseSync(path.join(evidence, 'data', 'runtime.sqlite'), { readOnly: true });
+        try {
+            const usageRows = database => database.prepare('SELECT data FROM canonical_events').all().map(row => JSON.parse(row.data)).filter(event => event.type === 'usage.snapshot').map(event => event.payload.usage);
+            const applicationUsage = usageRows(application);
+            const sessionUsage = usageRows(user);
+            assert.ok(applicationUsage.length > 0);
+            assert.ok(applicationUsage.every(usage => usage.purpose === 'connection_test' && usage.scope.kind === 'application'));
+            assert.ok(sessionUsage.length > 0);
+            assert.ok(sessionUsage.every(usage => usage.purpose === 'agent' && usage.scope.kind === 'session'));
+        } finally { application.close(); user.close(); }
+    });
     assert.deepEqual(pageErrors, []);
     await writeFile(path.join(evidence, 'report.json'), JSON.stringify({
         passed: checks,

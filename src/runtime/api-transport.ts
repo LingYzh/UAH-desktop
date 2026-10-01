@@ -17,7 +17,23 @@ const MAX_MODEL_PAGES = 10;
 type ApiProtocol = ApiConnection['protocol'];
 type TransportFailure = 'cancelled' | 'timeout' | 'network' | 'invalid' | 'truncated' | 'incomplete' | 'tool' | 'server';
 
-class ApiTransportError extends Error {
+export interface RequestIdentity { requestId: string; attemptId: string; }
+export interface RequestObserver {
+    prepared(body: Record<string, unknown>, protocol: ApiProtocol): void;
+    dispatch(): void;
+    responseStarted(): void;
+    providerEvent(event: { event?: string; data: string }): void;
+    terminal(status: 'completed' | 'failed' | 'cancelled'): void;
+}
+/** Recording acknowledgement failed; never reinterpret this as a provider/network failure. */
+export class RequestRecordingError extends Error {
+    constructor(readonly partial = false) {
+        super('Request recording failed; request execution has been stopped.');
+        this.name = 'RequestRecordingError';
+    }
+}
+
+export class ApiTransportError extends Error {
     constructor(message: string, readonly reason = 'invalid') {
         super(message);
         this.name = 'ApiTransportError';
@@ -253,8 +269,8 @@ interface RequestScope {
     throwIfAborted(): void;
 }
 
-function createRequestScope(signal?: AbortSignal, operation: 'models' | 'stream' | 'test' = 'stream', protocol = 'unknown', timeoutMs = REQUEST_TIMEOUT_MS): RequestScope {
-    const trace = createDiagnosticTrace(operation, protocol);
+function createRequestScope(signal?: AbortSignal, operation: 'models' | 'stream' | 'test' = 'stream', protocol = 'unknown', timeoutMs = REQUEST_TIMEOUT_MS, identity?: RequestIdentity): RequestScope {
+    const trace = createDiagnosticTrace(operation, protocol, identity);
     const started = Date.now();
     let finished = false;
     let responseSummary = '尚未收到 HTTP 响应';
@@ -317,18 +333,22 @@ async function fetchScoped(
     url: string,
     init: RequestInit,
     scope: RequestScope,
+    observer?: RequestObserver,
 ): Promise<Response> {
     scope.throwIfAborted();
     try {
         const path = new URL(url).pathname;
         const route = ['chat/completions', 'responses', 'messages', 'models'].find((value) => path.endsWith('/' + value)) ?? 'custom';
         scope.trace.event('http.send', { method: init.method === 'GET' ? 'GET' : 'POST', route });
+        observer?.dispatch();
         const response = await fetch(url, { ...init, redirect: 'error', signal: scope.signal });
+        observer?.responseStarted();
         const type = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase();
         const contentType = ['application/json', 'text/html', 'text/event-stream', 'text/plain'].includes(type ?? '') ? type! : type ? 'other' : 'missing';
         scope.response(response.status, contentType);
         return response;
     } catch (error) {
+        if (error instanceof RequestRecordingError) throw error;
         const abortError = scope.abortError();
         if (abortError) {
             throw abortError;
@@ -845,6 +865,8 @@ export function streamApi(
 
 export interface AgentApiStreamOptions extends ApiStreamOptions {
     tools: ToolDefinition[];
+    requestIdentity?: RequestIdentity;
+    observer?: RequestObserver;
     /** Full native history returned by the previous completed round, plus correlated tool results. */
     continuation?: unknown[];
 }
@@ -1221,6 +1243,39 @@ class AgentStreamAccumulator {
 /** Streams actual provider text/reasoning and releases tools only after a valid terminal response. */
 export async function* streamAgentApi(connectionInput: ApiConnection, modelInput: string, messagesInput: ApiMessage[],
     signal?: AbortSignal, options: AgentApiStreamOptions = { tools: [] }): AsyncGenerator<AgentStreamEvent> {
+    if (!options.observer) {
+        yield* streamAgentApiInternal(connectionInput, modelInput, messagesInput, signal, options);
+        return;
+    }
+    const supplied = options.observer;
+    let terminalAttempted = false;
+    let partial = false;
+    const invoke = (callback: () => void) => {
+        try { callback(); } catch { throw new RequestRecordingError(partial); }
+    };
+    const observer: RequestObserver = {
+        prepared: (body, protocol) => invoke(() => supplied.prepared(body, protocol)),
+        dispatch: () => invoke(() => supplied.dispatch()),
+        responseStarted: () => invoke(() => supplied.responseStarted()),
+        providerEvent: event => { partial = true; invoke(() => supplied.providerEvent(event)); },
+        terminal: status => {
+            if (terminalAttempted) return;
+            terminalAttempted = true;
+            invoke(() => supplied.terminal(status));
+        },
+    };
+    try {
+        yield* streamAgentApiInternal(connectionInput, modelInput, messagesInput, signal, { ...options, observer });
+    } catch (error) {
+        observer.terminal(signal?.aborted || (error instanceof ApiTransportError && error.reason === 'cancelled') ? 'cancelled' : 'failed');
+        throw error;
+    } finally {
+        if (!terminalAttempted) observer.terminal('cancelled');
+    }
+}
+
+async function* streamAgentApiInternal(connectionInput: ApiConnection, modelInput: string, messagesInput: ApiMessage[],
+    signal?: AbortSignal, options: AgentApiStreamOptions = { tools: [] }): AsyncGenerator<AgentStreamEvent> {
     const connection = validateConnection(connectionInput);
     const modelId = validateModelId(modelInput);
     const messages = validateMessages(messagesInput);
@@ -1247,29 +1302,38 @@ export async function* streamAgentApi(connectionInput: ApiConnection, modelInput
     const serialized = JSON.stringify(body);
     if (new TextEncoder().encode(serialized).byteLength > MAX_REQUEST_BYTES) fail('invalid');
     const scope = createRequestScope(signal, 'stream', connection.protocol,
-        options.parameters ? options.parameters.timeoutSeconds * 1_000 : REQUEST_TIMEOUT_MS);
+        options.parameters ? options.parameters.timeoutSeconds * 1_000 : REQUEST_TIMEOUT_MS, options.requestIdentity);
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     try {
+        options.observer?.prepared(JSON.parse(serialized) as Record<string, unknown>, connection.protocol);
         const response = await fetchScoped(endpointUrl(connection.baseUrl, requestPath(connection.protocol)), {
             method: 'POST', headers: headersFor(connection, true), body: serialized,
-        }, scope);
+        }, scope, options.observer);
         assertOk(response);
         if (!response.body) fail('invalid', 'body.missing');
         reader = response.body.getReader();
         const accumulator = new AgentStreamAccumulator(connection.protocol, tools);
         for await (const event of readSseEvents(reader, scope)) {
+            options.observer?.providerEvent({ ...event });
             const result = accumulator.accept(event);
             for (const delta of result.events) yield delta;
             if (result.complete) {
                 scope.throwIfAborted();
                 const continuation = boundedNativeHistory([...history, ...result.complete.output]);
+                options.observer?.terminal('completed');
                 scope.success();
                 yield { type: 'complete', toolCalls: result.complete.toolCalls, continuation };
                 return;
             }
         }
         fail('truncated');
-    } catch (error) { throw scope.failure(error); }
+    } catch (error) {
+        if (error instanceof RequestRecordingError) {
+            scope.trace.event('request.recording_failed', { reason: 'recording_failed' });
+            throw error;
+        }
+        throw scope.failure(error);
+    }
     finally {
         if (reader) {
             try { await reader.cancel(); } catch { /* The provider may already have closed its stream. */ }

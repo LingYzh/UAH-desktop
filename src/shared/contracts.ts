@@ -5,6 +5,10 @@ import type { PermissionMode } from './permissions';
 import { parseSessionControls, type SessionControls } from './session-controls';
 import type { DelegationRequest, DelegationPlan } from './delegation';
 
+// Additive journal contracts; existing IPC RunState and sequence retain their semantics.
+export type { RunIdentity, RequestIdentity, InvocationIdentity, HarnessRunState,
+    TranscriptEvent, TranscriptManifest, RequestSnapshot, UsageRecord } from './harness-contracts';
+
 export interface RuntimeConfig {
     runtimeId: string;
     modelId: string;
@@ -25,6 +29,8 @@ export interface RuntimeConfig {
 }
 
 export interface SessionRecord {
+    branchHistory?: Array<{ messages: import('./endpoints').ApiMessage[]; modelFrame?: import('./harness-contracts').ModelFrame }>;
+    branchArtifacts?: import('./harness-contracts').ArtifactReference[];
     activePlanRunId?: string;
     pendingModeTransition?: ModeTransition;
     branchAgent?: RuntimeConfig;
@@ -62,9 +68,21 @@ export interface RunActivity {
     status: 'running' | 'approval' | 'completed' | 'failed' | 'stopped';
     childRunId?: string;
     /** Structured display metadata; content remains the canonical legacy/history text. */
-    tool?: { name: string; arguments: Record<string, unknown>; result?: string; isError?: boolean; artifactId?: string };
+    tool?: { name: string; arguments: Record<string, unknown>; result?: string; isError?: boolean; artifactId?: string; outcome?: import('./harness-contracts').ToolOutcome };
 }
 export interface RunRecord {
+    goalVerification?: import('./goal-verification').GoalVerification;
+    resumeOfRunId?: string;
+    reconciliation?: { reviewId: string; throughSeq: number; reviewedAt: string; resourceFingerprint: string };
+    activeStepId?: string;
+    steering?: Array<{ id: string; expectedStepId: string; input: string; status: 'queued' | 'applied' }>;
+    contextState?: { version: string; taskState: import('./harness-contracts').ArtifactReference };
+    budgetState?: import('./harness-contracts').JsonValue;
+    toolProgress?: import('./harness-contracts').ToolProgressState;
+    budgetStopCode?: string;
+    modelFrame?: import('./harness-contracts').ModelFrame;
+    /** Machine state supplements the legacy UI projection; never infer recovery from `state`. */
+    harnessState?: import('./harness-contracts').HarnessRunState;
     requestContext?: import('./request-context').RequestContextSummary;
     modeTransition?: ModeTransition;
     plan?: PlanRecord;
@@ -123,6 +141,10 @@ export interface ArtifactSnapshot {
 }
 
 export interface Snapshot {
+    pendingSessionPurges?: string[];
+    historyWindow?: import('./snapshot-view').HistoryWindow;
+    viewSessionId?: string | null;
+    overview?: import('./snapshot-view').WorkspaceOverview;
     sessions: SessionRecord[];
     runs: RunRecord[];
     approvals: ApprovalRecord[];
@@ -130,6 +152,9 @@ export interface Snapshot {
 }
 
 export type Command =
+    | { type: 'verify-goal'; runId: string; fingerprint: string; criteria: string }
+    | { type: 'resume-run'; runId: string; fingerprint: string; input: string }
+    | { type: 'reconcile-run'; runId: string; fingerprint: string; note: string }
     | { type: 'snapshot' }
     | { type: 'create-session'; title: string; directory: string | null; selection?: { endpointId: string; modelId: string }; controls?: SessionControls; agentId?: string; branchFromRunId?: string }
     | { type: 'edit-reply'; runId: string; output: string }
@@ -146,6 +171,7 @@ export type Command =
           agentId?: string;
       }
     | { type: 'stop-run'; runId: string; reason?: string }
+    | { type: 'steer-run'; runId: string; expectedStepId: string; input: string }
     | {
           type: 'resolve-approval';
           identity: ApprovalIdentity;
@@ -164,7 +190,8 @@ type EventEnvelope<TType extends string, TPayload> = {
 
 export type RuntimeEvent =
     | EventEnvelope<'run-state', { run: RunRecord }>
-    | EventEnvelope<'delta', { text: string }>
+    | EventEnvelope<'delta', { text: string; offset?: number; activityId?: string; activityOffset?: number }>
+    | EventEnvelope<'activity-delta', { activityId: string; kind: 'reasoning'; title: string; offset: number; text: string }>
     | EventEnvelope<'approval-requested', { approval: ApprovalRecord }>
     | EventEnvelope<'approval-resolved', { approval: ApprovalRecord }>
     | EventEnvelope<'artifact-created', { artifact: ArtifactSnapshot }>
@@ -190,6 +217,8 @@ export interface BrowserState {
 }
 
 export interface DesktopBridge {
+    journalPolicy(command: import('./journal-policy').JournalPolicyCommand): Promise<import('./journal-policy').JournalPolicy>;
+    journal(query: import('./journal-view').JournalQuery): Promise<unknown>;
     git(query: import('./git').GitQuery): Promise<import('./git').GitResult>;
     requestContext(query: { runId: string }): Promise<import('./request-context').RequestContextDetail | null>;
     openLogs(): Promise<void>;
@@ -198,7 +227,7 @@ export interface DesktopBridge {
     agents(command: AgentCommand): Promise<AgentSettings>;
     previewDelegation(value: { parentRunId: string; request: DelegationRequest }): Promise<DelegationPlan>;
     endpoints(command: EndpointCommand): Promise<EndpointReply>;
-    command(command: Command): Promise<Snapshot>;
+    command(command: Command, view?: import('./snapshot-view').SnapshotView): Promise<Snapshot>;
     onEvent(listener: (event: RuntimeEvent) => void): () => void;
     setWindowTheme(theme: 'light' | 'dark'): Promise<void>;
     chooseDirectory(): Promise<string | null>;
@@ -299,6 +328,12 @@ export function parseCommand(value: unknown): Command {
     }
 
     switch (value.type) {
+        case 'verify-goal': {
+            assertExactKeys(value, ['type', 'runId', 'fingerprint', 'criteria'], 'command');
+            const fingerprint = readString(value.fingerprint, 'fingerprint');
+            if (!/^[a-f0-9]{64}$/.test(fingerprint)) fail('Invalid verification fingerprint');
+            return { type: 'verify-goal', runId: readString(value.runId, 'runId'), fingerprint, criteria: readString(value.criteria, 'criteria', 4000) };
+        }
         case 'snapshot': {
             assertExactKeys(value, ['type'], 'command');
             return { type: 'snapshot' };
@@ -404,6 +439,20 @@ export function parseCommand(value: unknown): Command {
                 runId: readString(value.runId, 'runId'),
                 ...(hasReason ? { reason: readString(value.reason, 'reason', 2000) } : {}),
             };
+        }
+        case 'resume-run':
+        case 'reconcile-run': {
+            const field = value.type === 'resume-run' ? 'input' : 'note';
+            assertExactKeys(value, ['type', 'runId', 'fingerprint', field], 'command');
+            const fingerprint = readString(value.fingerprint, 'fingerprint', 64);
+            if (!/^[a-f0-9]{64}$/.test(fingerprint)) fail('Invalid recovery fingerprint');
+            const common = { runId: readString(value.runId, 'runId'), fingerprint };
+            return value.type === 'resume-run' ? { type: 'resume-run', ...common, input: readString(value.input, 'input', 20000) }
+                : { type: 'reconcile-run', ...common, note: readString(value.note, 'note', 4000) };
+        }
+        case 'steer-run': {
+            assertExactKeys(value, ['type', 'runId', 'expectedStepId', 'input'], 'command');
+            return { type: 'steer-run', runId: readString(value.runId, 'runId'), expectedStepId: readString(value.expectedStepId, 'expectedStepId'), input: readString(value.input, 'input', 20000) };
         }
         case 'resolve-approval': {
             assertExactKeys(value, ['type', 'identity', 'decision'], 'command');

@@ -15,7 +15,7 @@ function answer(response: ServerResponse, text: string, calls: Array<{ name: str
     const delta = calls.length ? { tool_calls: calls.map((call, index) => ({ index, id: `call-${index}`, type: 'function', function: { name: call.name, arguments: JSON.stringify(call.args) } })) } : { content: text };
     response.end(`data: ${JSON.stringify({ choices: [{ delta, finish_reason: calls.length ? 'tool_calls' : 'stop' }] })}\n\ndata: [DONE]\n\n`);
 }
-const modules = (body: Body) => [...body.messages[0].content.matchAll(/<!-- UAH_MODULE:([^:]+):v1 -->/g)].map(match => match[1]);
+const modules = (body: Body) => [...body.messages[0].content.matchAll(/<!-- UAH_MODULE:([^:]+):v\d+ -->/g)].map(match => match[1]);
 const tools = (body: Body) => (body.tools || []).map(tool => tool.function.name);
 async function fixture(t: { after: (callback: () => Promise<void>) => void }, handler: (body: Body, response: ServerResponse, number: number) => void, mode: PermissionMode = 'manual', supported = true) {
     const root = mkdtempSync(join(tmpdir(), 'uah-conditional-loop-')); const project = join(root, 'project'); mkdirSync(project);

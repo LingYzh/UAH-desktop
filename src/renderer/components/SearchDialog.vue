@@ -1,10 +1,11 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { stateLabels } from '../stores/workspace';
+import { overviewForSnapshot } from '../run-events';
 import Icon from './Icon.vue';
 import { UiButton, UiInput, UiDialog } from '@lingyzh/ui';
 
-const props = defineProps({ open: Boolean, sessions: { type: Array, default: () => [] }, runs: { type: Array, default: () => [] } });
+const props = defineProps({ open: Boolean, sessions: { type: Array, default: () => [] }, latestStates: Object, runs: { type: Array, default: () => [] } });
 const emit = defineEmits(['close', 'select-session', 'navigate-settings', 'navigate-endpoints', 'present-change']);
 const dialog = ref(null);
 const input = ref(null);
@@ -19,7 +20,7 @@ const shortcuts = [
 const normalizedQuery = computed(() => query.value.trim().toLocaleLowerCase());
 const sessions = computed(() => props.sessions.filter((item) => `${item.title} ${item.directory || ''}`.toLocaleLowerCase().includes(normalizedQuery.value)));
 const entries = computed(() => shortcuts.filter((item) => item.label.toLocaleLowerCase().includes(normalizedQuery.value)));
-const sessionStates = computed(() => new Map(props.runs.map((run) => [run.sessionId, stateLabels[run.state] || '就绪'])));
+const sessionStates = computed(() => new Map(Object.entries(props.latestStates || overviewForSnapshot({ runs: props.runs }).latestStates).map(([sessionId, run]) => [sessionId, stateLabels[run.state] || '就绪'])));
 const directoryName = (item) => item.directory?.split(/[\\/]/).filter(Boolean).at(-1) || '无工作目录';
 function focusSearch() { input.value?.focus(); input.value?.select(); }
 let pendingSelection = null;

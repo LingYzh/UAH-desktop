@@ -166,7 +166,7 @@ test('session agent stays locked across model changes, profile deletion and rest
         await waitForSnapshot(supervisor, (snapshot) => snapshot.runs.at(-1)?.state === 'completed');
         const secondMessages = fixture.requests[1].body.messages as Array<{ role: string; content: string }>;
         assert.match(secondMessages[0].content, /UAH_MODULE:agent.instructions:v1\s*-->\nOriginal instructions/);
-        assert.match(secondMessages[0].content, /UAH_MODULE:host.contract:v1/);
+        assert.match(secondMessages[0].content, /UAH_MODULE:host.contract:v2/);
         assert.doesNotMatch(secondMessages[0].content, /Changed instructions/);
         assert.deepEqual(secondMessages.filter(message => message.role !== 'system'), [{ role: 'user', content: 'two' }]);
         await assert.rejects(supervisor.execute({ type: 'start-run', sessionId, input: 'bad', agentId: 'different-agent' }), /已固定/);
@@ -445,7 +445,7 @@ test('API sessions stream selected models with fresh endpoint metadata and persi
         assert.equal(completed.runs.find(run => run.id === firstRun.id)?.effective.modelId, 'test-model');
         const historyMessages = fixture.requests[1].body.messages as Array<{ role: string; content: string }>;
         assert.equal(historyMessages[0].role, 'system');
-        assert.match(historyMessages[0].content, /UAH_MODULE:host.contract:v1/);
+        assert.match(historyMessages[0].content, /UAH_MODULE:host.contract:v2/);
         assert.deepEqual(historyMessages.filter(message => message.role !== 'system'), [
             { role: 'user', content: 'first prompt' },
             { role: 'assistant', content: 'first answer' },

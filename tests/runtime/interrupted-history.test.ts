@@ -39,11 +39,11 @@ async function fixture(t: { after: (fn: () => Promise<void>) => void }, handler:
 
 test('persisted successful write followed by failure retains original task and bounded host evidence after restart, delete removes summary', async t => {
     let request = 0;
-    const f = await fixture(t, () => ++request === 1 ? reply('openai-chat', '', { name: 'write_file', args: { path: 'effect.txt', content: 'persisted effect', expectedContent: null } }) : request === 2 ? new Response('service failed', { status: 500 }) : reply('openai-chat', 'Continued'));
+    const f = await fixture(t, () => ++request === 1 ? reply('openai-chat', '', { name: 'write_file', args: { path: 'effect.txt', content: 'persisted effect', expectedContent: null } }) : request === 2 ? new Response('service failed', { status: 400 }) : reply('openai-chat', 'Continued'));
     const run = await f.start('ORIGINAL TASK'); const failed = await f.wait(state => state.runs[0].state === 'failed');
     assert.equal(readFileSync(join(f.project, 'effect.txt'), 'utf8'), 'persisted effect');
     await f.restart(); const next = await f.start('continue'); await f.wait(state => state.runs.find(item => item.id === next.id)?.state === 'completed');
-    const sent = JSON.stringify(f.requests.at(-1).messages); assert.match(sent, /ORIGINAL TASK/); assert.match(sent, /UAH host interruption record/); assert.match(sent, new RegExp(failed.artifacts[0].id)); assert.match(sent, /HTTP 500/);
+    const sent = JSON.stringify(f.requests.at(-1).messages); assert.match(sent, /ORIGINAL TASK/); assert.match(sent, /UAH host interruption record/); assert.match(sent, new RegExp(failed.artifacts[0].id)); assert.match(sent, /HTTP 400/);
     assert.equal(f.requests.at(-1).messages.filter((item: any) => item.role === 'assistant').length, 0);
     const branched = await f.execute({ type: 'create-session', title: 'interrupted branch', directory: null, branchFromRunId: run.id, selection: { endpointId: 'offline', modelId: 'root' } });
     const branch = branched.sessions.at(-1)!;
@@ -105,7 +105,7 @@ for (const protocol of ['openai-chat', 'openai-responses', 'anthropic'] as const
     const root = await f.start('root task'); const waiting = await f.wait(state => parentRequests === 2 && !!release && state.runs.length === 2);
     const child = waiting.runs.find(item => item.parentRunId === root.id)!;
     if (outcome === 'stopped') await f.execute({ type: 'stop-run', runId: child.id, reason: 'scope changed' });
-    else release(outcome === 'failed' ? new Response('late child failure', { status: 500 }) : reply(protocol, 'Child result ' + 'x'.repeat(10000)));
+    else release(outcome === 'failed' ? new Response('late child failure', { status: 400 }) : reply(protocol, 'Child result ' + 'x'.repeat(10000)));
     const done = await f.wait(state => state.runs.find(item => item.id === root.id)?.state === 'completed');
     assert.equal(done.runs.find(item => item.id === child.id)?.state, outcome); assert.equal(parentRequests, 3); assert.match(done.runs[0].output, /Verified final/);
 });

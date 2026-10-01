@@ -21,6 +21,8 @@ const checks = [];
 const screenshots = [];
 const sse = data => `data: ${JSON.stringify(data)}\n\n`;
 const delta = data => sse({ choices: [{ delta: data, finish_reason: null }] });
+const taskIndex = messages => messages.findLastIndex(message => message.role === 'user' && typeof message.content === 'string' && !message.content.startsWith('[UAH'));
+const currentTask = body => body.messages[taskIndex(body.messages)]?.content;
 const toolRound = (id, name, args, reasoning) => delta({ reasoning_content: reasoning })
     + delta({ tool_calls: [{ index: 0, id, type: 'function', function: { name, arguments: args.slice(0, 10) } }] })
     + sse({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: args.slice(10) } }] }, finish_reason: 'tool_calls' }] })
@@ -32,8 +34,10 @@ const server = http.createServer(async (request, response) => {
         const body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
         requests.push(body);
         response.writeHead(200, { 'content-type': 'text/event-stream' });
-        const results = body.messages.filter(message => message.role === 'tool');
-        const lastUser = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        // Native history retains earlier tool messages. Fixture progression is
+        // scoped to the latest user task, excluding host terminal-delivery data.
+        const results = body.messages.slice(taskIndex(body.messages) + 1).filter(message => message.role === 'tool');
+        const lastUser = currentTask(body);
         if (lastUser === 'Live child fixture') {
             response.end(toolRound('pending-child-write', 'write_file', JSON.stringify({ path: 'child-should-not-write.txt',
                 content: 'This file must never be written.', expectedContent: null }), 'The live child requests approval for a fixture edit.'));
@@ -351,13 +355,21 @@ try {
             if (stopReason) await capture('child-stop-reason-dark-900-800-125.png');
             await dialog.getByRole('button', { name: '确认停止', exact: true }).click();
             await dialog.waitFor({ state: 'hidden' });
-            await page.waitForFunction(id => window.uah.command({ type: 'snapshot' }).then(state => state.runs.find(run => run.id === id)?.state === 'completed'), parent.id);
+            let settled = false;
+            for (let attempt = 0; attempt < 100; attempt++) {
+                const current = await snapshot();
+                if (current.runs.find(run => run.id === parent.id)?.state === 'completed') { settled = true; break; }
+                await page.waitForTimeout(100);
+            }
+            assert.ok(settled, 'parent completes after receiving the stopped child result');
             const afterStop = await snapshot();
             const stopped = afterStop.runs.find(run => run.id === child.id);
             assert.equal(stopped.state, 'stopped');
             if (stopReason) assert.equal(stopped.stopReason, stopReason);
             else assert.ok(!stopped.stopReason);
-            const lastParentRequest = requests.filter(body => body.messages.filter(message => message.role === 'user').at(-1)?.content === prompt).at(-1);
+            const lastParentRequest = requests.filter(body => currentTask(body) === prompt).at(-1);
+            await writeFile(path.join(evidence, 'child-stop-request-evidence.json'), JSON.stringify({ prompt, childId: child.id,
+                tools: lastParentRequest.messages.filter(message => message.role === 'tool') }, null, 2));
             const waitResult = JSON.parse(lastParentRequest.messages.filter(message => message.role === 'tool').at(-1).content);
             assert.equal(waitResult[0].agentId, child.id);
             assert.equal(waitResult[0].status, 'stopped');

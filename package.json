@@ -28,7 +28,8 @@
         "test:browser": "node tests/desktop/browser.mjs",
         "test:appearance": "node tests/desktop/appearance.mjs",
         "test:search": "node tests/desktop/search.mjs",
-        "build:native": "dotnet build native/UAH.NativeHelper/UAH.NativeHelper.csproj -c Release",
+        "build:native": "dotnet build native/UAH.NativeHelper/UAH.NativeHelper.csproj -c Release && npm run build:native:execution",
+        "build:native:execution": "dotnet build native/UAH.ExecutionHelper/UAH.ExecutionHelper.csproj -c Release",
         "build:prototype": "python design/UAH_PC_Prototype_v1/build.py",
         "test:ui": "npm run build:ui && node tests/desktop/ui.mjs",
         "build:ui": "node scripts/build-ui.mjs"
@@ -36,7 +37,7 @@
     "dependencies": {
         "pinia": "4.0.3",
         "vue": "3.5.43",
-        "@lingyzh/ui": "0.1.0"
+        "@lingyzh/ui": "0.2.1"
     },
     "devDependencies": {
         "@types/node": "^24.0.0",

@@ -20,12 +20,15 @@ export function sessionHasFileChanges(snapshot: Snapshot, sessionId: string): bo
     if (snapshot.artifacts.some(artifact => artifact.sessionId === sessionId && artifact.oldContent !== artifact.newContent)) return true;
     return snapshot.runs.some(run => run.sessionId === sessionId && run.activities?.some(activity => {
         const name = activity.tool?.name ?? activity.title;
+        if (activity.tool?.outcome && ['write_file', 'apply_patch', 'run_command'].includes(name)) {
+            return ['possible', 'confirmed'].includes(activity.tool.outcome.effectState);
+        }
         const result = activity.tool?.result ?? legacyResult(activity.content);
         if (name === 'run_command') {
             if (!/Exit code: /.test(result) && /^\s*Command could not start\.\nUnsandboxed command:/.test(result)) return false;
             return activity.status === 'completed' || /Exit code: |Unsandboxed command:/.test(result);
         }
-        if (name !== 'write_file') return false;
+        if (!['write_file', 'apply_patch'].includes(name)) return false;
         if (activity.status === 'completed' && activity.tool?.isError !== true) return true;
         return /(?:^|\n\n)File written(?:\.|, but snapshot persistence failed\.)/.test(result)
             || /(?:^|\n\n)Write failed[^\n]*after modification began/.test(result);

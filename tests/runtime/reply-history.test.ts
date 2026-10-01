@@ -21,7 +21,7 @@ async function fixture(t: { after: (fn: () => Promise<void>) => void }) {
         const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
         const body = JSON.parse(Buffer.concat(chunks).toString()); requests.push(body);
         const input = body.messages.filter((message: any) => message.role === 'user').at(-1).content;
-        if (input === 'fail' && requests.filter(item => item.messages.at(-1)?.content === 'fail').length === 1) { response.writeHead(500); response.end('fixture failure'); return; }
+        if (input === 'fail' && requests.filter(item => item.messages.at(-1)?.content === 'fail').length === 1) { response.writeHead(400); response.end('fixture failure'); return; }
         response.writeHead(200, { 'content-type': 'text/event-stream' });
         const tools = body.messages.filter((message: any) => message.role === 'tool');
         const delta = input === 'write' && !tools.length ? { tool_calls: [{ index: 0, id: 'edit-call', type: 'function', function: { name: 'write_file', arguments: JSON.stringify({ path: 'edit.txt', expectedContent: null, content: 'actual file edit' }) } }] } : { content: `answer ${input}` };

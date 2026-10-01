@@ -65,7 +65,7 @@ test('runtime v1 database upgrades context storage without modifying existing se
     const session = { id: 'legacy', title: 'existing', directory: null, createdAt: '2026-09-28', requested: { runtimeId: 'api', modelId: 'model', agentId: 'default', policyVersion: 1 } };
     store.commit({ sessions: [session] }); store.close();
     const database = new DatabaseSync(join(root, 'runtime.sqlite'));
-    database.exec('DROP TABLE request_contexts; PRAGMA user_version = 1;'); database.close();
+    database.exec('DROP TABLE request_contexts; DROP TABLE canonical_events; DROP TABLE journal_exports; PRAGMA user_version = 1;'); database.close();
     try {
         store = new RuntimeStore(root);
         assert.deepEqual(store.readSnapshot().sessions, [session]);

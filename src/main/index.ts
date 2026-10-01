@@ -13,9 +13,16 @@ import { parseAgentCommand } from '../shared/agents';
 import { parseDelegationPreview } from '../shared/delegation';
 import { parseGitQuery } from '../shared/git';
 import { parseContextQuery } from '../shared/request-context';
+import { parseJournalQuery } from '../shared/journal-view';
+import { parseSnapshotView } from '../shared/snapshot-view';
+import { randomUUID } from 'node:crypto';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'uah', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 if (process.env.UAH_DATA_DIR) app.setPath('userData', path.resolve(process.env.UAH_DATA_DIR));
+// The journal and destructive maintenance require one desktop owner per userData.
+// Electron owns/reclaims this OS-backed lock; no PID-based stale-lock deletion.
+if (!app.requestSingleInstanceLock()) app.exit(0);
+app.on('second-instance', () => { if (window && !window.isDestroyed()) { if (window.isMinimized()) window.restore(); window.focus(); } });
 const developmentUrl = !app.isPackaged ? process.env.UAH_DEV_URL : undefined;
 if (developmentUrl && !trustedRendererUrl(developmentUrl, developmentUrl)) throw new Error('Only the local Vite server is supported.');
 let window: BrowserWindow | null = null;
@@ -65,12 +72,15 @@ app.whenReady().then(async () => {
     endpoints = new EndpointStore(app.getPath('userData'), safeStorage);
     runtime = new RuntimeClient(path.join(__dirname, '../runtime/worker.cjs'), app.getPath('userData'), (event) => {
         if (window && !window.isDestroyed()) window.webContents.send('uah:event', event);
-    }, (id) => endpoints.resolve(id));
+    }, (id) => endpoints.resolve(id), {
+        executionHelperPath: path.join(app.getAppPath(), 'native/UAH.ExecutionHelper/bin/Release/net10.0-windows/UAH.ExecutionHelper.exe'),
+    });
     browser = new BrowserHost(window);
     native = new NativeClient(path.join(app.getAppPath(), 'native/UAH.NativeHelper/bin/Release/net10.0-windows/UAH.NativeHelper.exe'));
-    ipcMain.handle('uah:command', async (event, value) => {
+    ipcMain.handle('uah:command', async (event, value, requestedView) => {
         assertSender(event);
         const command = parseCommand(value);
+        const view = parseSnapshotView(requestedView);
         if (command.type === 'create-session' && command.directory !== null) {
             const canonical = await realpath(command.directory);
             if (!selectedDirectories.has(canonical)) {
@@ -84,7 +94,7 @@ app.whenReady().then(async () => {
             }
             command.directory = canonical;
         }
-        return runtime.execute(command);
+        return runtime.execute(command, view);
     });
     ipcMain.handle('uah:git', async (event, value) => {
         assertSender(event);
@@ -104,6 +114,46 @@ app.whenReady().then(async () => {
         assertSender(event);
         if (closing) throw new Error('应用正在退出。');
         return runtime.requestContext(parseContextQuery(value));
+    });
+    ipcMain.handle('uah:journal-policy', async (event, value) => {
+        assertSender(event);
+        if (closing) throw new Error('应用正在退出。');
+        const { parseJournalPolicyCommand } = await import('../shared/journal-policy');
+        return runtime.journalPolicy(parseJournalPolicyCommand(value));
+    });
+    ipcMain.handle('uah:journal', async (event, value) => {
+        assertSender(event);
+        if (closing) throw new Error('应用正在退出。');
+        const query = parseJournalQuery(value);
+        if (query.action === 'purge-confirm' || query.action === 'purge-retry') {
+            if (query.action === 'purge-confirm') await runtime.beginSessionPurge(query);
+            else {
+                const snapshot = await runtime.execute({ type: 'snapshot' }, { sessionId: null });
+                if (!snapshot.pendingSessionPurges?.includes(query.sessionId)) throw new Error('没有此会话的待完成删除。');
+            }
+            browserIntent++;
+            try { await browser.purgeSession(query.sessionId); }
+            catch {
+                return runtime.finishSessionPurge(query.sessionId, false);
+            }
+            return runtime.finishSessionPurge(query.sessionId, true);
+        }
+        if (query.action === 'summary' || query.action === 'request' || query.action === 'recovery' || query.action === 'verification' || query.action === 'cleanup-review' || query.action === 'cleanup-confirm' || query.action === 'purge-review') return runtime.journal(query);
+        // The worker validates session ownership and flushes before revealing the directory to main.
+        const directory = await runtime.journalSessionDirectory({ sessionId: query.sessionId });
+        if (typeof directory !== 'string' || !path.isAbsolute(directory)) throw new Error('日志目录不可用。');
+        if (!window || window.isDestroyed()) throw new Error('应用窗口已关闭。');
+        if (query.action === 'open') {
+            const error = await shell.openPath(directory);
+            if (error) throw new Error('无法打开日志目录。');
+            return { opened: true };
+        }
+        const selected = await dialog.showOpenDialog(window, { title: '选择日志导出位置', properties: ['openDirectory', 'createDirectory'] });
+        if (!window || window.isDestroyed()) throw new Error('应用窗口已关闭。');
+        if (selected.canceled || !selected.filePaths[0]) return null;
+        const parentDirectory = await realpath(selected.filePaths[0]);
+        const destination = path.join(parentDirectory, `UAH-transcript-${randomUUID()}`);
+        return runtime.journalExport({ sessionId: query.sessionId, destination, mode: query.mode });
     });
     ipcMain.handle('uah:agents', async (event, value) => {
         assertSender(event);
