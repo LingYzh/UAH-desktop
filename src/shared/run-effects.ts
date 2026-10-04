@@ -20,7 +20,7 @@ export function sessionHasFileChanges(snapshot: Snapshot, sessionId: string): bo
     if (snapshot.artifacts.some(artifact => artifact.sessionId === sessionId && artifact.oldContent !== artifact.newContent)) return true;
     return snapshot.runs.some(run => run.sessionId === sessionId && run.activities?.some(activity => {
         const name = activity.tool?.name ?? activity.title;
-        if (activity.tool?.outcome && ['write_file', 'apply_patch', 'run_command'].includes(name)) {
+        if (activity.tool?.outcome && (['write_file', 'apply_patch', 'run_command', 'save_memory', 'forget_memory'].includes(name) || name.startsWith('mcp_'))) {
             return ['possible', 'confirmed'].includes(activity.tool.outcome.effectState);
         }
         const result = activity.tool?.result ?? legacyResult(activity.content);

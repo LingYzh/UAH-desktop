@@ -1,6 +1,8 @@
 # UAH / UI 新会话交接
 
-更新日期：2026-10-01。本文记录历次增量，文末为最新状态；新会话先检查实际 Git 状态和用户最新要求。
+更新日期：2026-10-04。本文记录历次增量，文末为最新状态；新会话先检查实际 Git 状态和用户最新要求。
+
+当前覆盖说明：原生模式已采用只读／默认权限／完全访问三个 Codex 预设，保留 MCP；Plan 独立为 `/plan`，Goal 使用原生接口。Provider 修改协议或端点默认保留已存 key。最新行为见 [NATIVE-CODEX-COMMANDS.md](NATIVE-CODEX-COMMANDS.md)，下文相反表述属于历史记录。
 
 提交检查点说明：用户现已授权把UI与UAH全部累计改动连同handoff分别提交。下文各阶段的“未提交”是历史记录；以文末2026-09-28提交检查点和实际git log/status为准。当前可用能力包括三协议API、工具/审批/委派、Plan、只读Git和请求上下文，并非开篇历史增量所述的纯文本阶段。
 
@@ -373,3 +375,146 @@ GC 桌面 journal-gc-desktop-5F1ujm 15 项；浏览器独立 browser-purge-bgMXd
 最终全量 **746 项，744 通过、2 权限跳过、零失败**（artifacts/harness-release-final-full.log），最终 typecheck（harness-release-final-typecheck.log）与 build（harness-final-build.log）通过。构建仍有既有 >500 kB chunk 提示。该构建 Electron 日志 journal-desktop-zZSgh8 与工具 tool-chat-73bIC5 六场景通过；root 再次检查日志深色900/125%截图，关闭/导出按钮可见，内部滚动无越界。本轮 D00–D08 约定实现与维护收尾完成，保留上述明确边界；D09 按真实需求另行安排。
 
 最后原生生命周期复验 21/21（native-execution-mt0fyD、native-credential-filter-jHTq40），涵盖连续执行/释放容量、后代树退出、取消、EOF/helper 崩溃、限额及跨片段凭据过滤；shell 文件版本与实际 exe 一致。后端/managed 定向 28/28、真实 native 隐私回归 2/2。所有子代理已完成，无待写或阻塞。
+
+## D09：原生 Codex 与扩展管理（2026-10-03）
+
+按本会话确认范围完成 Codex app-server、MCP 连接器、Claude Code 兼容插件/marketplace 子集、独立 Skill 管理；删除记忆与文件的禁用占位入口和空“更多功能”。真实文件工具、变更、Git、计划面板保留。OAuth 按用户答复留待后续，本轮支持 Token/请求头与环境变量认证。详细接口、权限、存储、安全和限制见 [HARNESS-D09.md](HARNESS-D09.md)。
+
+- 原生入口为「模型与账号 → 配置原生 Codex」。可在禁用、未选模型时检测；Windows 使用绝对 exe 或 node.exe + codex.js 参数，应用追加 app-server --stdio。保留本机受支持的登录配置，不导出账号凭据。原生唯一控制模型与工具，固定 native-default，不注入 portable API 基座。
+- 原生同配置多轮可 resume，模式/扩展变更或历史编辑后创建新线程；旧行为不自动重放。readonly/plan 使用原生只读；其他模式保留 workspace-write/on-request，不提供无沙箱 bypass。继承本机 MCP 的 readonly/plan 会拒绝启动，原生扩展设置下一轮生效。
+- 日志和原生 usage 均只记录观察到的数据，native.event 与离线公开文本回放已接入，覆盖 partial；原生文件快照明确未接入，不伪造“没有更改”。未知副作用需要核对，原生不提供重新生成。
+- MCP 使用固定 SDK 1.32.0；stdio/Streamable HTTP 握手、schema/参数校验、审批、版本撤销、取消、限额和脱敏已接通。默认插件及插件 MCP 停用；启用前检查配置。不支持的组件可见报告，不执行 hooks/安装脚本。
+- 所有 UI 复用 @lingyzh/ui 0.2.1，D:/UI 未改动。root 完成浅深主题、窄窗、125% 缩放与真实键盘操作验收。经济型 Luna 子代理承担明确接口下的后端实现和测试；决策及视觉工作由 root 完成。
+
+最终代码回归：810 项，808 通过、2 项既有 Windows 文件 symlink 权限跳过、零失败；typecheck/build 通过。证据 artifacts/d09-tests.log、d09-typecheck.log、d09-build.log。Electron 扩展专项 13 项、7 截图，最终目录 extensions-desktop-fPoJsd；搜索 6 项 search-Yyxl0j、端点 9 项 endpoints-pNjl2C 通过。root 已检查最终截图，控制台无页面错误。
+
+实机 Codex 0.156.1 只读 probe 成功：已登录、7 个模型、进程 close 确认退出；artifacts/d09-native-probe.json。未发送真实模型请求；远端 Git clone、真实外部 MCP 服务未做集成验收。高级大型看板与其他原生运行时继续按实际需求推进。未提交、推送或发布；不要把本次工作区状态当成已发布版本。
+
+## 最新增量：原生绑定体验（2026-10-03）
+
+用户追加的自动发现路径和基础参数、启动参数教学弹窗、自动模型目录及启用开关用途说明均已实现。Windows 扫描支持 PATH 与常见 npm/Node/NVM 布局；本机找到3种启动方式。打开配置检测草稿不会保存或创建模型任务，已有绑定保留；model/list 使用实际 model ID 与 isDefault，重载应用也恢复完整目录。扫描、晚到响应与不同绑定的目录隔离有测试。
+
+子代理边界已确认并写入设置界面和原生宿主说明：当前原生 Codex 不能调用 UAH spawn_agent/wait_agents；自身子代理由 Codex 管理，UAH 角色/路由/并发/预算只作用于 API。协议测试验证 start/resume 均未注册 dynamicTools，伪造 item/tool/call 请求被 -32601 拒绝且不会触发 UAH 审批。没有实现跨运行时工具桥，也没有把尚未收到回答的桥接范围问题当作已确认。
+
+最新全量 822 项：820 通过、2 既有 Windows symlink 权限跳过；typecheck/build/diff check 通过。Electron 21 项、9截图、无页面错误：artifacts/extensions-desktop-PExS3g。root 已验收浅色1440/深色900与125%缩放的路径表单、帮助和子代理边界，修复长路径候选挤压后复验。详情 HARNESS-D09.md；日志 d09-iteration-tests.log、d09-iteration-build.log、d09-iteration-desktop.log。UI 无变更，累计工作仍未提交或发布。
+
+## 最新增量：原生委派与内置技能（2026-10-03）
+
+用户明确选择原生父任务同时支持 API 与原生 Codex 子代理，已实现 uah_list_agent_presets / uah_spawn_agent / uah_wait_agents 动态工具桥。此前“不能调用 UAH 子代理”的记录为历史检查点。独立原生子线程由 UAH 管理角色、深度、并发、超时和停止；父任务等待时交出工具锁，返回模型前重新取得。未显式等待的子任务结果由宿主追加原生轮次交回父模型。共享宿主预算只覆盖可见原生轮次和报告的用量，不声称掌握内部所有请求。
+
+原生自带协作及 unified_exec 会话关闭；API 下级不开放命令或 MCP，文件写入经过审批。API 父任务暂不能反向委派原生子任务。完整权限与生命周期边界见 [NATIVE-DELEGATION.md](NATIVE-DELEGATION.md)。
+
+内置 grilling 1.2.0-personal.3、powershell-windows-cli 1.2.0-personal.2 随构建打包，默认启用、可停用、不可卸载；与用户同名技能独立。API/read_skill 和原生/uah_read_skill 按需读取、检查启用状态。Grilling 保留宿主提问工具优先规则；当前 UAH 没有独立交互提问工具时使用技能规定的文本回退。本次开发澄清已使用本会话 harness 提问工具。
+
+验证与最终证据见 VALIDATION.md 最新增量。D:/UI 未改动，继续固定 @lingyzh/ui@0.2.1。未提交、推送或发布。
+
+最终检查点：全量851项（849通过、2项既有权限跳过），typecheck/build通过。最终构建 Electron extensions-desktop-2OTgeH 24项、9截图、无页面错误，root复核深色窄窗/125%边界卡片。后补子任务失败后父任务收到失败结果且下一轮可继续的专项验证，委派专项共12项通过。完整证据见 VALIDATION.md。
+
+## 最新增量：原生权限与指令、表单解耦、真实测试（2026-10-03）
+
+已按用户选项完成三档 Codex 原生权限，取消只读遇 MCP 即拒绝启动的宿主限制；保留原生 MCP。`/plan` 使用原生 collaborationMode，提问以 UAH 卡片回传，子代理问题在父会话可见；`/goal` 使用原生目标接口和自动续轮。用户停止会确认目标暂停，确认停止且配置未变可同线程 resume；暂停未确认显示核对提示。旧轮次用量与独立问题 item 的协议校验已通过实机修复。
+
+模型菜单展示目录名称、请求保留稳定 ID。Provider 协议、端点、模型与 API Key 独立，默认保留加密 key。客户端错误统一中文展示；当前 UI 语言为简体中文，没有新增多语言设置。原始诊断、模型输出和工具结果不翻译。说明见 NATIVE-CODEX-COMMANDS.md。
+
+已复查 UI 公开组件、API/demo，复用既有 UiCard/Field/Input/Select/Button 等，无新通用组件缺口。UI 仓库保持干净。最终全量882项：880通过、2既有Windows权限跳过、0失败；typecheck/build通过，扩展桌面30项/11截图/无页面错误，端点专项10项通过，详见VALIDATION.md最新记录。
+
+用户授权现有OpenAI登录测试且只用Luna：gpt-6-luna真实普通/Plan问答/Goal连续轮次通过；原生父任务经UAH工具启动唯一原生Luna子代理，wait收回结果并完成，证据分别为artifacts/native-luna-smoke.json和native-luna-delegation.json。不读取或复制凭据，不调用其他模型。真实外部MCP业务服务和远端插件Git安装仍不据此宣称通过。当前累计D09代码及文档仍未提交、推送或发布。
+
+## 最新增量：原生内容、附件、上下文和 Revise（2026-10-03）
+
+已修复原生工具详情缺失与思考 JSON 直出：按原生 item 类型投影命令、MCP、动态工具、文件变更及公开 summary；有界输出、分片脱敏、身份关联和失败状态仍保留。真实上下文接 `thread/tokenUsage/updated`，最近请求与线程累计分开；meter 使用 last.totalTokens/modelContextWindow，详情含缓存读取/写入及推理输出，未知不填零，没有伪造分类明细。
+
+`+` 菜单统一附件、Plan/Revise、Goal 入口。原生附件支持选择/拖入/粘贴：图片 localImage、文本代码受限快照、其他文件显式路径引用；主进程注册与校验，运行记录只保存工件引用及元数据。API 附件仍不支持。原生计划正文/进度同步 UAH 面板，执行按钮或明确「执行计划」切回 default；Revise 保持 Plan 并返回输入框填写反馈。原生 developerInstructions 明确多步骤使用原生计划工具、适合拆分时优先已启用的 UAH 委派工具，遵守模型/角色/预算选择。
+
+复用 UI 既有组件，无 D:/UI 改动。最终有界并发全量913项：911通过、2既有Windows跳过；typecheck/build通过，桌面29项/10截图/无错误，root已做浅深色与缩放验收。默认高并发曾有两项等待超时，保留证据，详见VALIDATION.md。真实 gpt-6-luna 验证上下文、图片+文本、Plan→Revise→default执行模式；简单标记任务未发原生计划正文，不将它冒充真实复杂计划验收。行为/边界见 NATIVE-CODEX-COMMANDS.md。当前累计改动未提交、推送或发布。
+
+## 最新增量：Provider 调用 ID 和子代理目录（2026-10-03）
+
+用户确认以可编辑调用 ID 保留稳定内部标识。模型与账号表单新增可选 Provider ID，卡片显示有效值；留空使用默认内部 ID，修改/清空别名不重建端点、不清除 key、不改已有会话/角色引用。端点库迁移到 v5，新增 provider_id；别名区分大小写、支持中文，拒绝格式/保留字及全局命名冲突。旧别名不永久重定向。
+
+原生 `uah_list_agent_presets` 与 API 同名工具同时返回角色和 Provider/model 目录，经 utility process 按次读取主进程启用配置，只投影必要字段，未返回 key/URL。原生父额外列 native:codex 的当前真实模型；API 父不列不可启动的原生路由。调用 ID 可解析到 canonical 内部 ID，实际启动再次校验；目录配置状态不代表远端在线。对应提示词、模块版本及工具结果展示已更新，冻结品牌迁移模板保持原样。具体契约见 NATIVE-DELEGATION.md。
+
+复用已发布 UiField/Input/Card，无通用 UI 缺口、无共享样式修改。root 复核浅色列表和深色900/125%编辑器截图：ID 可见、描述正常换行、底部动作可达。端点桌面10项通过（artifacts/endpoints-mtawD8），真实 Electron/原生协议 fixture 目录3项通过（artifacts/provider-catalog-tjQBPq），覆盖改ID后立即更新和禁用后消失。没有新的真实付费模型调用。更多测试细节见 VALIDATION.md 最新增量；未提交、推送或发布。
+
+本增量最终全量923项：921通过、2项既有Windows权限跳过、0失败；typecheck/build通过。最终构建目录桌面复跑3项通过，最新证据artifacts/provider-catalog-DzoI9e。首次回归的旧版本断言已按新模块语义更新，随机端口失败的诊断及复验均保留，详见VALIDATION.md。原生新工具描述会进入线程指纹，后续请求按实际目录配置选ID，无需用户重建Provider。
+
+## 最新增量：工具展示、展开性能与线程确认（2026-10-03）
+
+修复 `uah_*` 桥接工具没有友好详情的问题。已知工具显示用途、准确名称和结果摘要，原始返回按需展开；未知工具保留实际名称/参数/返回。原生 dynamicToolCall 与 UAH 宿主记录只有在调用 ID、工具名匹配且宿主已结束时才展示去重，不修改原始日志。活动组/正文首次展开才挂载，展开后保留状态；手动展开暂停滚动跟随，避免尺寸动画反复滚动到底。
+
+用户追加要求：已有原生会话需要新建 thread 时，必须显示原因并确认。复用 NativeQuestionCard / UiCard / UiButton，固定「取消本次发送」「新建线程并继续」，没有通用组件缺口或共享样式修改。首次会话和独立子代理无需迁移确认；后端保留原因、决定日志，批准后重新校验配置/历史，取消不启动模型请求。恢复旧线程失败不静默退回新线程。
+
+指定会话实际记录 3 个原生 thread，而非仅 2 个。一次发生在 thread/resume 被拒绝之后，另一处只有新的 journal epoch 与 resumed=false，没有足够旧日志确定具体条件。详细证据和边界见 [NATIVE-SESSION-INVESTIGATION-2026-10-03.md](NATIVE-SESSION-INVESTIGATION-2026-10-03.md)。没有合并或改写用户会话。
+
+本机同场景15轮fixture对照：初始DOM 2932→1882；侧栏开启时展开思考/工具组布局101/108ms→72/64ms，scrollTop写入10/11→0/0。单次测量不承诺所有长会话帧率。原始基线/复测位于 artifacts/native-activity-performance-CQHSB0 与 native-activity-performance-xeVCqn。本轮没有真实模型调用、没有 UI 包变更、没有提交或发布；最终验证见 VALIDATION.md 最新记录。
+
+本增量最终全量935项：933通过、2既有Windows权限跳过、0失败；typecheck/build通过。原生桌面32项/12截图、目录展示4项、流式滚动4项均通过。最终确认卡片验收证据 `artifacts/native-rich-Rfqwc0`，准确工具名与目录摘要 `artifacts/provider-catalog-RUrMOb`。明确发送新轮次会恢复底部跟随，使新确认可见；手动展开本轮内容仍暂停跟随。
+
+### 追加：原生报错透传
+
+用户准备再次复现长间隔恢复失败，已补 JSON-RPC 错误方法/code/message 的中文提示与原始诊断（8,000 字符上限、认证字段/URL/Bearer/已登记秘密脱敏，不输出任意 data）。失败记录及导出保留诊断，旧丢失错误无法补回。原生协议/运行时/客户端错误专项84/84，typecheck/build通过；日志 `artifacts/native-rpc-error-tests.log`、`native-rpc-error-build.log`。没有真实模型调用，等待用户复现；未提交发布。
+### 追加：消息时间戳与恢复问题观察
+
+用户观察：不属于已有 Codex 项目的目录，间隔半小时后续聊成功；先前异常会话被 Codex 归到包含所选目录的项目，但 cwd 仍为 UAH 选择的目录。此关联尚不是根因证据，按用户要求等下次复现再处理，不改恢复机制。
+
+对话显示本地时区完整日期/时分秒：用户发送读取 run.createdAt，助手完成/停止/失败读取 finishedAt，保留轮次与耗时；新补充指令记录可选 createdAt。旧缺失字段与无时间的分支消息明确显示时间未记录，不补造。复用 UiMessageActions label 和已有 muted/small/布局工具类，无组件库改动。typecheck/build通过；补充指令回归9/9、桌面35项/14截图/无页面错误通过，root复核浅色1440和深色900/125%日期及底部时间可读。证据 artifacts/native-rich-KfyG4n、message-time-desktop.log、message-time-steering.log。未提交发布。
+
+## 2026-10-04：项目规则与独立 Markdown 记忆
+
+用户明确：记忆不需要专用 UI；本会话经济型子代理负责规则解析、Markdown 存储和集成测试，root 负责契约、运行时接入和验收。本增量没有新增记忆页面、入口、IPC 或共享组件。
+
+API 每次请求读取已授权目录及已涉及子目录的主规则；同作用域 AGENTS/CLAUDE 系列按 mtime 选有效主文件，其余按需。显式项目内 @引用有界展开，继承声明者作用域。首次触及新规则或等待审批期间规则变更时，文件操作在派发前返回 RULE_CONTEXT_CHANGED，下一模型请求再决定。任意 shell/MCP 内部访问无法自动推断全部作用域，提示词要求先读相关路径。原生 Codex 及其文件加载、记忆机制保持自身行为。
+
+用户记忆在 `~/.uah/memory`，项目在 `.memory`，私有项目在 `~/.uah/memory/projects/<path-hash>`；Markdown 权威、首次写入懒初始化。项目短索引和固定用户偏好自动提供，其余正文及外部白名单资料按需搜索/读取。默认模型只存候选，不增加后台付费总结；对话要求确认/固定会通过既有工具审批，真实批准才记录用户确认。子代理及 Plan/readonly 没有记忆写工具。版本哈希、原子替换、管理区块保留、无正文删除墓碑与跨项目私有目录隔离均已接入。
+
+实现说明和文件格式见 [MEMORY-AND-PROJECT-RULES.md](MEMORY-AND-PROJECT-RULES.md)。正常桌面使用操作系统 home；UAH_MEMORY_HOME 可覆盖，设置 UAH_DATA_DIR 的隔离环境默认用数据目录下 context-home。原有完整 Claude/GPT 默认提示词作为精确迁移来源保留，新能力由条件模块和实际工具注册声明。最终验证记录见 VALIDATION.md 对应日期；未提交、推送或发布。
+
+## 2026-10-04：记忆会话核查与可读文件名
+
+- 用户要求核查 UAH 会话 bf4db85c-0214-40dd-bc4e-0d65a1ef0d4f，并改用日期加主题文件名；继续经济型子代理，记忆没有 UI 表现。
+- root 已直接核对本机完整导出（3464 个连续事件）及校验哈希的请求/工具产物：创建、真实确认审批、固定偏好、旧哈希拒绝、无效固定拒绝和三作用域遗忘均符合预期。“跨会话”实际上是同一 session 的只读子代理，不据此声称独立会话或应用重启已获实测。详见 MEMORY-SESSION-INVESTIGATION-2026-10-04.md。
+- 新建文件采用宿主本地日期 YYYY-MM-DD-主题.md，可选英文 slug，否则从标题派生可读 Unicode 名。UUID 留在元数据中；碰撞加序号，普通更新保留路径，旧 UUID 文件兼容但不自动迁移。遗忘先清正文/标题，再改成日期-forgotten-memory 文件名；部分提交失败必须报告真实副作用。
+- 已核对 prompt-context、条件装配器和冻结 GPT/Claude 迁移模板：命名能力放在实际 save_memory schema/描述，动态上下文继续读真实索引，不改 Agent 历史配置或冻结模板。无 UI/组件缺口，D:/UI 保持干净。没有修改被核查会话的真实记忆文件，没有新真实模型调用、提交、推送或发布。验证结果见 VALIDATION.md 最新增量。
+
+## 2026-10-04：取消累计 token 用量停止
+
+- 用户明确取消“已达到估算用量限制”的任务停止机制。TaskTreeBudget 不再因累计估算或服务商报告的 token 数拒绝模型请求/工具；不是提高阈值。统计仍保留，超大计数饱和但不阻塞。
+- 新快照 maxEstimatedTokens=null、estimatedTokensExceeded=false。旧数字配置验证后忽略；旧数字上限/已超限检查点恢复时归一为无限制，保留历史计数。旧停止任务可显式续接，不改写历史、不自动重放工具。
+- Supervisor 续接不再相加 token 额度；RecoveryDialog 去掉追加 token 文案。组件盘点复用现有 UiDialog/Button/Table/Field/Textarea，仅改文本，无新组件或共享视觉能力缺口，D:/UI 不修改。
+- context.environment 升 v6，按次声明 token 仅统计；已检查 prompt-context、装配器及冻结 Claude/GPT 迁移模板，不修改历史 Agent 配置。单次上下文容量检查、请求/工具次数、运行时限与并发限制维持原逻辑。
+- 经济型子代理分别处理预算纯模块及调用循环测试，root处理集成/恢复兼容/提示词/文案与验收。没有真实模型调用，没有提交、推送或发布。验证见 VALIDATION 最新增量。
+
+## API 上下文 V2（2026-10-04）
+
+默认 API 运行现在使用持久化 owner surface 和冻结 prepared request；动态 Git／规则／记忆／环境快照按语义变化追加到历史尾部，避免采集时间、预算和 runId 重写系统前缀。原生 harness 保持自己的上下文机制。旧自定义动态模板保留兼容渲染并给出诊断。schema 4 迁移、跨模型／账号 portable replay、原子 checkpoint、缓存 usage 正规化与请求详情均已接入。
+
+组件盘点复用 @lingyzh/ui 0.2.1 的 UiUsageMeter、UiCollapse 和 UiCodeBlock，没有通用能力缺口，D:/UI 无修改。请求详情新增缓存命中率与剩余可用上下文分类；root 已检查浅色、深色及 125% 缩放截图。
+
+全量 1026 项：1024 通过、2 跳过、0 失败；后补暂停开关单文件 11/11 通过。三协议各 30 轮工具、跨回合／重启前缀稳定测试通过。真实 DS／公司端点各 3 次请求成功，重复输入缓存读取占比分别 92.26%／99.89%；不能据此保证真实长任务收益。详见 [CONTEXT-ENGINE-V2.md](CONTEXT-ENGINE-V2.md)，包含测试映射、原始证据、迁移与运维边界。生产规模 I/O 基准未建立，可选 C09 未实施。
+
+用户提供的真实端点路径正确：C:/Users/AnnaC/AppData/Roaming/uah-desktop/endpoints.sqlite。Codex MSIX 内直接访问会读取 LocalCache 虚拟化旧副本；本轮从宿主侧只读导出真实 SQLite 快照完成验收，没有修改用户真实配置或历史。不要再次根据虚拟化副本断言用户未配置端点。
+
+工作区保留先前累计修改，本轮未提交／推送。启动新构建需重启 UAH。
+
+## 2026-10-05：DS 用量对账与下次界面调整
+
+用户要求仅调查会话 63dc2434-f2ee-4561-98f3-2383a7e928cc，界面留待下次修改。11 次请求的最终 usage 汇总与 DS 截图逐项一致：缓存 197888、未缓存 21052、输出 10534、合计 229474；累计输入命中率 90.38%。客户端 97.05% 是最后单次请求。首请求全未命中，其余请求合计 96.43%；全部 10 次前缀转换稳定，没有发现记忆改头问题。详见 [DS-USAGE-AUDIT-2026-10-05.md](DS-USAGE-AUDIT-2026-10-05.md)。
+
+下次实施：上下文详情改为会话级展示、取消逐回合选择，累计用量从全 attempts 最终 usage 汇总；当前窗口占用／剩余容量与累计费用用量分开，不能把重复输入累计成上下文占用。本次未改业务代码或用户数据，未调用模型。
+
+## 2026-10-05：会话统计、容量恢复与启动草稿
+
+- 组件盘点复用 UiDialog、UiUsageMeter、UiCollapse、UiCodeBlock；仅 UsageSegment 缺少固定空闲颜色语义，已先在 D:/UI 增加 tone=remaining、真实 demo 和文档，经 root 浅深主题/缩放验收后，获用户授权发布 @lingyzh/ui 0.2.3。UAH 固定依赖及 lockfile 已升级。UI 发布提交 6f405a8、标签 v0.2.3、Actions 37226243401；发布记录补充提交 1477083。UAH 累计工作区不自动提交。
+- 上下文详情改为会话累计 request/attempt 最终 revision 统计，加权缓存命中率包含子任务、摘要与重试；缺失不补零。当前窗口与计費累计分开；进度条包含保守预留，空闲为冷灰。每次启动停留新会话草稿，不自动加载上次正文，不额外生成空会话。
+- 容量检查以完整请求及可验证服务用量基准加增量；本地序列化保护为 8 MB，不代表 provider 上限。先剪裁能按唯一调用身份/精确原文/公开 artifact 恢复的旧结果，再按窗口选取闭合交换摘要，保留近期尾部。摘要收益按实际选区衡量，明确超窗仅允许变小后重试一次；原始证据不删除、工具不重放。owner surface 复用旧 hash，仍不是完全增量 I/O。
+- 已检查 prompt-context 与冻结 Claude/GPT 迁移模板：没有新增工具能力或恢复累计 token 停止；原生 harness 继续按自身机制加载文件、管理上下文。
+- 用户纠正本会话经济型子代理使用 GPT-6 Luna；后续执行均使用该模型，任务结束默认不用作无关工作，root 负责视觉及最终验收。
+- 本地全量回归 1040 通过/2 跳过/0 失败；类型、构建、桌面专项通过。root 已检查 artifacts/git-context-TUV2ao 的会话弹窗。最后归档身份/计量/超窗恢复专项 13/13；统计重启持久化和缺失字段降级已覆盖。
+- DS/公司真实长会话验收已完成：DS 57 次尝试、8 个完成步骤、94/94 项目测试；公司 113 次尝试、10 个完成步骤、27/27 项目测试。已上报配对缓存命中率分别 98.38%（54/57）、97.21%（111/113），界面明确覆盖比例，不伪装缺失用量。压力专项3次提交、4次回滚，正确拒绝无法缩小的窗口。全部细节、失败夹具与默认60秒超时限制见 CONTEXT-LIVE-VALIDATION-2026-10-05.md。真实用户数据库/记忆未修改，临时端点副本已清理。
+
+### 本轮最终验收补充
+
+- 最终全量采用4并发：1044项、1042通过、2跳过、0失败，artifacts/context-v3-regression-bounded.log；解决测试环境并发争用，不放宽产品断言。新增部分缓存配对统计与请求上下文专项12/12，压力专项9/9。typecheck/build通过。
+- 最终桌面专项再次通过：artifacts/git-context-6VDefi；root复核浅色截图。原浅深主题及125%验收保留。
+- 真实 coding 与缓存对账见 [CONTEXT-LIVE-VALIDATION-2026-10-05.md](CONTEXT-LIVE-VALIDATION-2026-10-05.md)。缓存比例是相同尝试配对字段的加权比；出现缺失时同时展示已上报覆盖，避免跨字段错配或把缺失补零。
+- 真实试验进一步修正 provider 基准校验：粗略估算不能否定有效报告；超限时不受提前压缩的25%增长节流限制。压力测试已验证真实摘要提交后继续工具调用，无法充分缩小时保留错误。

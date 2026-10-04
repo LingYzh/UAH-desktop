@@ -1,4 +1,6 @@
 <script setup>
+import { clientError } from '../../shared/client-error.js';
+
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { UiButton, UiCard, UiSelect, UiCodeBlock, UiScrollArea } from '@lingyzh/ui';
 import { useWorkspace } from '../stores/workspace';
@@ -28,7 +30,7 @@ async function loadDiff() {
     try {
         const response = await query('diff', { staged: mode.value === 'index', ...(selectedPath.value ? { path: selectedPath.value } : {}) });
         if (generation === diffEpoch && response) diff.value = response;
-    } catch (cause) { if (generation === diffEpoch) diffError.value = cause?.message || String(cause); }
+    } catch (cause) { if (generation === diffEpoch) diffError.value = clientError(cause); }
     finally { if (generation === diffEpoch) diffBusy.value = false; }
 }
 async function loadLog() {
@@ -39,7 +41,7 @@ async function loadLog() {
     try {
         const response = await query('log');
         if (generation === logEpoch && response) commits.value = response;
-    } catch (cause) { if (generation === logEpoch) logError.value = cause?.message || String(cause); }
+    } catch (cause) { if (generation === logEpoch) logError.value = clientError(cause); }
     finally { if (generation === logEpoch) logBusy.value = false; }
 }
 async function refreshAll() {

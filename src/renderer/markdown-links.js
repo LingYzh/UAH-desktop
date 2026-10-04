@@ -1,3 +1,4 @@
+import { clientError } from '../shared/client-error.js';
 import { snackbar } from '@lingyzh/ui';
 import { parseExternalUrl } from '../shared/external-url';
 
@@ -7,6 +8,6 @@ export async function openMarkdownLink(href) {
         if (window.uah?.openExternal) await window.uah.openExternal(url);
         else window.open(url, '_blank', 'noopener,noreferrer');
     } catch (error) {
-        snackbar.show(error instanceof Error ? error.message : '无法打开链接。', { tone: 'error' });
+        snackbar.show(clientError(error), { tone: 'error' });
     }
 }

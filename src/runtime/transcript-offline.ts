@@ -36,10 +36,10 @@ interface Loaded {
     refs: ArtifactReference[]; artifacts: Map<string, Buffer>; report: ValidationReport; limits: OfflineLimits;
 }
 const TYPES = new Set(['message.accepted', 'history.revised', 'history.frame', 'history.branch', 'run.state', 'request.intent', 'request.sent',
-    'request.dispatch', 'request.retry', 'provider.frame', 'response.native', 'artifact.created', 'response.started', 'response.delta',
+    'request.dispatch', 'request.retry', 'provider.frame', 'response.native', 'native.event', 'artifact.created', 'response.started', 'response.delta',
     'response.terminal', 'tool.batch', 'approval.decided', 'approval.requested', 'tool.dispatch', 'tool.result',
     'usage.snapshot', 'budget.updated', 'progress.updated', 'context.admission', 'plan.version', 'permission.changed', 'control.requested', 'control.applied', 'delegation.delivery',
-    'context.compaction', 'recording.checkpoint', 'recovery.reviewed', 'recovery.resumed', 'goal.verified']);
+    'context.compaction', 'context.surface', 'context.request', 'recording.checkpoint', 'recovery.reviewed', 'recovery.resumed', 'goal.verified']);
 const COUNTERS = ['inputTokens', 'outputTokens', 'cachedInputTokens', 'cacheCreationInputTokens', 'totalTokens'] as const;
 
 function object(value: unknown, label: string): Record<string, unknown> {
@@ -348,6 +348,7 @@ export function replayTranscript(directory: string, limits?: Partial<OfflineLimi
         if (!ref || ref.availability !== 'present' || restricted(ref)) return null;
         return parseJson(loaded.artifacts.get(ref.relativePath)!, loaded.limits, 'public content');
     };
+    const nativeText = new Map<string, string | null>();
     for (const event of loaded.events) {
         const prior = runs.get(event.run.runId);
         if (prior && (prior.parentRunId !== event.run.parentRunId || prior.rootRunId !== event.run.rootRunId)) throw new Error('Conflicting replay run identity');
@@ -431,6 +432,16 @@ export function replayTranscript(directory: string, limits?: Partial<OfflineLimi
             if (integer(p.offset, 'delta offset') !== block.text.length) throw new Error('Public delta offset gap or overlap');
             block.text += p.text;
         }
+        if (event.type === 'native.event' && event.payload.method === 'uah/text') {
+            const content = publicJson(event.payload.content);
+            const previous = nativeText.get(event.run.runId) ?? '';
+            if (content === null || nativeText.get(event.run.runId) === null) nativeText.set(event.run.runId, null);
+            else {
+                const body = object(content, 'native public text');
+                if (typeof body.text !== 'string' || integer(body.offset, 'native text offset') !== previous.length) throw new Error('Native public text offset gap or overlap');
+                nativeText.set(event.run.runId, previous + body.text);
+            }
+        }
         if (event.type === 'message.accepted') {
             const ref = artifactRef(object(event.payload.content, 'message content'));
             let content: string | null = null;
@@ -450,7 +461,7 @@ export function replayTranscript(directory: string, limits?: Partial<OfflineLimi
     }
     const replies = [...runs.values()].map(run => {
         const revision = revisions.get(run.runId);
-        const original = [...blocks.values()].filter(block => block.runId === run.runId).map(block => block.text).join('');
+        const original = nativeText.has(run.runId) ? nativeText.get(run.runId) : [...blocks.values()].filter(block => block.runId === run.runId).map(block => block.text).join('');
         return { runId: run.runId, revision: revision?.revision ?? 0, deleted: revision?.deleted ?? false,
             text: revision?.deleted ? '' : revision ? revision.text : original };
     });

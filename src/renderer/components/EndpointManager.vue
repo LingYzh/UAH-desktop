@@ -1,14 +1,17 @@
 <script setup>
+import { clientError } from '../../shared/client-error.js';
+
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { UiButton, UiCard, UiDialog, UiField, UiInput, UiScrollArea, UiSelect, UiSwitch, UiIcon, UiTooltip, snackbar } from '@lingyzh/ui';
 import ModelCapabilitiesEditor from './ModelCapabilitiesEditor.vue';
 import ModelParametersEditor from './ModelParametersEditor.vue';
+import NativeCodexSettings from './NativeCodexSettings.vue';
 import { effectiveModelDetails } from '../../shared/endpoints';
 import { useWorkspace } from '../stores/workspace';
 
 const workspace = useWorkspace();
 const protocols = { 'openai-chat': 'OpenAI Chat Completions', 'openai-responses': 'OpenAI Responses', anthropic: 'Anthropic Messages' };
-const blank = () => ({ id: null, name: '', protocol: 'openai-chat', baseUrl: '', models: [], modelDetails: [], modelOverrides: [], modelParameters: [], enabled: true, revision: 0 });
+const blank = () => ({ id: null, providerId: '', name: '', protocol: 'openai-chat', baseUrl: '', models: [], modelDetails: [], modelOverrides: [], modelParameters: [], enabled: true, revision: 0 });
 const draft = ref(blank());
 const original = ref('');
 const key = ref('');
@@ -40,7 +43,7 @@ async function toggleEndpoint(endpoint, enabled) {
     try {
         const { hasKey, ...saved } = endpoint;
         await workspace.endpointCommand({ type: 'save', draft: { ...JSON.parse(JSON.stringify(saved)), enabled, apiKey: null } });
-    } catch (cause) { toggleError.value = `${endpoint.name}：${cause.message || '启用状态更新失败'}`; }
+    } catch (cause) { toggleError.value = `${endpoint.name}：${clientError(cause)}`; }
     finally { delete pendingEnablement.value[endpoint.id]; busy.value = ''; }
 }
 async function openLogs() {
@@ -80,13 +83,10 @@ function capabilitiesText(id) {
     if (overrideById.value.has(id)) labels.push('手动设置');
     return labels.join(' · ');
 }
-watch(() => [draft.value.baseUrl, draft.value.id], ([url, id], [previousUrl, previousId]) => {
-    if (id === previousId && url !== previousUrl) { draft.value.modelDetails = []; draft.value.modelOverrides = []; }
-});
 
 function openEditor(endpoint) {
     if (busy.value) return;
-    draft.value = endpoint ? { id: endpoint.id, name: endpoint.name, protocol: endpoint.protocol, baseUrl: endpoint.baseUrl, models: [...endpoint.models], modelDetails: JSON.parse(JSON.stringify(endpoint.modelDetails || [])), modelOverrides: JSON.parse(JSON.stringify(endpoint.modelOverrides || [])), modelParameters: JSON.parse(JSON.stringify(endpoint.modelParameters || [])), enabled: endpoint.enabled, revision: endpoint.revision } : blank();
+    draft.value = endpoint ? { id: endpoint.id, providerId: endpoint.providerId || '', name: endpoint.name, protocol: endpoint.protocol, baseUrl: endpoint.baseUrl, models: [...endpoint.models], modelDetails: JSON.parse(JSON.stringify(endpoint.modelDetails || [])), modelOverrides: JSON.parse(JSON.stringify(endpoint.modelOverrides || [])), modelParameters: JSON.parse(JSON.stringify(endpoint.modelParameters || [])), enabled: endpoint.enabled, revision: endpoint.revision } : blank();
     original.value = JSON.stringify(draft.value);
     hasStoredKey.value = Boolean(endpoint?.hasKey);
     keyAction.value = endpoint?.hasKey ? 'keep' : 'replace';
@@ -120,7 +120,7 @@ function run(operation, action) {
     if (busy.value) return Promise.resolve();
     busy.value = operation;
     error.value = '';
-    return action().catch((cause) => { error.value = cause.message || '操作未完成。'; }).finally(() => { busy.value = ''; });
+    return action().catch((cause) => { error.value = clientError(cause); }).finally(() => { busy.value = ''; });
 }
 function save() {
     if (busy.value) return;
@@ -174,7 +174,8 @@ onBeforeUnmount(() => { key.value = ''; });
                     <div><h1 class="settings-title">模型与账号</h1><p class="muted">配置 API 与自定义端点，选择模型开始对话。</p></div>
                     <div class="d-flex ga-2"><UiButton :disabled="!workspace.connected" :loading="openingLogs" @click="openLogs">打开日志目录</UiButton><UiButton variant="primary" :disabled="!workspace.connected" @click="openEditor()">添加端点</UiButton></div>
                 </div>
-                <p class="muted small">支持三种协议的文本流式对话。API 测试和发送消息可能产生服务商费用。订阅与官方运行时将在后续接入。</p>
+                <NativeCodexSettings />
+                <p class="muted small">API 支持三种协议的文本流式对话。API 测试和发送消息可能产生服务商费用。</p>
                 <UiCard v-if="!workspace.endpoints.length" title="还没有 API 端点" subtitle="添加服务商的 API 基础地址和模型 ID；密钥经系统加密保存在本机。">
                     <p>例如 https://api.openai.com/v1 或 https://api.anthropic.com/v1。本地服务可使用回环 HTTP 地址。</p>
                 </UiCard>
@@ -185,6 +186,7 @@ onBeforeUnmount(() => { key.value = ''; });
                         <label class="d-flex align-center ga-2 small"><span>{{ busy === `toggle:${endpoint.id}` ? '保存中…' : endpoint.enabled ? '已启用' : '已停用' }}</span><UiSwitch :model-value="pendingEnablement[endpoint.id] ?? endpoint.enabled" :aria-label="`启用 ${endpoint.name}`" :disabled="Boolean(busy)" @update:model-value="toggleEndpoint(endpoint, $event)" /></label>
                     </div>
                     <p class="ellipsis muted small my-2" :title="endpoint.baseUrl">{{ endpoint.baseUrl }}</p>
+                    <p class="break-word small my-2">Provider ID：<code>{{ endpoint.providerId || endpoint.id }}</code></p>
                     <div class="d-flex flex-wrap align-center justify-space-between ga-2">
                         <span class="muted small">{{ protocols[endpoint.protocol] }} · {{ endpoint.models.length }} 个模型 · {{ endpoint.hasKey ? '已保存密钥' : '无密钥' }}</span>
                         <div class="d-flex ga-1">
@@ -199,9 +201,10 @@ onBeforeUnmount(() => { key.value = ''; });
             <template #header><h2 id="endpoint-editor-title" class="ma-0">{{ draft.id ? '编辑端点' : '添加端点' }}</h2><p v-if="busy === 'test'" role="status" class="muted small">正在测试 {{ testModel }}，等待完整流式响应…</p><UiCard v-if="testResult" class="mt-3" density="compact" title="流式对话测试通过" :subtitle="testResult.modelId + ' · ' + testResult.elapsedMs + ' ms'"><UiScrollArea max-height="100px" label="测试模型实际回复"><p role="status" class="ma-0 break-word">{{ testResult.text }}</p></UiScrollArea></UiCard></template>
             <div class="d-flex flex-column ga-4">
                 <UiField v-slot="{ controlAttrs }" label="名称" for="endpoint-name"><UiInput v-model="draft.name" v-bind="controlAttrs" :disabled="Boolean(busy)" maxlength="100" placeholder="我的 API 服务" /></UiField>
+                <UiField v-slot="{ controlAttrs }" label="Provider ID（可选）" for="endpoint-provider-id" :description="`供子代理调用，区别于显示名称。支持字母、数字、中文、点、下划线和短横线，区分大小写且不能重复。留空使用默认 ID${draft.id ? '：' + draft.id : '（保存时自动生成）'}。修改不影响已有会话和模型配置。`"><UiInput v-model="draft.providerId" v-bind="controlAttrs" :disabled="Boolean(busy)" maxlength="100" spellcheck="false" placeholder="例如 company 或 公司" /></UiField>
                 <UiField v-slot="{ controlAttrs }" label="协议" for="endpoint-protocol"><UiSelect v-model="draft.protocol" v-bind="controlAttrs" :disabled="Boolean(busy)"><option v-for="(label, id) in protocols" :key="id" :value="id">{{ label }}</option></UiSelect></UiField>
                 <UiField v-slot="{ controlAttrs }" label="API 基础地址" for="endpoint-url" description="包含版本前缀（如 /v1），不包含 /chat/completions、/responses 或 /messages。"><UiInput v-model="draft.baseUrl" v-bind="controlAttrs" :disabled="Boolean(busy)" type="url" maxlength="2048" placeholder="https://api.example.com/v1" /></UiField>
-                <UiField v-if="hasStoredKey" v-slot="{ controlAttrs }" label="密钥操作" for="endpoint-key-action" description="更改地址或协议时，须重新输入密钥或移除密钥。"><UiSelect v-model="keyAction" v-bind="controlAttrs" :disabled="Boolean(busy)"><option value="keep">保留已保存的密钥</option><option value="replace">替换密钥</option><option value="remove">移除密钥</option></UiSelect></UiField>
+                <UiField v-if="hasStoredKey" v-slot="{ controlAttrs }" label="密钥操作" for="endpoint-key-action" description="默认保留已保存的密钥，修改协议或地址不会清除。可单独替换或移除。"><UiSelect v-model="keyAction" v-bind="controlAttrs" :disabled="Boolean(busy)"><option value="keep">保留已保存的密钥</option><option value="replace">替换密钥</option><option value="remove">移除密钥</option></UiSelect></UiField>
                 <UiField v-if="keyAction === 'replace'" v-slot="{ controlAttrs }" label="API Key" for="endpoint-key" description="保存后不回显；无需认证的本地服务可留空。"><UiInput v-model="key" v-bind="controlAttrs" :disabled="Boolean(busy)" type="password" autocomplete="off" spellcheck="false" maxlength="8192" /></UiField>
                 <UiCard title="模型目录" density="compact" subtitle="同步接口报告的模型能力；未报告项为未知。已接入文本、思考展示与工具调用；附件输入随后接入。">
                     <div class="d-flex flex-column ga-3">

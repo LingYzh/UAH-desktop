@@ -27,7 +27,7 @@ async function fixture(t, { journal, command, pending = [] } = {}) {
         remove(value.sessionId); server.pending = server.pending.filter(id => id !== value.sessionId);
         return Promise.resolve({ sessionId: value.sessionId, completed: true });
     } } };
-    setActivePinia(createPinia()); const workspace = useWorkspace(); t.after(() => workspace.dispose()); await workspace.initialize();
+    setActivePinia(createPinia()); const workspace = useWorkspace(); t.after(() => workspace.dispose()); await workspace.initialize(); await workspace.select('a');
     return { workspace, server, calls, remove };
 }
 async function seedOverrides(workspace) {
@@ -104,5 +104,5 @@ test('refresh failure after purge releases busy and reports the need to recheck 
     let fail = false;
     const f = await fixture(t, { journal: async (value, _server, remove) => { remove(value.sessionId); fail = true; return { sessionId: value.sessionId, completed: true }; }, command: () => fail ? Promise.reject(new Error('Snapshot IPC unavailable')) : undefined });
     const result = await f.workspace.purgeSession('a', 'fingerprint'); assert.equal(result.completed, true); assert.equal(f.workspace.busy, false);
-    assert.match(f.workspace.error, /Snapshot IPC unavailable/); assert.match(f.workspace.error, /重启确认/);
+    assert.match(f.workspace.error, /操作未完成/); assert.match(f.workspace.error, /重启确认/);
 });

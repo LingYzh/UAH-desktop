@@ -52,17 +52,22 @@ export function captureRequestContext(input: {
     runId: string; round: number; modelId: string; protocol: ApiProtocol; capacity?: number; requestId?: string;
     sections: Array<{ id: string; content: string }>;
     messages: ApiMessage[]; continuation?: unknown[]; tools: ToolDefinition[];
+    compiledBody?: Record<string, unknown>; contextDiagnostics?: string; pressure?: RequestContextSummary['pressure'];
 }): RequestContextDetail {
-    const visible = visibleHistory(input.continuation ?? input.messages);
-    const instructions = input.sections.filter(section => !section.id.startsWith('context.')).map(section => section.content).join('\n\n');
-    const environment = input.sections.filter(section => section.id.startsWith('context.')).map(section => section.content).join('\n\n');
+    const body = input.compiledBody;
+    const wireHistory = body ? (input.protocol === 'openai-responses' ? body.input : body.messages) as unknown[] : undefined;
+    const visible = visibleHistory(wireHistory?.filter(item => record(item).role !== 'system') ?? input.continuation ?? input.messages);
+    const instructions = body ? (input.protocol === 'openai-chat' ? wireHistory?.filter(item => record(item).role === 'system').map(item => record(item).content).join('\n\n') ?? ''
+        : typeof (body.instructions ?? body.system) === 'string' ? String(body.instructions ?? body.system) : JSON.stringify(body.system ?? ''))
+        : input.sections.filter(section => !section.id.startsWith('context.')).map(section => section.content).join('\n\n');
+    const environment = body ? '' : input.sections.filter(section => section.id.startsWith('context.')).map(section => section.content).join('\n\n');
     let budget = MAX_DETAIL_CHARACTERS;
     const sections = [
         { id: 'instructions', label: '系统与角色指令', content: instructions },
         { id: 'environment', label: '环境与 Git', content: environment },
-        { id: 'tools', label: '工具定义', content: JSON.stringify(input.tools, null, 2) },
+        { id: 'tools', label: '工具定义', content: JSON.stringify(body?.tools ?? input.tools, null, 2) },
         { id: 'history', label: '消息与工具结果', content: visible.text },
-    ].map(section => {
+    ].filter(section => !body || section.id !== 'environment').map(section => {
         const length = Math.min(budget, MAX_SECTION_CHARACTERS);
         const content = section.content.slice(0, length);
         budget -= content.length;
@@ -73,7 +78,8 @@ export function captureRequestContext(input: {
         modelId: input.modelId, protocol: input.protocol,
         ...(Number.isSafeInteger(input.capacity) && input.capacity! > 0 ? { capacity: input.capacity } : {}),
         estimatedInputTokens: sections.reduce((sum, section) => sum + section.estimatedTokens, 0),
-        omittedPrivateState: visible.omitted, sections,
+        omittedPrivateState: visible.omitted, sections, ...(input.pressure ? { pressure: input.pressure } : {}),
+        ...(input.contextDiagnostics ? { contextDiagnostics: input.contextDiagnostics } : {}),
     };
 }
 

@@ -1,4 +1,6 @@
 <script setup>
+import { clientError } from '../../shared/client-error.js';
+
 import { ref, watch, onBeforeUnmount, useId } from 'vue';
 import { UiDialog, UiButton, UiAlert, UiTable, UiTextarea, UiField } from '@lingyzh/ui';
 import { useWorkspace } from '../stores/workspace';
@@ -24,7 +26,7 @@ async function refresh() {
     try {
         const result = await window.uah.journal({ action: 'recovery', sessionId: run.sessionId, runId: run.id });
         if (epoch === generation) review.value = result;
-    } catch (cause) { if (epoch === generation) error.value = cause?.message || String(cause); }
+    } catch (cause) { if (epoch === generation) error.value = clientError(cause); }
     finally { if (epoch === generation) busy.value = false; }
 }
 async function act(type) {
@@ -39,7 +41,7 @@ async function act(type) {
         if (workspace.error) throw new Error(workspace.error);
         if (type === 'resume-run') emit('close');
         else { busy.value = false; await refresh(); }
-    } catch (cause) { if (epoch === generation) error.value = cause?.message || String(cause); }
+    } catch (cause) { if (epoch === generation) error.value = clientError(cause); }
     finally { if (epoch === generation) busy.value = false; }
 }
 watch(() => props.run, () => { generation++; busy.value = false; review.value = null; note.value = ''; error.value = ''; if (props.run) refresh(); }, { immediate: true });
@@ -55,7 +57,7 @@ onBeforeUnmount(() => { generation++; });
         <template v-if="review">
             <UiAlert v-for="reason in review.reasons" :key="reason" tone="warning" class="mb-3">{{ reason }}</UiAlert>
             <p>旧运行和已完成动作保留。继续会创建关联的新运行，使用当前权限，并重新检查文件证据。</p>
-            <p class="muted small">本次追加最多 {{ review.grant.maxRequests }} 次请求、{{ review.grant.maxTools }} 次工具调用、{{ review.grant.maxEstimatedTokens.toLocaleString() }} 估算 token、{{ Math.round(review.grant.maxElapsedMs / 60000) }} 分钟。历史消耗不会清零。</p>
+            <p class="muted small">本次追加最多 {{ review.grant.maxRequests }} 次请求、{{ review.grant.maxTools }} 次工具调用、{{ Math.round(review.grant.maxElapsedMs / 60000) }} 分钟。累计 token 用量仅作统计，不限制运行。</p>
             <UiTable :headers="headers" :items="review.resources" item-value="uri" label="恢复文件证据" empty-text="没有可自动核对的文件版本证据" height="220px" fixed-header dense>
                 <template #item.uri="{ item }"><span class="break-word">{{ item.uri }}</span></template>
                 <template #item.status="{ item }">{{ labels[item.status] }}</template>

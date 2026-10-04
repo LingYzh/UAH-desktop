@@ -1,4 +1,6 @@
 <script setup>
+import { clientError } from '../../shared/client-error.js';
+
 import { computed, ref, watch } from 'vue';
 import { UiButton, UiCard, UiDialog, UiField, UiScrollArea, UiTextarea, UiMarkdown } from '@lingyzh/ui';
 import { useWorkspace, stateLabels } from '../stores/workspace';
@@ -36,7 +38,7 @@ watch(() => workspace.selectedId, () => { dialogOpen.value = false; stopping.val
                 <UiCard density="compact" title="任务"><UiMarkdown :source="selected.input" @link-click="openMarkdownLink" /></UiCard>
                 <RunContent :run="selected" readonly />
                 <p v-if="selected.stopReason" class="small break-word">停止理由：{{ selected.stopReason }}</p>
-                <p v-if="selected.error" role="alert" class="inline-error">{{ selected.error }}</p>
+                <p v-if="selected.error" role="alert" class="inline-error">{{ clientError(selected.error) }}</p>
             </template>
             <template v-else>
                 <p class="muted small">当前会话的全部子代理 · {{ children.length }} 个</p>

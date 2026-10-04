@@ -96,4 +96,9 @@ export class JournalArtifacts {
         if (bytes.length !== ref.byteLength || createHash('sha256').update(bytes).digest('hex') !== ref.sha256) throw new Error('Artifact integrity mismatch');
         return bytes;
     }
+    verifiedPath(ref: ArtifactReference): string {
+        this.read(ref);
+        if (ref.availability !== 'present') throw new Error('Artifact is not available offline');
+        return resolve(this.directory, ref.relativePath);
+    }
 }

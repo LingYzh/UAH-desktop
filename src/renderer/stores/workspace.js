@@ -1,3 +1,5 @@
+import { clientError } from '../../shared/client-error.js';
+import { nativePermissionPreset } from '../../shared/native-codex-commands';
 import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { defaultSessionControls } from '../../shared/session-controls';
@@ -48,6 +50,28 @@ export const useWorkspace = defineStore('workspace', () => {
     const draft = ref({ input: '', directory: null, directoryChosen: false, model: '' });
     const draftControls = ref(blankDraftControls());
     const inputs = ref({});
+    const attachmentDrafts = ref({});
+    const currentAttachments = computed(() => attachmentDrafts.value[selectedId.value || 'draft'] || []);
+    async function addAttachments(files) {
+        if (!nativeMode.value) { error.value = '附件目前仅支持原生 Codex。'; return; }
+        const key = selectedId.value || 'draft';
+        await perform(async () => {
+            const added = files ? await window.uah.importAttachments(files) : await window.uah.chooseAttachments();
+            const existing = attachmentDrafts.value[key] || [];
+            if (existing.length + added.length > 8) {
+                await window.uah.releaseAttachments(added.map(item => item.id));
+                throw new Error('一条消息最多添加 8 个附件。');
+            }
+            attachmentDrafts.value[key] = [...existing, ...added];
+        });
+    }
+    async function removeAttachment(id) {
+        const key = selectedId.value || 'draft';
+        await perform(async () => {
+            await window.uah.releaseAttachments([id]);
+            attachmentDrafts.value[key] = (attachmentDrafts.value[key] || []).filter(item => item.id !== id);
+        });
+    }
     const panels = ref({});
     const activityViews = ref({});
     function activityView(run) {
@@ -61,6 +85,36 @@ export const useWorkspace = defineStore('workspace', () => {
     const connected = ref(Boolean(window.uah));
     const ready = ref(false);
     const endpoints = ref([]);
+    const nativeStatus = ref(null);
+    const nativeCatalog = ref(null);
+    const nativeCatalogError = ref('');
+    const nativeTarget = settings => JSON.stringify([settings?.command || '', settings?.args || []]);
+    async function nativeCommand(command) {
+        if (!window.uah?.nativeCodex) throw new Error('请重启更新后的桌面端。');
+        const result = await window.uah.nativeCodex(command);
+        // A late probe must not replace a more recent saved enablement or launch target.
+        if (!nativeStatus.value || result.settings.revision >= nativeStatus.value.settings.revision) nativeStatus.value = result;
+        if (result.probe && nativeTarget(result.probeTarget) === nativeTarget(nativeStatus.value.settings)) {
+            nativeCatalog.value = { target: nativeTarget(result.probeTarget), models: result.probe.models };
+            nativeCatalogError.value = '';
+        }
+        return result;
+    }
+    async function refreshNativeModels() {
+        if (!nativeStatus.value?.settings.enabled) return;
+        const target = nativeTarget(nativeStatus.value.settings);
+        try { await nativeCommand({ type: 'probe' }); }
+        catch (cause) { if (nativeTarget(nativeStatus.value?.settings) === target) nativeCatalogError.value = clientError(cause); }
+    }
+    const nativeMode = computed(() => { try { return JSON.parse(currentModel.value)[0] === 'native:codex'; } catch { return false; } });
+    const availableEndpoints = computed(() => {
+        const settings = nativeStatus.value?.settings;
+        const catalog = nativeCatalog.value?.target === nativeTarget(settings) ? nativeCatalog.value.models : [];
+        const discovered = catalog.map(item => item.id);
+        return [...endpoints.value, ...(settings?.enabled ? [{ id: 'native:codex', name: 'Codex 原生', enabled: true,
+            models: [...new Set([settings.model, ...discovered].filter(Boolean))],
+            modelNames: Object.fromEntries(catalog.map(item => [item.id, item.name || item.id])) }] : [])];
+    });
     const agentSettings = ref(null);
     const draftAgentId = ref('');
     const sessionAgents = ref({});
@@ -71,20 +125,21 @@ export const useWorkspace = defineStore('workspace', () => {
         agentSettings.value = settings;
         return settings;
     }
-    const modelGroups = computed(() => endpoints.value.filter((endpoint) => endpoint.enabled && endpoint.models.length).map((endpoint) => ({
+    const modelGroups = computed(() => availableEndpoints.value.filter((endpoint) => endpoint.enabled && endpoint.models.length).map((endpoint) => ({
         id: endpoint.id, label: endpoint.name,
-        models: endpoint.models.map((modelId) => ({ value: JSON.stringify([endpoint.id, modelId]), label: modelId })),
+        models: endpoint.models.map((modelId) => ({ value: JSON.stringify([endpoint.id, modelId]), label: endpoint.modelNames?.[modelId] || modelId })),
     })));
-    const modelOptions = computed(() => endpoints.value.filter((endpoint) => endpoint.enabled).flatMap((endpoint) => endpoint.models.map((modelId) => ({
-        value: JSON.stringify([endpoint.id, modelId]), label: `${endpoint.name} · ${modelId}`, endpointId: endpoint.id, modelId,
+    const modelOptions = computed(() => availableEndpoints.value.filter((endpoint) => endpoint.enabled).flatMap((endpoint) => endpoint.models.map((modelId) => ({
+        value: JSON.stringify([endpoint.id, modelId]), label: `${endpoint.name} · ${endpoint.modelNames?.[modelId] || modelId}`, endpointId: endpoint.id, modelId,
     }))));
     const selected = computed(() => snapshot.value.sessions.find((item) => item.id === selectedId.value));
     const viewLoaded = computed(() => !Object.hasOwn(snapshot.value, 'viewSessionId') || snapshot.value.viewSessionId === selectedId.value);
     const sessionControls = computed(() => {
-        if (!selected.value) return draftControls.value;
+        if (!selected.value) return nativeMode.value && draftControls.value.permissionMode ? { ...draftControls.value, permissionMode: nativePermissionPreset(draftControls.value.permissionMode) } : draftControls.value;
         const saved = selected.value.controls || selected.value.initialConfig?.controls || sessionControlOverrides.value[selected.value.id];
         if (saved) return {
             ...saved,
+            ...(nativeMode.value ? { permissionMode: nativePermissionPreset(saved.permissionMode) } : {}),
             // Older model-level settings used this sentinel before effort moved to sessions.
             reasoningEffort: saved.reasoningEffort === 'model-default' ? 'default' : saved.reasoningEffort,
         };
@@ -106,6 +161,7 @@ export const useWorkspace = defineStore('workspace', () => {
     const agentLocked = computed(() => Boolean(lockedAgent.value) || (selectedId.value !== null && !viewLoaded.value));
     const currentAgent = computed({
         get: () => {
+            if (nativeMode.value) return 'native-default';
             if (lockedAgent.value) return lockedAgent.value.agentId;
             if (!selected.value) return draftAgentId.value;
             const saved = sessionAgents.value[selectedId.value] ?? selected.value.initialConfig?.agentId ?? selected.value.requested?.agentId;
@@ -118,6 +174,7 @@ export const useWorkspace = defineStore('workspace', () => {
         },
     });
     const agentOptions = computed(() => {
+        if (nativeMode.value) return [{ id: 'native-default', name: 'Codex 原生默认' }];
         const options = agentSettings.value?.profiles.filter(item => item.kind === 'primary' && item.enabled) || [];
         if (!lockedAgent.value) return options;
         return [{ id: lockedAgent.value.agentId, name: lockedAgent.value.agentName || '会话 Agent' }];
@@ -133,7 +190,7 @@ export const useWorkspace = defineStore('workspace', () => {
             if (!selected.value) return draft.value.model;
             const config = selected.value.requested;
             if (Object.hasOwn(sessionModels.value, selectedId.value)) return sessionModels.value[selectedId.value];
-            if (config?.runtimeId === 'api') return JSON.stringify([config.endpointId, config.modelId]);
+            if (['api', 'codex-native'].includes(config?.runtimeId)) return JSON.stringify([config.endpointId, config.modelId]);
             if (config?.runtimeId === 'local-verification') return 'local-verification';
             const initialSelection = selected.value.initialConfig?.selection;
             if (isSelection(initialSelection)) return JSON.stringify([initialSelection.endpointId, initialSelection.modelId]);
@@ -142,7 +199,8 @@ export const useWorkspace = defineStore('workspace', () => {
         },
         set: (value) => {
             if (!viewLoaded.value) return;
-            if (lockedAgent.value && ((lockedAgent.value.runtimeId === 'api') === (value === 'local-verification'))) return;
+            const runtime = value === 'local-verification' ? 'local-verification' : value.startsWith('["native:codex",') ? 'codex-native' : 'api';
+            if (lockedAgent.value && lockedAgent.value.runtimeId !== runtime) return;
             if (selected.value) sessionModels.value[selectedId.value] = value;
             else draft.value.model = value;
         },
@@ -158,6 +216,7 @@ export const useWorkspace = defineStore('workspace', () => {
     });
     const configurationReady = computed(() => {
         if (!viewLoaded.value) return false;
+        if (nativeMode.value && !(selected.value?.directory || draft.value.directory)) return false;
         if (selected.value) return modelAvailable.value && agentAvailable.value
             && permissionModes.includes(sessionControls.value.permissionMode)
             && reasoningEfforts.includes(sessionControls.value.reasoningEffort);
@@ -224,7 +283,7 @@ export const useWorkspace = defineStore('workspace', () => {
                     snapshot.value = mergeRunSnapshot(snapshot.value, reply, job.sessionId);
                 } while (job.dirty);
             } catch (cause) {
-                if (job.generation === selectionGeneration && job.sessionId === selectedId.value) error.value = cause.message;
+                if (job.generation === selectionGeneration && job.sessionId === selectedId.value) error.value = clientError(cause);
             } finally {
                 if (refreshJob === job) refreshJob = undefined;
             }
@@ -244,13 +303,17 @@ export const useWorkspace = defineStore('workspace', () => {
         await refresh();
         if (window.uah.endpoints) {
             try { await endpointCommand({ type: 'list' }); }
-            catch (cause) { error.value = cause.message; }
+            catch (cause) { error.value = clientError(cause); }
         }
         if (window.uah.agents) {
             try { await agentCommand({ type: 'get' }); }
-            catch (cause) { error.value = cause.message; }
+            catch (cause) { error.value = clientError(cause); }
         }
-        selectedId.value = newestSession(snapshot.value.sessions)?.id || null;
+        if (window.uah.nativeCodex) {
+            try { await nativeCommand({ type: 'get' }); }
+            catch (cause) { error.value = clientError(cause); }
+            void refreshNativeModels();
+        }
         if (Object.hasOwn(snapshot.value, 'viewSessionId') && snapshot.value.viewSessionId !== selectedId.value) await refresh();
         seedDraftFromLatestInitialConfig();
         ready.value = true;
@@ -281,7 +344,7 @@ export const useWorkspace = defineStore('workspace', () => {
         busy.value = true;
         error.value = '';
         try { await action(); }
-        catch (cause) { error.value = cause.message || '操作未完成。'; }
+        catch (cause) { error.value = clientError(cause); }
         finally { busy.value = false; }
     }
 
@@ -303,10 +366,17 @@ export const useWorkspace = defineStore('workspace', () => {
         draft.value.directoryChosen = true;
     }
 
+    async function answerNativeQuestion(runId, questionId, answers) {
+        return perform(() => command({ type: 'answer-native-question', runId, questionId, answers }));
+    }
+
     async function send() {
         const submittedText = currentInput.value;
-        const input = submittedText.trim();
+        const attached = [...currentAttachments.value];
+        const attachmentKey = selectedId.value || 'draft';
+        const input = submittedText.trim() || (attached.length ? '请查看附件。' : '');
         if (!input || activeRun.value || !configurationReady.value) return;
+        if (attached.length && !nativeMode.value) { error.value = '请切换到原生 Codex 或移除附件。'; return; }
         let targetSessionId = selectedId.value;
         const generation = selectionGeneration;
         const sourceDraft = draft.value;
@@ -332,10 +402,23 @@ export const useWorkspace = defineStore('workspace', () => {
                 inputs.value[targetSessionId] = sourceDraft.input === submittedText ? submittedText : sourceDraft.input;
                 if (generation === selectionGeneration) select(targetSessionId);
                 if (draft.value === sourceDraft) draft.value.input = '';
+                if (attached.length) { attachmentDrafts.value[targetSessionId] = attached; delete attachmentDrafts.value[attachmentKey]; }
             }
-            await command({ type: 'start-run', sessionId: targetSessionId, input, ...(hasModelOverride ? { selection } : {}), ...(agentId ? { agentId } : {}) });
+            await command({ type: 'start-run', sessionId: targetSessionId, input, ...(attached.length ? { attachmentIds: attached.map(item => item.id) } : {}), ...(hasModelOverride ? { selection } : {}), ...(agentId ? { agentId } : {}) });
+            if (attached.length) attachmentDrafts.value[targetSessionId] = (attachmentDrafts.value[targetSessionId] || []).filter(item => !attached.some(sent => sent.id === item.id));
             if (inputs.value[targetSessionId] === submittedText) inputs.value[targetSessionId] = '';
         });
+    }
+
+    async function executeNativePlan() {
+        if (!nativeMode.value || !selectedId.value || activeRun.value) return;
+        const sessionId = selectedId.value;
+        await perform(() => command({ type: 'start-run', sessionId, input: '/plan execute' }));
+    }
+    function reviseNativePlan() {
+        if (!nativeMode.value || activeRun.value) return;
+        currentInput.value = `/plan revise ${currentInput.value}`;
+        panel.value.open = false;
     }
 
     async function steer() {
@@ -354,6 +437,9 @@ export const useWorkspace = defineStore('workspace', () => {
         if (Object.hasOwn(snapshot.value, 'viewSessionId')) return refresh();
     }
     function newSession() {
+        const abandonedAttachments = attachmentDrafts.value.draft || [];
+        delete attachmentDrafts.value.draft;
+        if (abandonedAttachments.length) window.uah?.releaseAttachments(abandonedAttachments.map(item => item.id)).catch(cause => { error.value = clientError(cause); });
         knownHistoryTotal = null;
         historyLimit.value = 50; historyLoading.value = false;
         selectionGeneration++;
@@ -424,13 +510,13 @@ export const useWorkspace = defineStore('workspace', () => {
                     }
                 }
                 await refresh();
-            } catch (cause) { error.value = `无法刷新删除状态，请重启确认：${cause.message}`; }
+            } catch (cause) { error.value = `无法刷新删除状态，请重启确认：${clientError(cause)}`; }
             busy.value = false;
         }
     }
     async function retryPurge(sessionId) {
         try { const result = await purgeSession(sessionId); if (!result.completed) error.value = result.error || '删除尚未完成，请检查后重试。'; }
-        catch (cause) { error.value = cause.message; }
+        catch (cause) { error.value = clientError(cause); }
     }
     function stop(run, reason) { return perform(() => command({ type: 'stop-run', runId: run.id, ...(reason?.trim() ? { reason: reason.trim() } : {}) })); }
     function resolve(approval, decision) {
@@ -438,5 +524,5 @@ export const useWorkspace = defineStore('workspace', () => {
         return perform(() => command({ type: 'resolve-approval', identity: { runtimeId, sessionId, runId, turnId, requestId, policyVersion }, decision }));
     }
     function dispose() { unsubscribe?.(); clearTimeout(refreshTimer); }
-    return { purgeSession, retryPurge, historyLimit, historyLoading, historyTotal, historyPanelReady, loadEarlier, steer, branchFrom, historyCommand, activityView, sessionControls, setSessionControl, agentLocked, lockedAgent, currentModelParameters, agentSettings, agentCommand, currentAgent, agentOptions, agentAvailable, snapshot, selectedId, draft, inputs, panel, page, busy, error, connected, ready, endpoints, modelGroups, modelOptions, currentModel, modelAvailable, configurationReady, endpointCommand, selected, runs, activeRun, currentInput, initialize, send, select, newSession, chooseDirectory, chooseNoDirectory, stop, resolve, dispose };
+    return { executeNativePlan, reviseNativePlan, currentAttachments, addAttachments, removeAttachment, answerNativeQuestion, nativeCatalogError, refreshNativeModels, nativeMode, nativeStatus, nativeCommand, purgeSession, retryPurge, historyLimit, historyLoading, historyTotal, historyPanelReady, loadEarlier, steer, branchFrom, historyCommand, activityView, sessionControls, setSessionControl, agentLocked, lockedAgent, currentModelParameters, agentSettings, agentCommand, currentAgent, agentOptions, agentAvailable, snapshot, selectedId, draft, inputs, panel, page, busy, error, connected, ready, endpoints, modelGroups, modelOptions, currentModel, modelAvailable, configurationReady, endpointCommand, selected, runs, activeRun, currentInput, initialize, send, select, newSession, chooseDirectory, chooseNoDirectory, stop, resolve, dispose };
 });

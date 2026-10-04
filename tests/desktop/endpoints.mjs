@@ -8,6 +8,7 @@ import { DatabaseSync } from 'node:sqlite';
 const root = process.cwd();
 const secret = 'fixture-secret-not-for-rendering';
 const requests = [];
+const catalogRequests = [];
 const openResponses = new Set();
 let mode = 'normal';
 
@@ -39,6 +40,7 @@ const server = http.createServer(async (request, response) => {
         return;
     }
     if (request.method === 'GET' && url.pathname === '/v1/models') {
+        catalogRequests.push({ pathname: url.pathname, authorized });
         if (mode === 'invalid-models') {
             response.writeHead(200, { 'content-type': 'application/json' });
             response.end(JSON.stringify({ data: Array.from({ length: 501 }, (_, i) => ({ id: 'fixture-model-' + i })) }));
@@ -224,6 +226,7 @@ try {
         await page.getByRole('button', { name: '添加端点', exact: true }).click();
         await waitForDialog('添加端点');
         await page.getByRole('textbox', { name: '名称', exact: true }).fill('Fixture API');
+        await page.getByRole('textbox', { name: 'Provider ID（可选）', exact: true }).fill('companyID');
         await page.getByRole('textbox', { name: 'API 基础地址', exact: true }).fill(baseUrl);
         await page.getByRole('textbox', { name: 'API Key', exact: true }).fill(secret);
         await page.getByRole('combobox', { name: '协议', exact: true }).selectOption('anthropic');
@@ -243,14 +246,16 @@ try {
         await dialogHeading('添加端点').waitFor({ state: 'hidden' });
         await page.getByLabel('启用 Fixture API', { exact: true }).waitFor();
         assert.equal(await page.getByLabel('启用 Fixture API', { exact: true }).isChecked(), true);
+        await page.getByText('companyID', { exact: true }).waitFor();
         await captureList('endpoint-list-light.png');
 
         const listed = await endpointList();
         assert.equal(listed.endpoints.length, 1);
         const endpoint = listed.endpoints[0];
         endpointId = endpoint.id;
+        assert.equal(endpoint.providerId, 'companyID');
         assert.deepEqual(endpoint.modelDetails, [{ id: 'fixture-model', imageInput: true, pdfInput: false, audioInput: false, videoInput: false, inputModalities: ['text','image'], outputModalities: ['text'], contextWindow: 128000, tools: false, vision: true, reasoning: true }]);
-        assert.deepEqual(Object.keys(endpoint).sort(), ['baseUrl', 'enabled', 'hasKey', 'id', 'modelDetails', 'models', 'name', 'protocol', 'revision']);
+        assert.deepEqual(Object.keys(endpoint).sort(), ['baseUrl', 'enabled', 'hasKey', 'id', 'modelDetails', 'models', 'name', 'protocol', 'providerId', 'revision']);
         assert.equal(endpoint.enabled, true);
         assert.equal(endpoint.hasKey, true);
         assert.equal(JSON.stringify(listed).includes(secret), false);
@@ -300,6 +305,153 @@ try {
         assert.deepEqual(listed.endpoints[0].modelOverrides, [{id:'fixture-model',pdfInput:true,audioInput:true,videoInput:false,contextWindow:200000}]);
         assert.equal(listed.endpoints[0].revision, 1);
         assert.equal(listed.endpoints[0].enabled, true);
+    });
+
+    await check('keeps the saved key through protocol and base path edits and still uses it for discovery and testing', async () => {
+        async function openSavedEndpoint() {
+            await page.getByRole('button', { name: '编辑 Fixture API', exact: true }).click();
+            await waitForDialog('编辑端点');
+            const keyAction = page.getByRole('combobox', { name: '密钥操作', exact: true });
+            assert.equal(await keyAction.inputValue(), 'keep');
+            assert.equal(await page.getByRole('textbox', { name: 'API Key', exact: true }).count(), 0);
+            assert.equal(await page.locator('body').innerText().then((text) => text.includes(secret)), false);
+            return keyAction;
+        }
+
+        async function assertSavedEndpoint(expectedProtocol, expectedBaseUrl) {
+            const listed = await endpointList();
+            assert.equal(listed.endpoints.length, 1);
+            const endpoint = listed.endpoints[0];
+            assert.equal(endpoint.id, endpointId);
+            assert.equal(endpoint.providerId, 'companyID');
+            assert.equal(endpoint.protocol, expectedProtocol);
+            assert.equal(endpoint.baseUrl, expectedBaseUrl);
+            assert.equal(endpoint.hasKey, true);
+            assert.equal(Object.hasOwn(endpoint, 'apiKey'), false);
+            assert.deepEqual(endpoint.modelOverrides, [{ id: 'fixture-model', pdfInput: true, audioInput: true, videoInput: false, contextWindow: 200000 }]);
+            assert.equal(JSON.stringify(listed).includes(secret), false);
+            assert.equal(await page.locator('body').innerText().then((text) => text.includes(secret)), false);
+            assert.equal(await page.evaluate((value) => Object.values(localStorage).join('\n').includes(value), secret), false);
+        }
+
+        let keyAction = await openSavedEndpoint();
+        await page.getByRole('combobox', { name: '协议', exact: true }).selectOption('anthropic');
+        await keyAction.selectOption('keep');
+        assert.equal(await keyAction.inputValue(), 'keep');
+        await page.getByRole('button', { name: '保存端点', exact: true }).click();
+        await dialogHeading('编辑端点').waitFor({ state: 'hidden' });
+        await assertSavedEndpoint('anthropic', baseUrl);
+
+        keyAction = await openSavedEndpoint();
+        await page.getByRole('textbox', { name: 'API 基础地址', exact: true }).fill(`${baseUrl}/changed-path`);
+        await keyAction.selectOption('keep');
+        assert.equal(await keyAction.inputValue(), 'keep');
+        await page.getByRole('button', { name: '保存端点', exact: true }).click();
+        await dialogHeading('编辑端点').waitFor({ state: 'hidden' });
+        await assertSavedEndpoint('anthropic', `${baseUrl}/changed-path`);
+
+        keyAction = await openSavedEndpoint();
+        await page.getByRole('combobox', { name: '协议', exact: true }).selectOption('openai-chat');
+        await page.getByRole('textbox', { name: 'API 基础地址', exact: true }).fill(baseUrl);
+        await keyAction.selectOption('keep');
+        await page.getByRole('button', { name: '保存端点', exact: true }).click();
+        await dialogHeading('编辑端点').waitFor({ state: 'hidden' });
+        await assertSavedEndpoint('openai-chat', baseUrl);
+
+        keyAction = await openSavedEndpoint();
+        await page.getByRole('button', { name: '读取模型目录', exact: true }).click();
+        await page.getByTitle('fixture-model', { exact: true }).waitFor();
+        assert.deepEqual(catalogRequests.at(-1), { pathname: '/v1/models', authorized: true });
+        await page.getByRole('combobox', { name: '测试模型', exact: true }).selectOption('fixture-model');
+        await page.getByRole('button', { name: '测试连接', exact: true }).click();
+        await page.getByText('流式对话测试通过', { exact: true }).waitFor();
+        await page.getByRole('region', { name: '测试模型实际回复', exact: true }).getByText('连接测试通过。', { exact: true }).waitFor();
+        assert.equal(requests.at(-1)?.body.messages?.[0]?.content, 'Reply with the single word OK.');
+        assert.equal(requests.at(-1)?.authorized, true);
+        assert.equal(await keyAction.inputValue(), 'keep');
+        assert.equal(await page.getByRole('textbox', { name: 'API Key', exact: true }).count(), 0);
+        assert.equal(await page.locator('body').innerText().then((text) => text.includes(secret)), false);
+        assert.equal(await page.evaluate((value) => Object.values(localStorage).join('\n').includes(value), secret), false);
+        await page.getByRole('button', { name: '保存端点', exact: true }).click();
+        await dialogHeading('编辑端点').waitFor({ state: 'hidden' });
+        await assertSavedEndpoint('openai-chat', baseUrl);
+    });
+
+    await check('validates Unicode, default, invalid-format and duplicate provider aliases without changing endpoint or session identity', async () => {
+        const sessionTitle = 'Provider alias reference fixture';
+        await page.evaluate(async ({ title, endpointId: selectedEndpointId }) => window.uah.command({
+            type: 'create-session', title, directory: null,
+            selection: { endpointId: selectedEndpointId, modelId: 'fixture-model' },
+            controls: { permissionMode: 'readonly', reasoningEffort: 'default' },
+            agentId: 'default',
+        }), { title: sessionTitle, endpointId });
+
+        const assertProviderState = async (expectedAlias) => {
+            const listed = await endpointList();
+            assert.equal(listed.endpoints.length, 1);
+            const endpoint = listed.endpoints[0];
+            assert.equal(endpoint.id, endpointId, 'internal endpoint id stays stable');
+            assert.equal(endpoint.providerId, expectedAlias || undefined);
+            assert.equal(endpoint.hasKey, true, 'the encrypted API key remains saved');
+            assert.deepEqual(endpoint.models, ['fixture-model']);
+            assert.deepEqual(endpoint.modelOverrides, [{ id: 'fixture-model', pdfInput: true, audioInput: true, videoInput: false, contextWindow: 200000 }]);
+            assert.equal(JSON.stringify(listed).includes(secret), false, 'endpoint IPC does not expose the key');
+            const session = (await snapshot()).sessions.find(item => item.title === sessionTitle);
+            assert.ok(session, 'the pre-existing session remains available');
+            assert.deepEqual(session.initialConfig?.selection, { endpointId, modelId: 'fixture-model' });
+            await page.getByText(expectedAlias || endpointId, { exact: true }).waitFor();
+        };
+
+        const openEditor = async () => {
+            await page.getByRole('button', { name: '编辑 Fixture API', exact: true }).click();
+            await waitForDialog('编辑端点');
+            await page.getByRole('combobox', { name: '密钥操作', exact: true }).selectOption('keep');
+        };
+        const saveAlias = async (value) => {
+            await openEditor();
+            await page.getByRole('textbox', { name: 'Provider ID（可选）', exact: true }).fill(value);
+            await page.getByRole('button', { name: '保存端点', exact: true }).click();
+            await dialogHeading('编辑端点').waitFor({ state: 'hidden' });
+            await assertProviderState(value);
+        };
+
+        await openEditor();
+        await page.getByRole('textbox', { name: 'Provider ID（可选）', exact: true }).fill('invalid id');
+        await page.getByRole('button', { name: '保存端点', exact: true }).click();
+        await page.getByRole('dialog', { name: '编辑端点', exact: true }).getByRole('alert').filter({ hasText: 'Provider ID 只能包含' }).waitFor();
+        assert.equal((await endpointList()).endpoints[0].providerId, 'companyID', 'invalid provider IDs are not persisted');
+        await page.getByRole('textbox', { name: 'Provider ID（可选）', exact: true }).fill('companyID');
+        await page.getByRole('button', { name: '保存端点', exact: true }).click();
+        await dialogHeading('编辑端点').waitFor({ state: 'hidden' });
+
+        let collision;
+        try {
+            collision = await page.evaluate(async ({ baseUrl: endpointBaseUrl }) => {
+                const result = await window.uah.endpoints({ type: 'save', draft: {
+                    id: null, providerId: 'collision-provider', name: 'Collision fixture', protocol: 'openai-chat',
+                    baseUrl: endpointBaseUrl, models: ['fixture-model'], enabled: true, revision: 0, apiKey: '',
+                } });
+                return result.endpoints.find(item => item.name === 'Collision fixture');
+            }, { baseUrl });
+            assert.ok(collision?.id, 'a second provider is created through the desktop IPC bridge');
+            await openEditor();
+            await page.getByRole('textbox', { name: 'Provider ID（可选）', exact: true }).fill('collision-provider');
+            await page.getByRole('button', { name: '保存端点', exact: true }).click();
+            await page.getByRole('dialog', { name: '编辑端点', exact: true }).getByRole('alert').filter({ hasText: 'Provider ID 已被其他端点使用' }).waitFor();
+            assert.equal((await endpointList()).endpoints.find(item => item.id === endpointId).providerId, 'companyID', 'duplicate aliases leave the original endpoint unchanged');
+            await page.getByRole('textbox', { name: 'Provider ID（可选）', exact: true }).fill('companyID');
+            await page.getByRole('button', { name: '保存端点', exact: true }).click();
+            await dialogHeading('编辑端点').waitFor({ state: 'hidden' });
+        } finally {
+            if (collision?.id) {
+                const latest = (await endpointList()).endpoints.find(item => item.id === collision.id);
+                if (latest) await page.evaluate(async ({ id, revision }) => window.uah.endpoints({ type: 'delete', id, revision }), { id: latest.id, revision: latest.revision });
+            }
+        }
+
+        await saveAlias('公司');
+        await saveAlias('');
+        await saveAlias('companyID');
     });
 
     await check('captures dark and narrow endpoint views and confirms visible actions without page overflow', async () => {

@@ -11,12 +11,13 @@ import type {
     Snapshot,
 } from '../shared/contracts.js';
 import type { RequestContextDetail } from '../shared/request-context';
-import type { TranscriptEvent } from '../shared/harness-contracts';
+import type { ArtifactReference, JsonValue, TranscriptEvent } from '../shared/harness-contracts';
 import type { WorkspaceOverview } from '../shared/snapshot-view';
+import type { ContextEntry, ContextSurface, ContextUpdate } from './context/contracts';
 import { sessionHasFileChanges } from '../shared/run-effects';
 import { eraseSessionRows } from './session-purge-data';
 
-export const RUNTIME_SCHEMA_VERSION = 3;
+export const RUNTIME_SCHEMA_VERSION = 4;
 const SCHEMA_VERSION = RUNTIME_SCHEMA_VERSION;
 const MAX_SESSIONS = 5_000;
 const DEFAULT_MAX_RUNS = 100_000;
@@ -70,6 +71,7 @@ export interface StoreCommit {
     artifacts?: ArtifactSnapshot[];
     events?: RuntimeEvent[];
     journal?: TranscriptEvent[];
+    contextUpdates?: ContextUpdate[];
 }
 
 function serialize(value: unknown): string {
@@ -82,6 +84,224 @@ function parseRow<T>(json: string, table: string): T {
     } catch (error) {
         throw new Error(`Cannot read persisted ${table} record`, { cause: error });
     }
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+}
+
+function safeText(value: unknown, name: string, maximum = 4096): string {
+    if (typeof value !== 'string' || value.length > maximum || /[\u0000-\u001f\u007f-\u009f]/.test(value)) {
+        throw new Error(`Invalid ${name}`);
+    }
+    return value;
+}
+
+function safeString(value: unknown, name: string, maximum = 4096): string {
+    const text = safeText(value, name, maximum);
+    if (!text) throw new Error(`Invalid ${name}`);
+    return text;
+}
+
+function assertJsonValue(value: unknown, name: string, depth = 0, seen = new Set<object>()): asserts value is JsonValue {
+    if (depth > 32) throw new Error(`Invalid ${name}: JSON nesting is too deep`);
+    if (value === null || typeof value === 'string' || typeof value === 'boolean') return;
+    if (typeof value === 'number') {
+        if (!Number.isFinite(value)) throw new Error(`Invalid ${name}: JSON numbers must be finite`);
+        return;
+    }
+    if (typeof value !== 'object' || seen.has(value)) throw new Error(`Invalid ${name}: expected JSON value`);
+    seen.add(value);
+    if (Array.isArray(value)) {
+        for (const item of value) assertJsonValue(item, name, depth + 1, seen);
+    } else if (isPlainObject(value)) {
+        for (const key of Reflect.ownKeys(value)) {
+            if (typeof key !== 'string') throw new Error(`Invalid ${name}: JSON object keys must be strings`);
+            safeString(key, `${name} key`, 1024);
+            const descriptor = Object.getOwnPropertyDescriptor(value, key);
+            if (!descriptor || !Object.hasOwn(descriptor, 'value')) throw new Error(`Invalid ${name}: accessors are not allowed`);
+            assertJsonValue(descriptor.value, name, depth + 1, seen);
+        }
+    } else {
+        throw new Error(`Invalid ${name}: expected JSON value`);
+    }
+    seen.delete(value);
+}
+
+function canonicalJson(value: JsonValue): string {
+    if (value === null || typeof value === 'string' || typeof value === 'boolean') return JSON.stringify(value);
+    if (typeof value === 'number') return JSON.stringify(value);
+    if (Array.isArray(value)) return `[${value.map(item => canonicalJson(item)).join(',')}]`;
+    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+}
+
+function validateArtifactReference(value: unknown, name: string): asserts value is ArtifactReference {
+    if (!isPlainObject(value)) throw new Error(`Invalid ${name}`);
+    const availability = value.availability;
+    safeString(value.mediaType, `${name}.mediaType`, 256);
+    if (availability === 'present') {
+        requireKeys(value, ['mediaType', 'availability', 'relativePath', 'sha256', 'byteLength', 'missingReason'], name);
+        const relativePath = safeString(value.relativePath, `${name}.relativePath`, 4096);
+        if (/^(?:[A-Za-z]:[\\/]|[\\/])/.test(relativePath) || relativePath.split(/[\\/]/).includes('..')) {
+            throw new Error(`Invalid ${name}.relativePath`);
+        }
+        if (typeof value.sha256 !== 'string' || !/^[a-fA-F0-9]{64}$/.test(value.sha256)) throw new Error(`Invalid ${name}.sha256`);
+        if (typeof value.byteLength !== 'number' || !Number.isSafeInteger(value.byteLength) || value.byteLength < 0) throw new Error(`Invalid ${name}.byteLength`);
+        if (value.missingReason !== null) throw new Error(`Invalid ${name}.missingReason`);
+    } else if (availability === 'missing') {
+        requireKeys(value, ['mediaType', 'availability', 'relativePath', 'sha256', 'byteLength', 'missingReason'], name);
+        const relativePath = safeString(value.relativePath, `${name}.relativePath`, 4096);
+        if (/^(?:[A-Za-z]:[\\/]|[\\/])/.test(relativePath) || relativePath.split(/[\\/]/).includes('..')) {
+            throw new Error(`Invalid ${name}.relativePath`);
+        }
+        if (value.sha256 !== null && (typeof value.sha256 !== 'string' || !/^[a-fA-F0-9]{64}$/.test(value.sha256))) throw new Error(`Invalid ${name}.sha256`);
+        if (value.byteLength !== null && (typeof value.byteLength !== 'number' || !Number.isSafeInteger(value.byteLength) || value.byteLength < 0)) throw new Error(`Invalid ${name}.byteLength`);
+        safeString(value.missingReason, `${name}.missingReason`, 4096);
+    } else if (availability === 'external_reference_only') {
+        requireKeys(value, ['mediaType', 'availability', 'relativePath', 'sha256', 'byteLength', 'externalReference', 'missingReason'], name);
+        if (value.relativePath !== null || value.sha256 !== null || value.byteLength !== null) throw new Error(`Invalid ${name}`);
+        safeString(value.externalReference, `${name}.externalReference`, 4096);
+        safeString(value.missingReason, `${name}.missingReason`, 4096);
+    } else {
+        throw new Error(`Invalid ${name}.availability`);
+    }
+}
+
+function requireKeys(value: Record<string, unknown>, keys: readonly string[], name: string, optionalKeys: readonly string[] = []): void {
+    const allowed = new Set([...keys, ...optionalKeys]);
+    for (const key of Reflect.ownKeys(value)) {
+        if (typeof key !== 'string' || !allowed.has(key)) throw new Error(`Invalid ${name} field: ${String(key)}`);
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (!descriptor || !Object.hasOwn(descriptor, 'value')) throw new Error(`Invalid ${name}.${key}: accessors are not allowed`);
+    }
+    for (const key of keys) if (!Object.hasOwn(value, key)) throw new Error(`Invalid ${name}.${key}`);
+}
+
+function validateContextEntry(value: unknown, name = 'context entry'): asserts value is ContextEntry {
+    if (!isPlainObject(value)) throw new Error(`Invalid ${name}`);
+    requireKeys(value, ['id', 'sessionId', 'ownerId', 'kind', 'content', 'sourceRunId'], name);
+    safeString(value.id, `${name}.id`, 200);
+    safeString(value.sessionId, `${name}.sessionId`, 200);
+    safeString(value.ownerId, `${name}.ownerId`, 200);
+    safeString(value.sourceRunId, `${name}.sourceRunId`, 200);
+    if (!['message', 'runtime_snapshot', 'summary'].includes(value.kind as string)) throw new Error(`Invalid ${name}.kind`);
+    validateArtifactReference(value.content, `${name}.content`);
+}
+
+function validateContextSurface(value: unknown, name = 'context surface'): asserts value is ContextSurface {
+    if (!isPlainObject(value)) throw new Error(`Invalid ${name}`);
+    const requiredKeys = ['schemaVersion', 'sessionId', 'ownerId', 'revision', 'epoch', 'routeKey', 'entryIds', 'snapshotHashes', 'instructionHash', 'toolManifestHash', 'sourceFingerprint', 'lastRunId', 'coverage'] as const;
+    requireKeys(value, requiredKeys, name, ['metadata']);
+    if (value.schemaVersion !== 2) throw new Error(`Invalid ${name}.schemaVersion`);
+    safeString(value.sessionId, `${name}.sessionId`, 200);
+    safeString(value.ownerId, `${name}.ownerId`, 200);
+    if (typeof value.revision !== 'number' || !Number.isSafeInteger(value.revision) || value.revision < 1) throw new Error(`Invalid ${name}.revision`);
+    if (typeof value.epoch !== 'number' || !Number.isSafeInteger(value.epoch) || value.epoch < 0) throw new Error(`Invalid ${name}.epoch`);
+    safeString(value.routeKey, `${name}.routeKey`);
+    if (!Array.isArray(value.entryIds) || value.entryIds.some(id => typeof id !== 'string' || !id || id.length > 200 || /[\u0000-\u001f\u007f-\u009f]/.test(id))) throw new Error(`Invalid ${name}.entryIds`);
+    if (new Set(value.entryIds).size !== value.entryIds.length) throw new Error(`Invalid ${name}.entryIds: duplicate entry`);
+    if (!isPlainObject(value.snapshotHashes) || Object.entries(value.snapshotHashes).some(([key, hash]) => {
+        try { safeString(key, `${name}.snapshotHashes key`, 1024); safeString(hash, `${name}.snapshotHashes value`, 4096); return false; } catch { return true; }
+    })) throw new Error(`Invalid ${name}.snapshotHashes`);
+    safeText(value.instructionHash, `${name}.instructionHash`);
+    safeText(value.toolManifestHash, `${name}.toolManifestHash`);
+    safeString(value.sourceFingerprint, `${name}.sourceFingerprint`);
+    safeString(value.lastRunId, `${name}.lastRunId`, 200);
+    if (value.coverage !== 'complete' && value.coverage !== 'partial') throw new Error(`Invalid ${name}.coverage`);
+    if (Object.hasOwn(value, 'metadata')) {
+        if (value.metadata === undefined) throw new Error(`Invalid ${name}.metadata`);
+        assertJsonValue(value.metadata, `${name}.metadata`);
+    }
+}
+
+function validateContextUpdate(value: unknown, name = 'context update'): asserts value is ContextUpdate {
+    if (!isPlainObject(value)) throw new Error(`Invalid ${name}`);
+    requireKeys(value, ['expectedRevision', 'surface', 'entries'], name);
+    if (value.expectedRevision !== null && (typeof value.expectedRevision !== 'number' || !Number.isSafeInteger(value.expectedRevision) || value.expectedRevision < 1)) {
+        throw new Error(`Invalid ${name}.expectedRevision`);
+    }
+    validateContextSurface(value.surface, `${name}.surface`);
+    if (!Array.isArray(value.entries)) throw new Error(`Invalid ${name}.entries`);
+    for (let index = 0; index < value.entries.length; index++) validateContextEntry(value.entries[index], `${name}.entries[${index}]`);
+    for (const entry of value.entries) {
+        if (entry.sessionId !== value.surface.sessionId || entry.ownerId !== value.surface.ownerId) throw new Error('Context entry scope does not match surface owner');
+    }
+}
+
+interface ContextEntryRow {
+    id: string;
+    session_id: string;
+    owner_id: string;
+    kind: string;
+    content: string;
+    source_run_id: string;
+}
+
+interface ContextSurfaceRow {
+    schema_version: number;
+    session_id: string;
+    owner_id: string;
+    revision: number;
+    epoch: number;
+    route_key: string;
+    entry_ids: string;
+    snapshot_hashes: string;
+    instruction_hash: string;
+    tool_manifest_hash: string;
+    source_fingerprint: string;
+    last_run_id: string;
+    coverage: string;
+    metadata: string | null;
+}
+
+function entryFromRow(row: ContextEntryRow): ContextEntry {
+    return {
+        id: row.id,
+        sessionId: row.session_id,
+        ownerId: row.owner_id,
+        kind: row.kind as ContextEntry['kind'],
+        content: parseRow<ArtifactReference>(row.content, 'context_entries'),
+        sourceRunId: row.source_run_id,
+    };
+}
+
+function surfaceFromRow(row: ContextSurfaceRow): ContextSurface {
+    let entryIds: unknown;
+    let snapshotHashes: unknown;
+    try {
+        entryIds = JSON.parse(row.entry_ids);
+        snapshotHashes = JSON.parse(row.snapshot_hashes);
+    } catch (error) {
+        throw new Error('Cannot read persisted context_surfaces record', { cause: error });
+    }
+    const surface: ContextSurface = {
+        schemaVersion: Number(row.schema_version) as 2,
+        sessionId: row.session_id,
+        ownerId: row.owner_id,
+        revision: Number(row.revision),
+        epoch: Number(row.epoch),
+        routeKey: row.route_key,
+        entryIds: entryIds as string[],
+        snapshotHashes: snapshotHashes as Record<string, string>,
+        instructionHash: row.instruction_hash,
+        toolManifestHash: row.tool_manifest_hash,
+        sourceFingerprint: row.source_fingerprint,
+        lastRunId: row.last_run_id,
+        coverage: row.coverage as ContextSurface['coverage'],
+    };
+    if (row.metadata !== null) surface.metadata = parseRow<JsonValue>(row.metadata, 'context_surfaces');
+    return surface;
+}
+
+function contextEntryEqual(left: ContextEntry, right: ContextEntry): boolean {
+    return left.id === right.id
+        && left.sessionId === right.sessionId
+        && left.ownerId === right.ownerId
+        && left.kind === right.kind
+        && left.sourceRunId === right.sourceRunId
+        && canonicalJson(left.content as unknown as JsonValue) === canonicalJson(right.content as unknown as JsonValue);
 }
 
 export class RuntimeStore {
@@ -186,6 +406,51 @@ export class RuntimeStore {
         if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 200 || /[\u0000-\u001f\u007f-\u009f]/.test(sessionId)) throw new Error('Invalid session identity');
         const rows = this.database.prepare('SELECT data FROM runs WHERE session_id = ? ORDER BY rowid ASC').all(sessionId) as Array<{ data: string }>;
         return rows.map(row => parseRow<RunRecord>(row.data, 'runs'));
+    }
+
+    /** Read the current active surface for one independent owner lineage. */
+    readContextSurface(sessionId: string, ownerId: string): ContextSurface | undefined {
+        this.assertOpen();
+        safeString(sessionId, 'context sessionId', 200);
+        safeString(ownerId, 'context ownerId', 200);
+        const row = this.database.prepare(`SELECT schema_version, session_id, owner_id, revision, epoch, route_key,
+                entry_ids, snapshot_hashes, instruction_hash, tool_manifest_hash, source_fingerprint,
+                last_run_id, coverage, metadata
+            FROM context_surfaces WHERE session_id = ? AND owner_id = ?`).get(sessionId, ownerId) as ContextSurfaceRow | undefined;
+        if (!row) return undefined;
+        const surface = surfaceFromRow(row);
+        validateContextSurface(surface);
+        if (surface.entryIds.length) this.readContextEntries(sessionId, ownerId, surface.entryIds);
+        return surface;
+    }
+
+    /**
+     * Read entries in caller order. A missing ID and an ID belonging to another
+     * session/owner are both errors so callers cannot accidentally widen scope.
+     */
+    readContextEntries(sessionId: string, ownerId: string, ids: readonly string[]): ContextEntry[] {
+        this.assertOpen();
+        safeString(sessionId, 'context sessionId', 200);
+        safeString(ownerId, 'context ownerId', 200);
+        if (!Array.isArray(ids)) throw new Error('Invalid context entry IDs');
+        for (const id of ids) safeString(id, 'context entry ID', 200);
+        if (!ids.length) return [];
+        const placeholders = ids.map(() => '?').join(', ');
+        const rows = this.database.prepare(`SELECT id, session_id, owner_id, kind, content, source_run_id
+            FROM context_entries WHERE id IN (${placeholders})`).all(...ids) as unknown as ContextEntryRow[];
+        const byId = new Map<string, ContextEntry>();
+        for (const row of rows) {
+            const entry = entryFromRow(row);
+            validateContextEntry(entry);
+            byId.set(entry.id, entry);
+        }
+        return ids.map(id => {
+            const entry = byId.get(id);
+            if (!entry || entry.sessionId !== sessionId || entry.ownerId !== ownerId) {
+                throw new Error(`Context entry is missing or belongs to a different owner: ${id}`);
+            }
+            return entry;
+        });
     }
 
     /** Session-scoped history projection; does not verify artifact hashes or event manifests. */
@@ -454,6 +719,8 @@ export class RuntimeStore {
                     .run(context.runId, serialize(context));
             }
 
+            for (const update of changes.contextUpdates ?? []) this.applyContextUpdate(update);
+
             for (const artifact of changes.artifacts ?? []) {
                 this.database
                     .prepare(
@@ -564,6 +831,15 @@ export class RuntimeStore {
         return this.journalWatermark(sessionId).durableSeq + 1;
     }
 
+    /** Accounting projection reads no streamed text or request bodies into JavaScript. */
+    readAccountingJournal(sessionId: string): TranscriptEvent[] {
+        this.assertOpen();
+        const rows = this.database.prepare(`SELECT data FROM canonical_events WHERE session_id = ?
+            AND json_extract(data, '$.type') IN ('usage.snapshot', 'request.dispatch') ORDER BY session_seq ASC`)
+            .all(sessionId) as Array<{ data: string }>;
+        return rows.map(row => parseRow<TranscriptEvent>(row.data, 'canonical_events'));
+    }
+
     readJournal(sessionId: string, afterSeq = 0, limit = 1000): TranscriptEvent[] {
         this.assertOpen();
         if (!Number.isSafeInteger(afterSeq) || afterSeq < 0 || !Number.isSafeInteger(limit) || limit < 1) {
@@ -608,6 +884,24 @@ export class RuntimeStore {
         return new Set([...unresolved.values()].map(item => item.runId));
     }
 
+    /** Provider call IDs are safe for pruning only when their invocation identity is unambiguous. */
+    readToolDispatchIdentities(sessionId: string): Array<{ invocationId: string; toolCallId: string }> {
+        this.assertOpen();
+        const rows = this.database.prepare(`SELECT
+            json_extract(data, '$.payload.identity.invocationId') AS invocation_id,
+            json_extract(data, '$.payload.identity.toolCallId') AS tool_call_id
+            FROM canonical_events WHERE session_id = ? AND json_extract(data, '$.type') = 'tool.dispatch'
+            ORDER BY session_seq ASC`).all(sessionId) as Array<{ invocation_id: unknown; tool_call_id: unknown }>;
+        const identities: Array<{ invocationId: string; toolCallId: string }> = [];
+        for (const row of rows) {
+            if (typeof row.invocation_id !== 'string' || !row.invocation_id || typeof row.tool_call_id !== 'string' || !row.tool_call_id) {
+                throw new Error('Invalid tool dispatch identity projection');
+            }
+            identities.push({ invocationId: row.invocation_id, toolCallId: row.tool_call_id });
+        }
+        return identities;
+    }
+
     journalWatermark(sessionId: string): { durableSeq: number; exportedSeq: number } {
         this.assertOpen();
         const row = this.database.prepare(`SELECT
@@ -637,6 +931,99 @@ export class RuntimeStore {
         }
         this.database.prepare(`INSERT INTO journal_exports (session_id, exported_seq) VALUES (?, ?)
             ON CONFLICT(session_id) DO UPDATE SET exported_seq = excluded.exported_seq`).run(sessionId, seq);
+    }
+
+    private applyContextUpdate(update: ContextUpdate): void {
+        validateContextUpdate(update);
+        const surface = update.surface;
+        const { sessionId, ownerId } = surface;
+        if (!this.database.prepare('SELECT 1 FROM sessions WHERE id = ?').get(sessionId)) {
+            throw new Error(`Context session does not exist: ${sessionId}`);
+        }
+
+        const existingSurfaceRow = this.database.prepare(`SELECT schema_version, session_id, owner_id, revision, epoch, route_key,
+                entry_ids, snapshot_hashes, instruction_hash, tool_manifest_hash, source_fingerprint,
+                last_run_id, coverage, metadata
+            FROM context_surfaces WHERE session_id = ? AND owner_id = ?`).get(sessionId, ownerId) as ContextSurfaceRow | undefined;
+        const existingSurface = existingSurfaceRow ? surfaceFromRow(existingSurfaceRow) : undefined;
+        if (existingSurface) validateContextSurface(existingSurface, 'persisted context surface');
+        if (update.expectedRevision === null) {
+            if (existingSurface) throw new Error(`Context surface revision conflict for ${sessionId}/${ownerId}`);
+            if (surface.revision !== 1) throw new Error('Initial context surface revision must be 1');
+        } else {
+            if (!existingSurface || existingSurface.revision !== update.expectedRevision) {
+                throw new Error(`Context surface revision conflict for ${sessionId}/${ownerId}`);
+            }
+            if (surface.revision !== update.expectedRevision + 1) {
+                throw new Error('Context surface revision must advance by one');
+            }
+        }
+
+        const entryById = new Map<string, ContextEntry>();
+        for (const entry of update.entries) {
+            const priorInBatch = entryById.get(entry.id);
+            if (priorInBatch && !contextEntryEqual(priorInBatch, entry)) {
+                throw new Error(`Context entry identity conflict: ${entry.id}`);
+            }
+            entryById.set(entry.id, entry);
+            const row = this.database.prepare(`SELECT id, session_id, owner_id, kind, content, source_run_id
+                FROM context_entries WHERE id = ?`).get(entry.id) as ContextEntryRow | undefined;
+            if (row) {
+                const persisted = entryFromRow(row);
+                validateContextEntry(persisted, 'persisted context entry');
+                if (!contextEntryEqual(persisted, entry)) throw new Error(`Context entry identity conflict: ${entry.id}`);
+                continue;
+            }
+            this.database.prepare(`INSERT INTO context_entries
+                (id, session_id, owner_id, kind, content, source_run_id) VALUES (?, ?, ?, ?, ?, ?)`)
+                .run(entry.id, entry.sessionId, entry.ownerId, entry.kind, serialize(entry.content), entry.sourceRunId);
+        }
+
+        if (surface.entryIds.length) {
+            const placeholders = surface.entryIds.map(() => '?').join(', ');
+            const rows = this.database.prepare(`SELECT id, session_id, owner_id
+                FROM context_entries WHERE id IN (${placeholders})`).all(...surface.entryIds) as Array<{ id: string; session_id: string; owner_id: string }>;
+            const byId = new Map(rows.map(row => [row.id, row]));
+            for (const id of surface.entryIds) {
+                const row = byId.get(id);
+                if (!row || row.session_id !== sessionId || row.owner_id !== ownerId) {
+                    throw new Error(`Context surface entry is missing or belongs to a different owner: ${id}`);
+                }
+            }
+        }
+
+        const metadata = Object.hasOwn(surface, 'metadata') ? serialize(surface.metadata) : null;
+        const values = [
+            surface.schemaVersion,
+            surface.sessionId,
+            surface.ownerId,
+            surface.revision,
+            surface.epoch,
+            surface.routeKey,
+            serialize(surface.entryIds),
+            serialize(surface.snapshotHashes),
+            surface.instructionHash,
+            surface.toolManifestHash,
+            surface.sourceFingerprint,
+            surface.lastRunId,
+            surface.coverage,
+            metadata,
+        ] as const;
+        if (!existingSurface) {
+            this.database.prepare(`INSERT INTO context_surfaces
+                (schema_version, session_id, owner_id, revision, epoch, route_key, entry_ids, snapshot_hashes,
+                 instruction_hash, tool_manifest_hash, source_fingerprint, last_run_id, coverage, metadata)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(...values);
+        } else {
+            const result = this.database.prepare(`UPDATE context_surfaces SET
+                    schema_version = ?, revision = ?, epoch = ?, route_key = ?, entry_ids = ?, snapshot_hashes = ?,
+                    instruction_hash = ?, tool_manifest_hash = ?, source_fingerprint = ?, last_run_id = ?, coverage = ?, metadata = ?
+                WHERE session_id = ? AND owner_id = ? AND revision = ?`)
+                .run(surface.schemaVersion, surface.revision, surface.epoch, surface.routeKey, serialize(surface.entryIds), serialize(surface.snapshotHashes),
+                    surface.instructionHash, surface.toolManifestHash, surface.sourceFingerprint, surface.lastRunId, surface.coverage, metadata,
+                    sessionId, ownerId, update.expectedRevision);
+            if (Number(result.changes) !== 1) throw new Error(`Context surface revision conflict for ${sessionId}/${ownerId}`);
+        }
     }
 
     private validateJournalEvent(event: TranscriptEvent): void {
@@ -719,7 +1106,7 @@ export class RuntimeStore {
                     data TEXT NOT NULL
                 );
             `);
-            if (currentVersion < SCHEMA_VERSION) this.database.exec(`
+            if (currentVersion < 3) this.database.exec(`
                 CREATE TABLE canonical_events (
                     event_id TEXT PRIMARY KEY,
                     session_id TEXT NOT NULL,
@@ -732,7 +1119,36 @@ export class RuntimeStore {
                     exported_seq INTEGER NOT NULL CHECK(exported_seq >= 0)
                 );
             `);
-            // Additive index repair on v3 shares the same atomic boundary as older-schema upgrades.
+            if (currentVersion < 4) this.database.exec(`
+                CREATE TABLE IF NOT EXISTS context_entries (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                    owner_id TEXT NOT NULL,
+                    kind TEXT NOT NULL CHECK(kind IN ('message', 'runtime_snapshot', 'summary')),
+                    content TEXT NOT NULL,
+                    source_run_id TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS context_entries_scope ON context_entries(session_id, owner_id, id);
+                CREATE TABLE IF NOT EXISTS context_surfaces (
+                    schema_version INTEGER NOT NULL CHECK(schema_version = 2),
+                    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                    owner_id TEXT NOT NULL,
+                    revision INTEGER NOT NULL CHECK(revision > 0),
+                    epoch INTEGER NOT NULL CHECK(epoch >= 0),
+                    route_key TEXT NOT NULL,
+                    entry_ids TEXT NOT NULL,
+                    snapshot_hashes TEXT NOT NULL,
+                    instruction_hash TEXT NOT NULL,
+                    tool_manifest_hash TEXT NOT NULL,
+                    source_fingerprint TEXT NOT NULL,
+                    last_run_id TEXT NOT NULL,
+                    coverage TEXT NOT NULL CHECK(coverage IN ('complete', 'partial')),
+                    metadata TEXT,
+                    PRIMARY KEY(session_id, owner_id)
+                );
+                CREATE INDEX IF NOT EXISTS context_surfaces_owner ON context_surfaces(owner_id, session_id);
+            `);
+            // Additive index repair shares the same atomic boundary as schema upgrades.
             this.database.exec('CREATE TABLE IF NOT EXISTS session_purges (session_id TEXT PRIMARY KEY, data TEXT NOT NULL);');
             this.database.exec(`CREATE INDEX IF NOT EXISTS runs_created_at ON runs(created_at, id);
                 CREATE INDEX IF NOT EXISTS runs_session_created_at ON runs(session_id, created_at, id);`);

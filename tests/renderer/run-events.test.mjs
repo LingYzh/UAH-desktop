@@ -26,7 +26,7 @@ async function workspaceFixture(t, initial = makeSnapshot(), customCommand) {
     } };
     setActivePinia(createPinia()); const workspace = useWorkspace();
     t.after(() => workspace.dispose());
-    await workspace.initialize();
+    await workspace.initialize(); await workspace.select('session');
     return { workspace, emit: event => listener(event), snapshotCount: () => snapshots,
         setServer: value => { server = structuredClone(value); } };
 }

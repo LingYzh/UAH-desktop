@@ -1,6 +1,8 @@
 # 条件提示词装配（API 运行时）
 
-UAH 现在每次模型请求都用 `src/runtime/prompt-assembler.ts` 装配指令。适用于 Claude、GPT、通用 Coding 与自定义 Agent；不是切换品牌时另写一套工具系统。原生 Codex 尚未接入，仍按 [CODEX-RUNTIME.md](CODEX-RUNTIME.md) 的单一运行时权威边界处理。
+UAH 的 API 运行时每次模型请求都用 `src/runtime/prompt-assembler.ts` 装配指令。适用于 Claude、GPT、通用 Coding 与自定义 Agent；不是切换品牌时另写一套工具系统。原生 Codex 已接入，独立使用 native-default，不经过 portable API 装配器；详见 [HARNESS-D09.md](HARNESS-D09.md)。
+
+D09 增量：host.contract 升为 v3，extensions.mcp / extensions.skills v1 仅在真实注册的 mcp_* / read_skill 能力存在时装配。技能目录只包含已启用项目，描述作为有界外部数据；服务端 annotations、技能正文不授予权限。prompt-context 同步真实 MCP/技能可用性，记忆仍明确未接入。已检查 claude-harness-prompts.ts 与 gpt-harness-prompts.ts；它们是旧默认的精确迁移来源，保持原文避免破坏识别，现行能力以请求期宿主模块为准。
 
 ## 配置与运行时分离
 
@@ -41,7 +43,7 @@ Agent 保存可编辑的专业要求、风格与工作方法。默认预设开�
 
 ## 上下文边界与长度
 
-目录／运行 ID／父运行 ID／权限／工具由 runtimePromptContext 提供。Git 在每次 API 模型请求前重新只读获取，再通过提供器注入有界快照；没有目录、非仓库、失败都明确表示，不能当作干净工作树。`workspace.git:v1` 仅在实际注册 git_status/git_diff/git_log 时启用。记忆仍保留限定入口，不能覆盖权威环境／工具字段。当前没有自动读取 AGENTS.md、加载记忆或 Git 网络请求；按需读取项目规则仍依赖真实文件工具。
+目录／运行 ID／父运行 ID／权限／工具由 runtimePromptContext 提供。Git 在每次 API 模型请求前重新只读获取，再通过提供器注入有界快照；没有目录、非仓库、失败都明确表示，不能当作干净工作树。`workspace.git:v1` 仅在实际注册 git_status/git_diff/git_log 时启用。API 请求自动装配已发现作用域的主项目规则、项目记忆短索引和用户固定偏好，外部 harness 目录仅发现白名单来源、正文按需读取。记忆不能覆盖权威环境／工具字段；没有 Git 网络请求。细则见 [MEMORY-AND-PROJECT-RULES.md](MEMORY-AND-PROJECT-RULES.md)。
 
 状态用有界 JSON 表示，转义尖括号防止伪造区块，不递归展开标记；每个原始状态槽最多 6000 字符。配置仍为 32000 字符上限；完整请求指令扩至 64000 字符，以容纳合法用户配置和条件模块，超限明确报错而不悄悄截掉权限或角色。该上限是字符限制，不是 token 配额。
 
@@ -58,3 +60,13 @@ Agent 数据库 v8 原样归档 v7 文档，仅在 id、kind、旧默认指令�
 自动测试覆盖配置迁移、主／子风格继承、所有权限模式、无工具模型、实际 manual→Plan 请求切换、工具和模块一致、审批拒绝零写入、历史原文不变、条件稳定顺序、恶意标记不递归、长度和日志脱敏。具体结果与真实 kiro 多模型测试证据见 [VALIDATION.md](VALIDATION.md) 的本轮记录。
 
 对比样本（相同简化环境、readonly、未启用委派工具）：旧 GPT 静态预设 27743 字符，新装配含宿主状态约 16401；Claude 4723 → 3648。无工具时分别约16052和3299。字符变化不是 token 成本或模型质量测量；完整编排与 Plan 下会按需增加相应模块。
+
+## D09 原生委派与内置技能增量（2026-10-03）
+
+extensions.skills 升至 v2，按实际 read_skill 注册结果提供内置／独立／插件技能目录与宿主提问工具规则。prompt-context 同时识别原生 uah_read_skill。没有提问工具时采用技能规定的文本回退，不虚构能力。旧 claude/gpt 完整品牌绑定文件仍保留用于精确迁移。
+
+原生桥使用 developerInstructions 描述实际 UAH 委派工具和技能目录，原生基座保持 native-default。子角色仅加入角色补充，未修改的 API 条件默认基座不作为原生覆盖。原生 API 下级按实际限制后的工具目录装配条件模块。详见 [NATIVE-DELEGATION.md](NATIVE-DELEGATION.md)。
+
+## API 上下文 V2 投影（2026-10-04）
+
+API supervisor 已采用 contextEngineVersion=2：规则、Git、记忆、来源、语义环境和模式转换只在变化时追加尾部快照，不再每轮写入 instructions。采集时钟、运行 ID、累计预算与进度仅保留诊断；权限和实际工具继续每次请求解析。自定义动态槽保留旧渲染并标记 legacy_dynamic_template。旧品牌精确迁移文本不改写。传输、预览与 admission 共用冻结 prepared request；详细契约及例外见 [CONTEXT-ENGINE-V2.md](CONTEXT-ENGINE-V2.md)。

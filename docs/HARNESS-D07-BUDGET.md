@@ -1,5 +1,11 @@
 # D07 context and task-tree budget foundation
 
+## Current policy — 2026-10-04
+
+Cumulative estimated/provider-reported token usage is accounting only and never stops a task, request, or tool. The former 4,000,000-token cap and token-overrun admission checks have been removed. New snapshots use `limits.maxEstimatedTokens: null` and `estimatedTokensExceeded: false`. Legacy numeric options are accepted but do not impose a cap; valid older snapshots (including exceeded ones) restore their counters with the token limit disabled. Counters saturate safely at the maximum representable integer without blocking execution. Existing stopped tasks remain historical records and may be explicitly resumed; no request or tool is automatically replayed.
+
+Single-request context-capacity admission and the request/tool/time/concurrency limits remain separate. Recovery no longer grants or displays a cumulative token allowance. The earlier implementation and validation notes below describe historical checkpoints; references there to token limits, token-overrun stops and token grants are superseded by this policy.
+
 `src/runtime/context-governor.ts` is a pure admission/accounting module. It performs no network requests, persistence, provider retry or history compression. Supervisor now supplies integration: root and descendant operations share one task-tree budget, canonical `context.admission` and `budget.updated` events retain decisions/accounting, and a programmatic `SupervisorOptions.taskBudget` can override limits. Cancellation, deadline handling and execution authorization belong to that integration.
 
 ## Complete context admission

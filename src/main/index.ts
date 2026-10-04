@@ -1,3 +1,5 @@
+import { clientError } from '../shared/client-error.js';
+import { AttachmentStore } from './attachment-store';
 import { app, BrowserWindow, clipboard, dialog, ipcMain, protocol, safeStorage, session, shell, type IpcMainInvokeEvent } from 'electron';
 import { parseExternalUrl } from '../shared/external-url';
 import { realpath, readFile, mkdir } from 'node:fs/promises';
@@ -16,6 +18,11 @@ import { parseContextQuery } from '../shared/request-context';
 import { parseJournalQuery } from '../shared/journal-view';
 import { parseSnapshotView } from '../shared/snapshot-view';
 import { randomUUID } from 'node:crypto';
+import { ExtensionStore } from './extension-store';
+import { parseExtensionCommand } from '../shared/extensions';
+import { NativeCodexStore } from './native-codex-store';
+import { discoverNativeCodex } from './native-codex-discovery';
+import { parseNativeCodexSettings } from '../shared/native-codex';
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'uah', privileges: { standard: true, secure: true, supportFetchAPI: true } }]);
 if (process.env.UAH_DATA_DIR) app.setPath('userData', path.resolve(process.env.UAH_DATA_DIR));
@@ -30,10 +37,14 @@ let runtime: RuntimeClient;
 let browser: BrowserHost;
 let native: NativeClient;
 let endpoints: EndpointStore;
+let extensions: ExtensionStore;
+let nativeCodex: NativeCodexStore;
+let extensionBusy = false;
 let probingEndpoint = false;
 let quitting = false;
 let closing = false;
 const selectedDirectories = new Set<string>();
+const attachmentStore = new AttachmentStore();
 let browserIntent = 0;
 
 function assertSender(event: IpcMainInvokeEvent) {
@@ -70,16 +81,52 @@ app.whenReady().then(async () => {
     window.webContents.on('will-navigate', (event, url) => { if (!trustedRendererUrl(url, developmentUrl)) event.preventDefault(); });
     window.webContents.on('will-attach-webview', (event) => event.preventDefault());
     endpoints = new EndpointStore(app.getPath('userData'), safeStorage);
+    extensions = new ExtensionStore(app.getPath('userData'), safeStorage, path.resolve(__dirname, '../builtin-skills'));
+    nativeCodex = new NativeCodexStore(app.getPath('userData'));
     runtime = new RuntimeClient(path.join(__dirname, '../runtime/worker.cjs'), app.getPath('userData'), (event) => {
         if (window && !window.isDestroyed()) window.webContents.send('uah:event', event);
     }, (id) => endpoints.resolve(id), {
         executionHelperPath: path.join(app.getAppPath(), 'native/UAH.ExecutionHelper/bin/Release/net10.0-windows/UAH.ExecutionHelper.exe'),
+        resolveExtensions: () => ({ connectors: extensions.resolveConnectors(), skills: extensions.skillCatalogForRuntime(), native: nativeCodex.get() }),
+        listProviders: () => endpoints.listProviders(),
+        readSkill: (id, relativePath) => extensions.readSkill(id, relativePath),
     });
     browser = new BrowserHost(window);
+    ipcMain.handle('uah:extensions', async (event, value) => {
+        assertSender(event);
+        if (closing || extensionBusy) throw new Error('扩展操作正在进行，请稍后重试。');
+        const command = parseExtensionCommand(value);
+        extensionBusy = true;
+        try { return await extensions.execute(command); }
+        finally { extensionBusy = false; }
+    });
+    ipcMain.handle('uah:test-connector', async (event, id) => {
+        assertSender(event);
+        if (closing || typeof id !== 'string' || id.length > 200) throw new Error('连接器标识无效。');
+        return runtime.testConnector(id);
+    });
+    ipcMain.handle('uah:native-codex', async (event, command) => {
+        assertSender(event);
+        if (closing || !command || typeof command !== 'object' || !['get', 'save', 'probe', 'discover'].includes(command.type)
+            || Object.keys(command).some(key => !['type', ...(['save', 'probe'].includes(command.type) ? ['settings'] : [])].includes(key))) throw new Error('原生运行时操作无效。');
+        if (command.type === 'save') return { settings: nativeCodex.save(command.settings) };
+        const settings = nativeCodex.get();
+        if (command.type === 'discover') return { settings, candidates: await discoverNativeCodex() };
+        if (command.type === 'probe') {
+            const target = command.settings === undefined ? settings : parseNativeCodexSettings(command.settings);
+            const probe = await runtime.nativeProbe(target);
+            return { settings: nativeCodex.get(), probe, probeTarget: { command: target.command, args: target.args } };
+        }
+        return { settings };
+    });
     native = new NativeClient(path.join(app.getAppPath(), 'native/UAH.NativeHelper/bin/Release/net10.0-windows/UAH.NativeHelper.exe'));
     ipcMain.handle('uah:command', async (event, value, requestedView) => {
         assertSender(event);
-        const command = parseCommand(value);
+        if (value && Object.hasOwn(value, 'attachments')) throw new Error('请使用附件选择入口。');
+        const ids = value?.attachmentIds;
+        if (ids !== undefined && value?.type !== 'start-run') throw new Error('只有发送消息可以携带附件。');
+        const { attachmentIds: _attachmentIds, ...source } = value ?? {};
+        const command = parseCommand({ ...source, ...(ids !== undefined ? { attachments: attachmentStore.resolve(ids) } : {}) });
         const view = parseSnapshotView(requestedView);
         if (command.type === 'create-session' && command.directory !== null) {
             const canonical = await realpath(command.directory);
@@ -94,7 +141,28 @@ app.whenReady().then(async () => {
             }
             command.directory = canonical;
         }
-        return runtime.execute(command, view);
+        const result = await runtime.execute(command, view);
+        if (ids !== undefined) attachmentStore.release(ids);
+        return result;
+    });
+    ipcMain.handle('uah:attachments', async (event, value) => {
+        assertSender(event);
+        if (closing) throw new Error('应用正在退出。');
+        if (value?.type === 'release') { attachmentStore.release(value.ids); return; }
+        if (value?.type === 'choose') {
+            const selected = await dialog.showOpenDialog(window!, { title: '添加附件', properties: ['openFile', 'multiSelections'] });
+            return selected.canceled ? [] : attachmentStore.preparePaths(selected.filePaths);
+        }
+        if (value?.type === 'import') {
+            if (!Array.isArray(value.paths) || !Array.isArray(value.images) || value.paths.length + value.images.length > 8) throw new Error('附件列表无效。');
+            const added = await attachmentStore.preparePaths(value.paths);
+            try {
+                for (const image of value.images) added.push(await attachmentStore.prepareImage(image.name, image.bytes));
+                attachmentStore.resolve(added.map(item => item.id));
+                return added;
+            } catch (error) { attachmentStore.release(added.map(item => item.id)); throw error; }
+        }
+        throw new Error('附件操作无效。');
     });
     ipcMain.handle('uah:git', async (event, value) => {
         assertSender(event);
@@ -230,7 +298,7 @@ app.whenReady().then(async () => {
     });
     await window.loadURL(developmentUrl || APP_URL);
 }).catch((error) => {
-    dialog.showErrorBox('UAH 启动失败', error instanceof Error ? error.message : '无法启动。');
+    dialog.showErrorBox('UAH 启动失败', clientError(error));
     app.quit();
 });
 
@@ -241,12 +309,13 @@ app.on('before-quit', (event) => {
     closing = true;
     Promise.all([runtime?.shutdown(), native?.shutdown()]).then(() => {
         endpoints?.close();
+        extensions?.close();
         browser?.dispose();
         quitting = true;
         app.quit();
     }).catch((error) => {
         closing = false;
-        dialog.showErrorBox('任务尚未停止', error instanceof Error ? error.message : '尚未收到退出确认。');
+        dialog.showErrorBox('任务尚未停止', clientError(error));
     });
 });
 app.on('window-all-closed', () => app.quit());

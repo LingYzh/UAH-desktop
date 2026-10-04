@@ -170,7 +170,7 @@ test('stop while write approval is pending expires approval and cannot resume or
 test('inherit, preset and inline children preserve correlated wait results without impersonating later root answers', async t => {
     let rootRound = 0;
     const f = await fixture(t, (body, response) => {
-        const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        const user = body.messages.filter(message => message.role === 'user' && !message.content?.startsWith('[UAH runtime context update v2]')).at(-1)?.content;
         if (user?.startsWith('CHILD')) { answer(response, `PRIVATE ${user}`); return; }
         rootRound++;
         if (rootRound === 1) answer(response, '', [{ name: 'list_agent_presets', args: {} }]);
@@ -214,7 +214,7 @@ test('inherit, preset and inline children preserve correlated wait results witho
 test('failed response after child delivery leaves durable receipt unconsumed', async t => {
     let parentRound = 0;
     const f = await fixture(t, (body, response) => {
-        const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        const user = body.messages.filter(message => message.role === 'user' && !message.content?.startsWith('[UAH runtime context update v2]')).at(-1)?.content;
         if (user === 'CHILD RECEIPT') { answer(response, 'Child complete.'); return; }
         parentRound++;
         if (parentRound === 1) answer(response, '', [{ name: 'spawn_agent', args: { prompt: 'CHILD RECEIPT', agent: { type: 'inherit' }, permissionMode: 'readonly' } }]);
@@ -245,7 +245,7 @@ test('permission escalation is rejected before any child endpoint request', asyn
 test('maximum depth blocks grandchildren and inherited context excludes historical children', async t => {
     let rootRound = 0;
     const f = await fixture(t, (body, response) => {
-        const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        const user = body.messages.filter(message => message.role === 'user' && !message.content?.startsWith('[UAH runtime context update v2]')).at(-1)?.content;
         if (user === 'CHILD DEPTH') {
             assert.ok(!(body.tools || []).some(value => (value as { function: { name: string } }).function.name === 'spawn_agent'));
             assert.match(body.messages.find(message => message.role === 'system')?.content || '', /UAH_MODULE:delegation.unavailable:v1/);
@@ -266,7 +266,7 @@ test('maximum depth blocks grandchildren and inherited context excludes historic
 test('concurrent child bound rejects extra child; root stop cancels owned pending child', async t => {
     let rounds = 0;
     const f = await fixture(t, (body, response) => {
-        const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        const user = body.messages.filter(message => message.role === 'user' && !message.content?.startsWith('[UAH runtime context update v2]')).at(-1)?.content;
         if (user === 'CHILD STALL') { response.writeHead(200, { 'content-type': 'text/event-stream' }); response.flushHeaders(); return; }
         if (++rounds === 1) answer(response, '', [
             { name: 'spawn_agent', args: { prompt: 'CHILD STALL', agent: { type: 'inherit' } } },
@@ -283,7 +283,7 @@ test('concurrent child bound rejects extra child; root stop cancels owned pendin
 
 test('restart recovers interrupted root and child runs and expires stale tool approval', async t => {
     const f = await fixture(t, (body, response) => {
-        const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        const user = body.messages.filter(message => message.role === 'user' && !message.content?.startsWith('[UAH runtime context update v2]')).at(-1)?.content;
         if (user === 'CHILD RECOVERY') answer(response, '', [{ name: 'write_file', args: { path: 'recovery.txt', content: 'x', expectedContent: null } }]);
         else if (!toolMessages(body).length) answer(response, '', [{ name: 'spawn_agent', args: { prompt: 'CHILD RECOVERY', agent: { type: 'inherit' }, context: { mode: 'none' } } }]);
         else { const agentId = JSON.parse(toolMessages(body)[0].content!).agentId; answer(response, '', [{ name: 'wait_agents', args: { agentIds: [agentId] } }]); }
@@ -304,7 +304,7 @@ test('restart recovers interrupted root and child runs and expires stale tool ap
 
 test('root model failure stops owned children and expires their pending approval', async t => {
     const f = await fixture(t, async (body, response) => {
-        const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        const user = body.messages.filter(message => message.role === 'user' && !message.content?.startsWith('[UAH runtime context update v2]')).at(-1)?.content;
         if (user === 'CHILD FAILURE') answer(response, '', [{ name: 'write_file', args: { path: 'failure.txt', content: 'x', expectedContent: null } }]);
         else if (!toolMessages(body).length) answer(response, '', [{ name: 'spawn_agent', args: { prompt: 'CHILD FAILURE', agent: { type: 'inherit' }, context: { mode: 'none' } } }]);
         else { await f.wait(state => state.approvals.some(item => item.status === 'pending')); response.writeHead(500); response.end('fixture error'); }
@@ -328,7 +328,7 @@ test('explicit child stop reason reaches waiting parent and survives restart wit
     let parentReceived = false;
     const reason = '需求已变更，请停止此子任务。';
     const f = await fixture(t, (body, response) => {
-        const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        const user = body.messages.filter(message => message.role === 'user' && !message.content?.startsWith('[UAH runtime context update v2]')).at(-1)?.content;
         if (user === 'CHILD STOP REASON') answer(response, '', [{ name: 'write_file', args: { path: 'child-reason.txt', content: 'x', expectedContent: null } }]);
         else if (!toolMessages(body).length) answer(response, '', [{ name: 'spawn_agent', args: { prompt: 'CHILD STOP REASON', agent: { type: 'inherit' }, context: { mode: 'none' } } }]);
         else if (toolMessages(body).length === 1) { const id = JSON.parse(toolMessages(body)[0].content!).agentId; answer(response, '', [{ name: 'wait_agents', args: { agentIds: [id] } }]); }
@@ -362,10 +362,11 @@ for (const gate of ['enabled', 'global-off', 'agent-off', 'model-off'] as const)
     assert.equal(names.includes('read_file'), gate !== 'model-off');
     const instructions = body.messages.find(message => message.role === 'system')?.content || '';
     assert.ok(instructions.includes(parsePromptProfile(f.settings.profiles[0].instructions).instructions));
-    assert.match(instructions, /UAH_MODULE:host.contract:v2/);
-    assert.match(instructions, /UAH_MODULE:context.tools:v1/);
+    assert.match(instructions, /UAH_MODULE:host.contract:v4/);
+    assert.match(instructions, /UAH_MODULE:context.tools:v4/);
     for (const module of ['delegation.spawn', 'delegation.wait', 'delegation.presets', 'delegation.limits']) {
-        assert.equal(instructions.includes(`UAH_MODULE:${module}:v1`), gate === 'enabled', module);
+        const version = module === 'delegation.presets' ? 2 : 1;
+        assert.equal(instructions.includes(`UAH_MODULE:${module}:v${version}`), gate === 'enabled', module);
     }
     assert.equal(instructions.includes('UAH_MODULE:delegation.unavailable:v1'), gate !== 'enabled');
     assert.equal(instructions.includes('UAH_MODULE:tools.none:v1'), gate === 'model-off');
@@ -375,7 +376,7 @@ test('nonblocking spawn permits independent parent work, zero/positive wait snap
     let childResponse: ServerResponse | undefined;
     let round = 0; let id = ''; let sawIndependentWork = false; let shortWaitReturned = false;
     const f = await fixture(t, (body, response) => {
-        const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        const user = body.messages.filter(message => message.role === 'user' && !message.content?.startsWith('[UAH runtime context update v2]')).at(-1)?.content;
         if (user === 'CHILD CONTROLLED') { childResponse = response; return; } // Explicit barrier: no child output until the test releases it.
         round++;
         if (round === 1) answer(response, '', [{ name: 'spawn_agent', args: { prompt: 'CHILD CONTROLLED', agent: { type: 'inherit' }, context: { mode: 'none' } } }]);
@@ -396,7 +397,7 @@ test('nonblocking spawn permits independent parent work, zero/positive wait snap
 test('wait rejects invalid timeout values and a run that is not this parent direct child', async t => {
     let rootId = ''; let childResponse: ServerResponse | undefined; let checked = false;
     const f = await fixture(t, (body, response) => {
-        const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        const user = body.messages.filter(message => message.role === 'user' && !message.content?.startsWith('[UAH runtime context update v2]')).at(-1)?.content;
         if (user === 'CHILD VALIDATION') { childResponse = response; return; }
         const results = toolMessages(body);
         if (!results.length) answer(response, '', [{ name: 'spawn_agent', args: { prompt: 'CHILD VALIDATION', agent: { type: 'inherit' }, context: { mode: 'none' } } }]);
@@ -421,7 +422,7 @@ test('wait rejects invalid timeout values and a run that is not this parent dire
 test('stop during a bounded wait aborts parent and owned paused child without awaiting the timeout', async t => {
     let parentRound = 0; let childStarted = false;
     const f = await fixture(t, (body, response) => {
-        const user = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        const user = body.messages.filter(message => message.role === 'user' && !message.content?.startsWith('[UAH runtime context update v2]')).at(-1)?.content;
         if (user === 'CHILD BOUNDED STOP') { childStarted = true; response.writeHead(200, { 'content-type': 'text/event-stream' }); response.flushHeaders(); return; }
         if (++parentRound === 1) answer(response, '', [{ name: 'spawn_agent', args: { prompt: 'CHILD BOUNDED STOP', agent: { type: 'inherit' }, context: { mode: 'none' } } }]);
         else { const id = JSON.parse(toolMessages(body)[0].content!).agentId; answer(response, '', [{ name: 'wait_agents', args: { agentIds: [id], timeoutMs: 60000 } }]); }

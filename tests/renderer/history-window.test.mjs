@@ -37,7 +37,7 @@ async function fixture(t, intercept) {
         return intercept?.(command, selectedView, server) ?? Promise.resolve(snapshot(server, selectedView));
     } } };
     setActivePinia(createPinia()); const workspace = useWorkspace();
-    t.after(() => workspace.dispose()); await workspace.initialize();
+    t.after(() => workspace.dispose()); await workspace.initialize(); await workspace.select('a');
     return { workspace, server, calls };
 }
 async function settleWatch() { await nextTick(); await delay(0); }

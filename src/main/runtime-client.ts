@@ -1,11 +1,16 @@
 import { utilityProcess, type UtilityProcess } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { Command, RuntimeEvent, Snapshot } from '../shared/contracts';
-import type { ApiConnection, ModelCatalog, ApiTestResult } from '../shared/endpoints';
+import type { ApiConnection, ModelCatalog, ApiTestResult, ProviderCatalogEntry } from '../shared/endpoints';
 import type { AgentCommand, AgentSettings } from '../shared/agents';
 import type { JournalViewQuery, JournalExportResult } from '../shared/journal-view';
 
-export interface RuntimeClientOptions { executionHelperPath?: string }
+export interface RuntimeClientOptions {
+    listProviders?: () => ProviderCatalogEntry[];
+    executionHelperPath?: string;
+    resolveExtensions?: () => import('../shared/extension-runtime').ExtensionRuntimeBundle;
+    readSkill?: (id: string, relativePath?: string) => { name: string; content: string; source: string };
+}
 
 export class RuntimeClient {
     private child: UtilityProcess;
@@ -34,6 +39,17 @@ export class RuntimeClient {
         // Attach immediately, including when startup fails before the first command.
         this.ready.catch(() => {});
         this.child.on('message', (message) => {
+            if (message?.kind === 'resolve-extensions' || message?.kind === 'read-skill' || message?.kind === 'list-providers') {
+                try {
+                    const result = message.kind === 'list-providers' ? options.listProviders?.() : message.kind === 'resolve-extensions' ? options.resolveExtensions?.()
+                        : options.readSkill?.(message.skillId, message.relativePath);
+                    if (!result) throw new Error('扩展服务不可用。');
+                    this.child.postMessage({ kind: 'extension-result', id: message.id, result });
+                } catch {
+                    this.child.postMessage({ kind: 'extension-result', id: message.id, error: message.kind === 'list-providers' ? 'Provider 目录读取失败，请检查模型与账号设置。' : '扩展配置或技能不可用，请检查安装与启用状态。' });
+                }
+                return;
+            }
             if (message?.kind === 'resolve-connection') {
                 try {
                     if (typeof message.endpointId !== 'string') throw new Error('端点 ID 无效。');
@@ -67,11 +83,19 @@ export class RuntimeClient {
         await this.ready;
         return this.request({ kind: 'command', command, view });
     }
+    async testConnector(id: string): Promise<unknown> {
+        await this.ready;
+        return this.request({ kind: 'test-connector', connectorId: id }, 45_000);
+    }
+    async nativeProbe(settings: import('../shared/native-codex').NativeCodexSettings): Promise<NonNullable<import('../shared/extension-runtime').NativeStatus['probe']>> {
+        await this.ready;
+        return this.request({ kind: 'native-probe', settings }, 45_000);
+    }
     async git(query: import('../shared/git').GitQuery): Promise<import('../shared/git').GitResult> {
         await this.ready;
         return this.request({ kind: 'git-query', query }, 30_000);
     }
-    async requestContext(query: { runId: string }): Promise<import('../shared/request-context').RequestContextDetail | null> {
+    async requestContext(query: import('../shared/request-context').ContextQuery): Promise<import('../shared/request-context').RequestContextDetail | null> {
         await this.ready;
         return this.request({ kind: 'request-context', query });
     }

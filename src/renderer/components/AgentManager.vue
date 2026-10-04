@@ -1,4 +1,6 @@
 <script setup>
+import { clientError } from '../../shared/client-error.js';
+
 import { computed, onMounted, ref, useId } from 'vue';
 import { UiButton, UiCard, UiDialog, UiField, UiInput, UiTextarea, UiSelect, UiSwitch, UiScrollArea, UiTabs, UiTabPanel, UiMarkdown, snackbar } from '@lingyzh/ui';
 import { openMarkdownLink } from '../markdown-links';
@@ -36,7 +38,7 @@ function modelExists(value) { return workspace.modelOptions.some(item => item.va
 async function perform(action) {
     if (busy.value) return;
     busy.value = true; error.value = '';
-    try { await action(); } catch (cause) { error.value = cause.message || '操作未完成。'; } finally { busy.value = false; }
+    try { await action(); } catch (cause) { error.value = clientError(cause); } finally { busy.value = false; }
 }
 onMounted(() => perform(() => workspace.agentCommand({ type: 'get' })));
 function openProfile(profile, kind = 'primary') {
@@ -100,7 +102,7 @@ function remove() { return perform(async () => { const settings = copy(workspace
                 </section>
                 <UiField v-if="draft.kind === 'subagent'" v-slot="{ controlAttrs }" label="可选绑定模型" for="agent-model" description="不指定时继承父代理模型；主代理启动时仍可指定 provider、模型及思考强度。生成参数在模型设置中维护。"><UiSelect v-model="modelValue" v-bind="controlAttrs" :disabled="busy"><option value="">继承父代理模型</option><optgroup v-for="group in workspace.modelGroups" :key="group.id" :label="group.label"><option v-for="model in group.models" :key="model.value" :value="model.value">{{ model.label }}</option></optgroup><option v-if="modelValue && !modelExists(modelValue)" :value="modelValue" disabled>已配置模型不可用</option></UiSelect></UiField>
                 <UiField v-if="draft.kind === 'primary'" v-slot="{ controlAttrs }" label="允许继续委派" for="agent-delegate" description="默认开启，允许主代理准备子任务；子代理权限始终不能超过它。全局子代理开关和深度上限同样有效。"><UiSwitch v-model="draft.allowDelegation" v-bind="controlAttrs" :disabled="busy" /></UiField>
-                <p class="muted small ma-0">主代理通过工具选择子代理模型、思考强度和上下文；权限不能超过父代理。</p>
+                <p class="muted small ma-0">主代理通过工具选择子代理模型、思考强度和上下文；可绑定 API 或已启用的 Codex 原生模型。绑定原生模型的角色由原生父任务启动。API 使用端点额度，原生使用本机账号；权限不能超过父代理，原生父任务的 API 子任务写入需逐次审批。</p>
             </div>
             <template #footer><div class="d-flex justify-end ga-2"><UiButton :disabled="busy" @click="requestClose('profile')">关闭</UiButton><UiButton variant="primary" :loading="busy" @click="saveProfile">保存 Agent</UiButton></div></template>
         </UiDialog>

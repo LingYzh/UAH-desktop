@@ -37,6 +37,9 @@ function integer(value: unknown, field: string, min = 0): number {
     return value;
 }
 function add(...values: number[]): number { return integer(values.reduce((sum, value) => sum + value, 0), 'budget total'); }
+function addSaturated(...values: number[]): number {
+    return values.reduce((sum, value) => sum >= Number.MAX_SAFE_INTEGER - value ? Number.MAX_SAFE_INTEGER : sum + value, 0);
+}
 const LIMIT_KEYS = ['maxRequests', 'maxTools', 'maxElapsedMs', 'maxEstimatedTokens', 'maxConcurrentRequests'];
 const OPTION_KEYS = [...LIMIT_KEYS, 'monotonicNow'];
 function complete(value: unknown, keys: string[]): asserts value is Record<string, unknown> {
@@ -93,6 +96,7 @@ export interface TaskTreeBudgetOptions {
     maxRequests?: number;
     maxTools?: number;
     maxElapsedMs?: number;
+    /** @deprecated Retained for compatibility; validated and ignored. */
     maxEstimatedTokens?: number;
     maxConcurrentRequests?: number;
     monotonicNow?: () => number;
@@ -105,7 +109,7 @@ export interface TaskTreeBudgetSnapshot {
     estimatedTokensExceeded: boolean;
     inFlight: number;
     elapsedMs: number;
-    limits: { maxRequests: number; maxTools: number; maxElapsedMs: number; maxEstimatedTokens: number; maxConcurrentRequests: number };
+    limits: { maxRequests: number; maxTools: number; maxElapsedMs: number; maxEstimatedTokens: number | null; maxConcurrentRequests: number };
 }
 /** Shared by a root and its descendants. Admission reservations are never refunded. */
 export class TaskTreeBudget {
@@ -116,7 +120,6 @@ export class TaskTreeBudget {
     private requestsUsed = 0;
     private toolsUsed = 0;
     private tokensCharged = 0;
-    private tokensExceeded = false;
     private elapsedBefore = 0;
     private readonly reservations = new Map<string, number>();
     constructor(options: TaskTreeBudgetOptions = {}) {
@@ -125,9 +128,10 @@ export class TaskTreeBudget {
             maxRequests: integer(options.maxRequests === undefined ? 64 : options.maxRequests, 'maxRequests', 1),
             maxTools: integer(options.maxTools === undefined ? 256 : options.maxTools, 'maxTools'),
             maxElapsedMs: integer(options.maxElapsedMs === undefined ? 30 * 60 * 1000 : options.maxElapsedMs, 'maxElapsedMs', 1),
-            maxEstimatedTokens: integer(options.maxEstimatedTokens === undefined ? 4_000_000 : options.maxEstimatedTokens, 'maxEstimatedTokens'),
+            maxEstimatedTokens: null,
             maxConcurrentRequests: integer(options.maxConcurrentRequests === undefined ? 4 : options.maxConcurrentRequests, 'maxConcurrentRequests', 1),
         };
+        if (options.maxEstimatedTokens !== undefined) integer(options.maxEstimatedTokens, 'maxEstimatedTokens');
         if (options.monotonicNow !== undefined && typeof options.monotonicNow !== 'function') throw new TypeError('Invalid monotonicNow.');
         this.now = options.monotonicNow as (() => number) | undefined ?? (() => performance.now());
         this.started = this.lastClock = this.now();
@@ -144,25 +148,32 @@ export class TaskTreeBudget {
         const reserved = integer(snapshot.tokensReserved, 'tokensReserved');
         const inFlight = integer(snapshot.inFlight, 'inFlight');
         const limits = snapshot.limits;
-        for (const key of LIMIT_KEYS) integer(limits[key], key, ['maxRequests', 'maxElapsedMs', 'maxConcurrentRequests'].includes(key) ? 1 : 0);
+        for (const key of LIMIT_KEYS) {
+            if (key === 'maxEstimatedTokens' && limits[key] === null) continue;
+            integer(limits[key], key, ['maxRequests', 'maxElapsedMs', 'maxConcurrentRequests'].includes(key) ? 1 : 0);
+        }
+        const legacyTokenLimit: number | null = limits.maxEstimatedTokens === null
+            ? null : integer(limits.maxEstimatedTokens, 'maxEstimatedTokens');
         if (typeof snapshot.estimatedTokensExceeded !== 'boolean'
             || typeof snapshot.elapsedMs !== 'number' || !Number.isFinite(snapshot.elapsedMs)
             || snapshot.elapsedMs < 0 || snapshot.elapsedMs > Number.MAX_SAFE_INTEGER
             || inFlight > requests || inFlight > (limits.maxConcurrentRequests as number)
             || reserved > charged || inFlight === 0 && reserved !== 0 || requests === 0 && charged !== 0
-            || charged > (limits.maxEstimatedTokens as number) && !snapshot.estimatedTokensExceeded
-            || snapshot.estimatedTokensExceeded && charged <= (limits.maxEstimatedTokens as number) && charged < Number.MAX_SAFE_INTEGER) {
+            || legacyTokenLimit === null && snapshot.estimatedTokensExceeded
+            || legacyTokenLimit !== null && charged > legacyTokenLimit && !snapshot.estimatedTokensExceeded
+            || legacyTokenLimit !== null && snapshot.estimatedTokensExceeded && charged <= legacyTokenLimit && charged < Number.MAX_SAFE_INTEGER) {
             throw new TypeError('Inconsistent budget snapshot.');
         }
-        const restoredOptions: TaskTreeBudgetOptions = { ...limits };
+        const restoredOptions: TaskTreeBudgetOptions = {
+            maxRequests: limits.maxRequests as number, maxTools: limits.maxTools as number,
+            maxElapsedMs: limits.maxElapsedMs as number, maxConcurrentRequests: limits.maxConcurrentRequests as number,
+        };
         for (const key of OPTION_KEYS) if (options[key] !== undefined) Object.defineProperty(restoredOptions, key, { value: options[key], enumerable: true, configurable: true, writable: true });
         const restored = new TaskTreeBudget(restoredOptions);
         restored.requestsUsed = requests;
         restored.toolsUsed = tools;
         restored.tokensCharged = charged;
         restored.elapsedBefore = snapshot.elapsedMs;
-        // MAX_SAFE may be a saturated aggregate: an explicit increase cannot prove headroom.
-        restored.tokensExceeded = charged === Number.MAX_SAFE_INTEGER || charged > restored.limits.maxEstimatedTokens;
         return restored;
     }
     private elapsed(): number {
@@ -176,26 +187,22 @@ export class TaskTreeBudget {
     /** Settlement is evidence only; callers check before authorizing more effects. */
     check(): void {
         this.admitTime();
-        if (this.tokensExceeded || this.tokensCharged > this.limits.maxEstimatedTokens) throw new BudgetExceededError('estimated_tokens');
     }
     reserveRequest(estimatedTokens: number): string {
         integer(estimatedTokens, 'estimatedTokens'); this.check();
         if (this.requestsUsed >= this.limits.maxRequests) throw new BudgetExceededError('requests');
         if (this.reservations.size >= this.limits.maxConcurrentRequests) throw new BudgetExceededError('concurrent_requests');
-        if (estimatedTokens > this.limits.maxEstimatedTokens - this.tokensCharged) throw new BudgetExceededError('estimated_tokens');
         const id = randomUUID(); this.reservations.set(id, estimatedTokens);
-        this.requestsUsed++; this.tokensCharged += estimatedTokens; return id;
+        this.requestsUsed++; this.tokensCharged = addSaturated(this.tokensCharged, estimatedTokens); return id;
     }
     settleRequest(id: string, reportedTokens: number | null): void {
         if (typeof id !== 'string' || !this.reservations.has(id)) throw new TypeError('Unknown or already settled request reservation.');
         if (reportedTokens !== null) integer(reportedTokens, 'reportedTokens');
         const reserved = this.reservations.get(id)!;
         const increment = Math.max(reserved, reportedTokens ?? reserved) - reserved;
-        const charged = this.tokensCharged + increment;
+        const charged = addSaturated(this.tokensCharged, increment);
         this.reservations.delete(id);
-        this.tokensExceeded ||= !Number.isSafeInteger(charged) || charged > this.limits.maxEstimatedTokens;
-        // Saturate only an unrepresentable aggregate; never wrap or admit it.
-        this.tokensCharged = Math.min(Number.MAX_SAFE_INTEGER, charged);
+        this.tokensCharged = charged;
     }
     reserveTools(count: number): void {
         integer(count, 'tool count'); this.check();
@@ -204,8 +211,8 @@ export class TaskTreeBudget {
     }
     snapshot(): TaskTreeBudgetSnapshot {
         return { requestsUsed: this.requestsUsed, toolsUsed: this.toolsUsed, tokensCharged: this.tokensCharged,
-            estimatedTokensExceeded: this.tokensExceeded,
-            tokensReserved: [...this.reservations.values()].reduce((sum, value) => sum + value, 0),
+            estimatedTokensExceeded: false,
+            tokensReserved: addSaturated(...this.reservations.values()),
             inFlight: this.reservations.size, elapsedMs: this.elapsed(), limits: { ...this.limits } };
     }
 }

@@ -64,7 +64,7 @@ function loadConnection(): ApiConnection {
         progress('decrypt_key');
         if (row.key_blob !== null && !safeStorage.isEncryptionAvailable()) throw new Error('key_unavailable');
         const apiKey = row.key_blob === null ? '' : safeStorage.decryptString(Buffer.from(row.key_blob as Uint8Array));
-        return { ...draft, id: draft.id!, enabled: true, apiKey };
+        return { ...draft, providerId: draft.providerId ?? undefined, id: draft.id!, enabled: true, apiKey };
     } finally {
         database.close();
     }

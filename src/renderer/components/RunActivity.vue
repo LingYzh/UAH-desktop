@@ -1,5 +1,5 @@
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { UiActivity, UiButton, UiCodeBlock, UiDiff, UiMarkdown } from '@lingyzh/ui';
 import { useWorkspace, stateLabels } from '../stores/workspace';
 import { presentTool } from '../tool-presentation';
@@ -9,6 +9,13 @@ const props = defineProps({ run: { type: Object, required: true }, activity: { t
 const workspace = useWorkspace();
 const view = computed(() => workspace.activityView(props.run));
 const expanded = computed(() => view.value.expanded);
+// Keep cold disclosure bodies out of the DOM; retain them after first opening
+// so closing transitions and local copy/scroll state remain intact.
+const contentReady = ref(false);
+const rawOpen = ref(false);
+const rawReady = ref(false);
+watch(() => Boolean(expanded.value[props.activity.id]), open => { if (open) contentReady.value = true; }, { immediate: true });
+watch(rawOpen, open => { if (open) rawReady.value = true; });
 const child = computed(() => workspace.snapshot.runs.find(run => run.id === props.activity.childRunId));
 const directory = computed(() => workspace.snapshot.sessions.find(session => session.id === props.run.sessionId)?.directory);
 const tool = computed(() => ['tool', 'agent'].includes(props.activity.kind) ? presentTool(props.activity, workspace.snapshot.artifacts, { runId: props.run.id, directory: directory.value }) : null);
@@ -46,15 +53,17 @@ function viewChild() {
 <template>
     <div v-if="activity.kind === 'text'" class="assistant-message mb-4"><UiMarkdown :source="activity.content" :streaming="live" @link-click="openMarkdownLink" /></div>
     <UiActivity v-else v-model:open="expanded[activity.id]" variant="inline" :icon="icon" :title="title" :filename="tool?.path?.split(/[\\/]/).at(-1)" :added="counts?.added ?? undefined" :removed="counts?.removed ?? undefined" :status="status === 'completed' ? '' : stateLabels[status] || status" :tone="tone" :scrollable="activity.kind === 'reasoning'">
-        <UiMarkdown v-if="activity.kind === 'reasoning'" :source="activity.content" :streaming="Boolean(expanded[activity.id] && live && activity.status === 'running')" @link-click="openMarkdownLink" />
-        <div v-else-if="tool" class="d-flex flex-column ga-3">
+        <UiMarkdown v-if="contentReady && activity.kind === 'reasoning'" :source="activity.content" :streaming="Boolean(expanded[activity.id] && live && activity.status === 'running')" @link-click="openMarkdownLink" />
+        <div v-else-if="contentReady && tool" class="d-flex flex-column ga-3">
+            <p v-if="tool.originalToolName || tool.toolName" class="muted small ma-0">工具：<code>{{ tool.originalToolName || tool.toolName }}</code></p>
             <UiDiff v-if="tool.diffSource" compact :inspectable="Boolean(tool.artifactId)" :path="displayFilePath(tool.path, directory)" :before="tool.before" :after="tool.after" :proposed="tool.diffSource === 'proposal'" @inspect="inspect" />
             <template v-else><UiCodeBlock v-if="tool.language" :code="tool.usage" :language="tool.language" max-height="240px" dense /><p v-else class="small break-word ma-0">{{ tool.usage }}</p></template>
             <UiCodeBlock v-if="tool.result && (!tool.diffSource || status === 'failed')" :code="tool.result" language="text" max-height="320px" dense />
             <p v-else-if="!tool.diffSource && !tool.result" class="muted small ma-0">{{ ['running', 'approval'].includes(status) ? '等待执行结果…' : '没有返回结果。' }}</p>
+            <UiActivity v-if="tool.rawResult" v-model:open="rawOpen" variant="inline" title="原始返回" :scrollable="false"><UiCodeBlock v-if="rawReady" :code="tool.rawResult" language="text" max-height="320px" dense /></UiActivity>
             <template v-if="child"><p class="muted small ma-0">{{ child.effective.modelId }} · {{ stateLabels[child.state] }}</p><UiButton size="sm" @click="viewChild">查看子代理会话</UiButton></template>
         </div>
-        <p v-else class="muted small">活动详情不可用。</p>
+        <p v-else-if="contentReady" class="muted small">活动详情不可用。</p>
         <template v-if="!readonly && approvals.length" #actions><div v-for="approval in approvals" :key="approval.requestId"><p class="small break-word">{{ tool?.diffSource ? '批准后应用上方文件修改。' : approval.summary }}</p><p class="small break-word">{{ approval.path }}</p><div class="d-flex ga-2"><UiButton size="sm" variant="primary" :disabled="workspace.busy" @click="workspace.resolve(approval, 'approve')">批准本次操作</UiButton><UiButton size="sm" :disabled="workspace.busy" @click="workspace.resolve(approval, 'reject')">拒绝</UiButton></div></div></template>
     </UiActivity>
 </template>

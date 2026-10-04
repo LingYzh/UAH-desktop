@@ -37,15 +37,17 @@ test('legacy full snapshots retain sidebar root states, last-any-run search stat
     assert.equal(overviewForSnapshot(scoped), scoped.overview);
 });
 
-test('initialize loads overview first and then only the selected session body', async t => {
-    const f = await fixture(t); assert.deepEqual(f.snapshots().map(call => call.view.sessionId), [null, 'a']);
-    assert.equal(f.workspace.snapshot.viewSessionId, 'a'); assert.deepEqual(f.workspace.snapshot.runs.map(item => item.sessionId), ['a']);
+test('initialize loads a new-session overview without a session body until a history item is selected', async t => {
+    const f = await fixture(t); assert.deepEqual(f.snapshots().map(call => call.view.sessionId), [null]);
+    assert.equal(f.workspace.selectedId, null); assert.equal(f.workspace.snapshot.viewSessionId, null); assert.deepEqual(f.workspace.snapshot.runs, []);
     assert.equal(f.workspace.snapshot.sessions.length, 2); assert.equal(f.workspace.snapshot.overview.rootStates.b.id, 'b-run');
+    await f.workspace.select('a'); assert.deepEqual(f.snapshots().map(call => call.view.sessionId), [null, 'a']);
+    assert.equal(f.workspace.snapshot.viewSessionId, 'a'); assert.deepEqual(f.workspace.snapshot.runs.map(item => item.sessionId), ['a']);
     await f.workspace.select('b'); assert.equal(f.workspace.snapshot.viewSessionId, 'b'); assert.deepEqual(f.workspace.runs.map(item => item.id), ['b-run']);
     f.workspace.newSession(); await delay(10); assert.equal(f.workspace.snapshot.viewSessionId, null); assert.deepEqual(f.workspace.snapshot.runs, []);
 });
 
-test('initialize starts the selected-session query even when an event triggered an overview query is still pending', async t => {
+test('an explicit selection starts a session query while an event-triggered overview query remains pending', async t => {
     const server = { sessions: [session('a'), session('b')], runs: [run('a', 'a-run')], approvals: [], artifacts: [] };
     const endpointsEntered = deferred(); const endpointsGate = deferred(); const pendingStarted = deferred(); const overviewGate = deferred();
     const calls = []; let listener; let overviewQueries = 0;
@@ -59,13 +61,17 @@ test('initialize starts the selected-session query even when an event triggered 
     setActivePinia(createPinia()); const workspace = useWorkspace(); t.after(() => workspace.dispose()); const initialized = workspace.initialize();
     await endpointsEntered.promise; listener({ type: 'session-created', sessionId: 'b', runId: '', sequence: 0, payload: {} }); await pendingStarted.promise;
     endpointsGate.resolve({ endpoints: [] }); await initialized;
-    assert.deepEqual(calls, [null, null, 'a']); assert.equal(workspace.ready, true); assert.equal(workspace.snapshot.viewSessionId, 'a');
+    assert.deepEqual(calls, [null, null]); assert.equal(workspace.ready, true); assert.equal(workspace.selectedId, null);
+    const selecting = workspace.select('a');
+    assert.deepEqual(calls, [null, null, 'a']); await selecting;
+    assert.equal(workspace.snapshot.viewSessionId, 'a'); assert.equal(workspace.runs[0].id, 'a-run');
     overviewGate.resolve(view(server, null)); await delay(10); assert.equal(workspace.snapshot.viewSessionId, 'a'); assert.equal(workspace.runs[0].id, 'a-run');
 });
 
 test('a late old-session refresh cannot overwrite a newer selection or temporarily unlock its Agent', async t => {
     const slow = deferred(); let hold = false;
     const f = await fixture(t, (command, selectedView) => hold && command.type === 'snapshot' && selectedView.sessionId === 'b' ? slow.promise : undefined);
+    await f.workspace.select('a');
     hold = true; const pending = f.workspace.select('b'); assert.equal(f.workspace.agentLocked, true); assert.equal(f.workspace.configurationReady, false);
     const agent = f.workspace.currentAgent; f.workspace.currentAgent = 'unwanted-override'; assert.equal(f.workspace.currentAgent, agent);
     f.workspace.currentInput = 'Must not send while this view is loading'; await f.workspace.send();
@@ -77,6 +83,7 @@ test('a late old-session refresh cannot overwrite a newer selection or temporari
 
 test('a late mutation reply for the old session cannot replace the current session body', async t => {
     const slow = deferred(); const f = await fixture(t, command => command.type === 'edit-reply' ? slow.promise : undefined);
+    await f.workspace.select('a');
     const pending = f.workspace.historyCommand({ type: 'edit-reply', runId: 'a-run', output: 'edited' }); await f.workspace.select('b');
     slow.resolve(view(f.server, 'a')); await pending; await delay(10);
     assert.equal(f.workspace.selectedId, 'b'); assert.equal(f.workspace.snapshot.viewSessionId, 'b'); assert.deepEqual(f.workspace.runs.map(item => item.id), ['b-run']);
@@ -85,6 +92,7 @@ test('a late mutation reply for the old session cannot replace the current sessi
 
 test('other-session token deltas are ignored while run-state and new-run events refresh overview', async t => {
     const f = await fixture(t, undefined, [run('a', 'a-run', 'running'), run('b', 'b-run', 'running')]);
+    await f.workspace.select('a');
     for (let sequence = 2; sequence < 100; sequence++) f.emit({ type: 'delta', sessionId: 'b', runId: 'b-run', turnId: 'b-run-turn', sequence, payload: { text: 'foreign', offset: 0 } });
     await delay(10); assert.equal(f.snapshots().length, 2); assert.equal(f.workspace.runs[0].output, '');
     const completed = { ...f.server.runs[0], state: 'completed', sequence: 2 }; f.server.runs[0] = completed; f.emit(stateEvent(completed));

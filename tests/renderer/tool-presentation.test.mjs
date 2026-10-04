@@ -1,8 +1,98 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { presentTool, legacyToolMetadata } from '../../src/renderer/tool-presentation.js';
+import { presentTool, legacyToolMetadata, nativeReasoningSummary, coalesceNativeActivities } from '../../src/renderer/tool-presentation.js';
 
 const activity = (name, args, result = '', status = 'completed') => ({ id: 'activity', kind: 'tool', title: name, content: `${JSON.stringify(args)}\n\n${result}`, status, tool: { name, arguments: args, result } });
+
+test('native bridge duplicates coalesce only by matching call identity and tool', () => {
+    const bridge = { ...activity('uah_list_agent_presets', {}, '{}'), id: 'uah:call-1' };
+    const native = { ...activity('native:dynamicToolCall', { tool: 'uah_list_agent_presets', arguments: {} }, '{}'), id: 'native:call-1' };
+    assert.deepEqual(coalesceNativeActivities([bridge, native]), [bridge]);
+    assert.equal(coalesceNativeActivities([bridge, { ...native, id: 'native:call-2' }]).length, 2);
+    assert.equal(coalesceNativeActivities([{ ...bridge, status: 'running' }, native]).length, 2);
+    assert.equal(coalesceNativeActivities([bridge, { ...native, tool: { ...native.tool, arguments: { tool: 'other' } } }]).length, 2);
+    const legacy = { ...native, tool: undefined, content: JSON.stringify({ type: 'dynamicToolCall', id: 'call-1', tool: 'uah_list_agent_presets', arguments: {}, contentItems: [] }) };
+    assert.deepEqual(coalesceNativeActivities([bridge, legacy]), [bridge]);
+});
+
+test('provider catalog is visible even when no child presets are enabled', () => {
+    const shown = presentTool(activity('list_agent_presets', {}, JSON.stringify({ profiles: [], providerCatalogAvailable: true, providers: [{ providerId: 'company', name: '公司', models: ['model-a'], runtimeId: 'api' }] })));
+    assert.match(shown.result, /Provider ID：company/);
+    assert.match(shown.result, /公司/);
+    assert.match(shown.result, /model-a/);
+    assert.match(shown.result, /未探测服务在线/);
+});
+
+test('known UAH bridge activities use the shared friendly presentation and retain the raw result', () => {
+    const raw = JSON.stringify({
+        currentProviderId: 'fixture', currentModelId: 'model-a', providerCatalogAvailable: true,
+        profiles: [], providers: [{ providerId: 'fixture', name: 'Fixture API', models: ['model-a'], runtimeId: 'api' }],
+    });
+    const shown = presentTool(activity('uah_list_agent_presets', {}, raw));
+    assert.equal(shown.title, '查询子代理角色');
+    assert.equal(shown.toolName, 'list_agent_presets');
+    assert.equal(shown.originalToolName, 'uah_list_agent_presets');
+    assert.match(shown.result, /Fixture API/);
+    assert.equal(shown.rawResult, raw);
+
+    const skillRaw = JSON.stringify({ name: 'Review skill', source: 'builtin', content: 'Skill body.' });
+    const skill = presentTool(activity('uah_read_skill', { id: 'review', path: 'references/checks.md' }, skillRaw));
+    assert.equal(skill.title, '读取技能');
+    assert.equal(skill.toolName, 'read_skill');
+    assert.equal(skill.originalToolName, 'uah_read_skill');
+    assert.match(skill.usage, /references\/checks\.md/);
+    assert.match(skill.result, /Review skill[\s\S]*Skill body\./);
+    assert.equal(skill.rawResult, skillRaw);
+});
+
+test('native dynamic UAH tool wrappers unwrap into the same friendly delegation summary', () => {
+    const raw = JSON.stringify([{ agentId: 'child-1', status: 'completed', output: 'Finished the delegated task.' }]);
+    const dynamic = {
+        id: 'native:dynamic-tool', kind: 'tool', title: '原生动态工具', status: 'completed', content: raw,
+        tool: { name: 'native:dynamicToolCall', arguments: { tool: 'uah_wait_agents', arguments: { agentIds: ['child-1'], timeoutMs: 0 } }, result: raw },
+    };
+    const shown = presentTool(dynamic);
+    assert.equal(shown.title, '等待子代理');
+    assert.equal(shown.toolName, 'wait_agents');
+    assert.equal(shown.originalToolName, 'uah_wait_agents');
+    assert.match(shown.usage, /查询 1 个子代理状态/);
+    assert.match(shown.result, /Finished the delegated task\./);
+    assert.equal(shown.rawResult, raw);
+});
+
+test('unknown native dynamic and MCP tools preserve their true name, arguments, and result', () => {
+    const dynamic = {
+        id: 'native:dynamic-unknown', kind: 'tool', title: '原生动态工具', status: 'completed',
+        tool: { name: 'native:dynamicToolCall', arguments: { tool: 'future_tool_v7', arguments: { limit: 3, query: 'exact' } }, result: 'Future result.' },
+    };
+    const shownDynamic = presentTool(dynamic);
+    assert.match(shownDynamic.title, /future_tool_v7/);
+    assert.equal(shownDynamic.toolName, 'future_tool_v7');
+    assert.equal(shownDynamic.originalToolName, 'future_tool_v7');
+    assert.match(shownDynamic.usage, /"query": "exact"/);
+    assert.equal(shownDynamic.result, 'Future result.');
+
+    const unknownMcp = activity('mcp_vendor__lookup', { query: 'unmodified args' }, 'Unmodified result.');
+    const shownMcp = presentTool(unknownMcp);
+    assert.match(shownMcp.title, /mcp_vendor__lookup/);
+    assert.equal(shownMcp.toolName, 'mcp_vendor__lookup');
+    assert.match(shownMcp.usage, /"query": "unmodified args"/);
+    assert.equal(shownMcp.result, 'Unmodified result.');
+
+    const missing = presentTool({ id: 'unknown', kind: 'tool', title: 'future', content: '', status: 'completed', tool: { name: 'future', arguments: {} } });
+    assert.equal(missing.result, '原始记录没有结果。');
+    const pending = presentTool({ id: 'pending', kind: 'tool', title: 'future', content: '', status: 'running', tool: { name: 'future', arguments: {} } });
+    assert.equal(pending.result, '', 'an in-flight call must leave the UI pending instead of claiming a terminal result is missing');
+});
+
+test('bridge errors retain the original error text rather than parsing it as a successful result', () => {
+    const raw = 'Provider resolution failed safely.';
+    const shown = presentTool(activity('uah_spawn_agent', { providerId: 'missing', modelId: 'm' }, raw, 'failed'));
+    assert.equal(shown.title, '启动子代理');
+    assert.equal(shown.originalToolName, 'uah_spawn_agent');
+    assert.equal(shown.result, raw);
+    assert.equal(shown.rawResult, undefined);
+});
 
 test('friendly usage covers workspace, delegation and planning tools without parameter JSON', () => {
     const cases = [
@@ -100,4 +190,41 @@ test('legacy completed edit fallback requires explicit run, normalized path, exa
     assert.equal(presentTool(absolute, [snapshot], { runId: 'run' }).artifactId, snapshot.id);
     const posix = { ...old, content: JSON.stringify({ path: '/project/File.txt', expectedContent: 'before', content: 'after' }) + '\n\nFile written.' };
     assert.equal(presentTool(posix, [{ ...snapshot, path: '/project/file.txt' }], { runId: 'run' }).diffSource, undefined);
+});
+
+test('native tool metadata displays structured details and keeps results as plain text', () => {
+    const command = {
+        id: 'native:cmd-1', kind: 'tool', title: '原生命令', content: '# literal result', status: 'completed',
+        tool: { name: 'native:commandExecution', arguments: { command: 'git status', cwd: 'D:/project' }, result: '# literal result' },
+    };
+    assert.deepEqual(presentTool(command), { title: '原生命令', toolName: 'commandExecution', usage: 'git status\n目录：D:/project', result: '# literal result' });
+
+    const mcp = {
+        id: 'native:mcp-1', kind: 'tool', title: 'Codex · mcpToolCall', status: 'completed',
+        content: JSON.stringify({ id: 'mcp-1', type: 'mcpToolCall', status: 'completed', server: 'docs', tool: 'search', arguments: { query: 'schema' }, result: { content: [{ type: 'text', text: 'Found two pages.' }] } }),
+    };
+    const shown = presentTool(mcp);
+    assert.equal(shown.title, 'MCP 工具');
+    assert.match(shown.usage, /docs \/ search/);
+    assert.match(shown.usage, /schema/);
+    assert.equal(shown.result, 'Found two pages.');
+});
+
+test('legacy native raw JSON is projected, and old reasoning shows only its public summary', () => {
+    const legacyCommand = {
+        id: 'native:cmd-old', kind: 'tool', title: 'Codex · commandExecution', status: 'completed',
+        content: JSON.stringify({ id: 'cmd-old', type: 'commandExecution', status: 'completed', command: 'Get-Location', cwd: 'D:/UAH', aggregatedOutput: 'D:/UAH', exitCode: 0 }),
+    };
+    assert.equal(presentTool(legacyCommand).usage, 'Get-Location\n目录：D:/UAH');
+    assert.match(presentTool(legacyCommand).result, /退出代码：0/);
+
+    const oldReasoning = {
+        id: 'native:reasoning-old', kind: 'reasoning', content: JSON.stringify({
+            id: 'reasoning-old', type: 'reasoning', summary: ['A public update.'],
+            content: [{ type: 'reasoning_text', text: 'PRIVATE THOUGHT' }], encrypted_content: 'ENCRYPTED',
+        }),
+    };
+    assert.equal(nativeReasoningSummary(oldReasoning), 'A public update.');
+    assert.equal(nativeReasoningSummary({ ...oldReasoning, content: JSON.stringify({ type: 'reasoning', encrypted_content: 'ENCRYPTED' }) }), '公开推理摘要不可用。');
+    assert.ok(!nativeReasoningSummary(oldReasoning).includes('PRIVATE'));
 });

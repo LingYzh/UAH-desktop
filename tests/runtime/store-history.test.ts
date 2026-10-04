@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { RuntimeStore, type RuntimeStoreOptions, type RunPageOptions } from '../../src/runtime/store';
+import { RuntimeStore, RUNTIME_SCHEMA_VERSION, type RuntimeStoreOptions, type RunPageOptions } from '../../src/runtime/store';
 import type { SessionRecord, RunRecord, ArtifactSnapshot, RuntimeEvent, ApprovalRecord } from '../../src/shared/contracts';
 
 const timestamp = '2026-10-01T00:00:00.000Z';
@@ -143,7 +143,7 @@ test('existing schema v3 receives indexes without deleting or rewriting history'
         assert.deepEqual(reopened.readRunPage().runs, [run('preserved')]);
         const inspect = new DatabaseSync(join(directory, 'runtime.sqlite'));
         try {
-            assert.equal((inspect.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 3);
+            assert.equal((inspect.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, RUNTIME_SCHEMA_VERSION);
             assert.ok(inspect.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='runs_session_created_at'").get());
         } finally { inspect.close(); }
     } finally { reopened.close(); }

@@ -1,4 +1,10 @@
-# GPT 提示词系统与未来 Codex 运行时
+# GPT 提示词系统与 Codex 运行时
+
+当前权限与指令已更新为三档原生预设、原生 `/plan` 和 `/goal`，保留本机 MCP；模型名称、Provider key 独立保存和客户端中文错误提示见 [NATIVE-CODEX-COMMANDS.md](NATIVE-CODEX-COMMANDS.md)。
+
+最新状态（2026-10-03）：已按 D09 接入 Codex app-server，使用 native-default；实际接口、权限映射、覆盖限制和验收见 [HARNESS-D09.md](HARNESS-D09.md)。下文 2026-09-27 的“尚未接入／设计建议”是保留的来源与历史设计，不代表当前实现。实机核验版本为 0.156.1；不是本资料包的 0.157.1。
+
+绑定配置已支持 Windows 自动扫描、基础启动参数和帮助弹窗，模型通过 model/list 自动获取。启用仅提供新的原生轮次入口，关闭不会停止当前任务。已接入 UAH 动态工具桥：原生父任务可启动 API 或原生 Codex 子代理，共用任务树、取消、角色路由及宿主预算；原生自身协作工具关闭。原生预算仅覆盖宿主可观察的调用。API 父任务暂不能反向启动原生子任务。内置 grilling 与 powershell-windows-cli 随应用提供，详见 [NATIVE-DELEGATION.md](NATIVE-DELEGATION.md)。
 
 状态：2026-09-27。当前 API 提示词已进一步升级为[条件装配](CONDITIONAL-PROMPTS.md)，原生 Codex 运行时尚未接入。下文保留 v7 分层预设的来源与设计依据；v8 的配置与装配行为以上述文档为准。本轮已通过 kiro 验证真实 API 模型调用，但未启动原生 Codex 或接入订阅认证。
 

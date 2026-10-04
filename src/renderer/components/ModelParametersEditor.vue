@@ -1,4 +1,6 @@
 <script setup>
+import { clientError } from '../../shared/client-error.js';
+
 import { computed, ref, watch } from 'vue';
 import { UiDialog, UiButton, UiField, UiInput, UiSelect, UiTextarea } from '@lingyzh/ui';
 import { defaultModelParameters, parseModelParameters } from '../../shared/model-parameters';
@@ -20,7 +22,7 @@ watch(() => props.open, open => {
 });
 function apply() {
     try { emit('apply', { id: props.modelId, parameters: parseModelParameters(JSON.parse(JSON.stringify(form.value))) }); emit('update:open', false); }
-    catch (cause) { error.value = cause.message; }
+    catch (cause) { error.value = clientError(cause); }
 }
 </script>
 

@@ -17,6 +17,11 @@ function deferred<T = void>() {
     return { promise, resolve: resolveValue };
 }
 interface Body { messages: Array<{ role: string; content?: string }>; }
+const runtimeContextMarker = '[UAH runtime context update v2]';
+const stripRuntimeContextUpdate = (content: string): string => {
+    const marker = content.indexOf(runtimeContextMarker);
+    return marker < 0 ? content : content.slice(0, marker).trimEnd();
+};
 function answer(response: ServerResponse, calls: Array<{ name: string; args: unknown }> = []) {
     response.writeHead(200, { 'content-type': 'text/event-stream' });
     const delta = calls.length ? { tool_calls: calls.map((call, index) => ({ index, id: `call-${index}`, type: 'function', function: { name: call.name, arguments: JSON.stringify(call.args) } })) } : { content: 'Settled.' };
@@ -32,7 +37,7 @@ async function fixture(t: { after(fn: () => Promise<void>): void }) {
         try {
             const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
             const body = JSON.parse(Buffer.concat(chunks).toString('utf8')) as Body;
-            const prompt = body.messages.filter(item => item.role === 'user').at(-1)?.content;
+            const prompt = body.messages.filter(item => item.role === 'user').map(item => stripRuntimeContextUpdate(item.content ?? '')).filter(Boolean).at(-1);
             const results = body.messages.filter(item => item.role === 'tool');
             if ((prompt === 'CHILD A' || prompt === 'CHILD B') && results.length === 0) {
                 childResponses.set(prompt, response); if (childResponses.size === 2) childrenReady.resolve(); return;

@@ -109,6 +109,19 @@ function connection(baseUrl: string, revision = 1): ApiConnection {
     };
 }
 
+function isRuntimeContextUpdate(message: { role: string; content: unknown }): boolean {
+    return message.role === 'user' && typeof message.content === 'string'
+        && message.content.includes('[UAH runtime context update v2]');
+}
+
+function visibleApiMessages(messages: Array<{ role: string; content: string }>): Array<{ role: string; content: string }> {
+    return messages.filter(message => message.role !== 'system').flatMap(message => {
+        const marker = message.content.indexOf('[UAH runtime context update v2]');
+        const content = marker < 0 ? message.content : message.content.slice(0, marker).trimEnd();
+        return content ? [{ role: message.role, content }] : [];
+    });
+}
+
 function cleanup(root: string): void {
     const target = resolve(root);
     if (dirname(target) !== resolve(tmpdir()) || !basename(target).startsWith('uah-api-test-')) {
@@ -130,6 +143,38 @@ async function waitForSnapshot(
     assert.equal(predicate(snapshot), true, 'runtime did not reach the expected state');
     return snapshot;
 }
+
+test('API runs fail closed while the V2 context engine is operationally paused', async () => {
+    const previous = process.env.UAH_CONTEXT_V2_ENABLED;
+    process.env.UAH_CONTEXT_V2_ENABLED = '0';
+    let root: string | undefined;
+    let fixture: Fixture | undefined;
+    let supervisor: Supervisor | undefined;
+    try {
+        root = mkdtempSync(join(tmpdir(), 'uah-api-test-'));
+        fixture = await createFixture();
+        const profile: AgentProfile = { id: 'default', name: 'Agent', description: '', instructions: 'Agent instructions',
+            enabled: true, kind: 'primary', allowDelegation: true };
+        supervisor = new Supervisor({ dataDirectory: root, delayMs: 0, onEvent: () => {},
+            resolveConnection: async () => connection(fixture!.baseUrl), resolveAgent: () => profile });
+        const created = await supervisor.execute({ type: 'create-session', title: 'Paused V2', directory: null,
+            selection: { endpointId: 'endpoint-1', modelId: 'test-model' } });
+        const started = await supervisor.execute({ type: 'start-run', sessionId: created.sessions[0].id, input: 'must not dispatch' });
+        const failed = await waitForSnapshot(supervisor, snapshot => snapshot.runs.some(run => run.id === started.runs[0].id && run.state === 'failed'));
+        const run = failed.runs.find(item => item.id === started.runs[0].id)!;
+        assert.match(run.error ?? '', /API 上下文引擎 V2 已由运行配置暂停/);
+        assert.equal(fixture.requests.length, 0);
+    } finally {
+        try {
+            if (supervisor) await supervisor.shutdown();
+            if (fixture) await fixture.close();
+            if (root) cleanup(root);
+        } finally {
+            if (previous === undefined) delete process.env.UAH_CONTEXT_V2_ENABLED;
+            else process.env.UAH_CONTEXT_V2_ENABLED = previous;
+        }
+    }
+});
 
 test('session agent stays locked across model changes, profile deletion and restart', async () => {
     const root = mkdtempSync(join(tmpdir(), 'uah-api-test-'));
@@ -166,9 +211,12 @@ test('session agent stays locked across model changes, profile deletion and rest
         await waitForSnapshot(supervisor, (snapshot) => snapshot.runs.at(-1)?.state === 'completed');
         const secondMessages = fixture.requests[1].body.messages as Array<{ role: string; content: string }>;
         assert.match(secondMessages[0].content, /UAH_MODULE:agent.instructions:v1\s*-->\nOriginal instructions/);
-        assert.match(secondMessages[0].content, /UAH_MODULE:host.contract:v2/);
+        assert.match(secondMessages[0].content, /UAH_MODULE:host.contract:v4/);
         assert.doesNotMatch(secondMessages[0].content, /Changed instructions/);
-        assert.deepEqual(secondMessages.filter(message => message.role !== 'system'), [{ role: 'user', content: 'two' }]);
+        assert.equal(secondMessages.some(message => isRuntimeContextUpdate(message)), true);
+        // historyTurns: 0 intentionally starts this request with a fresh semantic window;
+        // the V2 runtime tail remains observable, but the old surface is not reused.
+        assert.deepEqual(visibleApiMessages(secondMessages), [{ role: 'user', content: 'two' }]);
         await assert.rejects(supervisor.execute({ type: 'start-run', sessionId, input: 'bad', agentId: 'different-agent' }), /已固定/);
         await assert.rejects(supervisor.execute({ type: 'start-run', sessionId, input: 'bad', selection: null }), /已固定/);
         deleted = true;
@@ -180,8 +228,10 @@ test('session agent stays locked across model changes, profile deletion and rest
         const thirdMessages = fixture.requests[2].body.messages as Array<{ role: string; content: string }>;
         assert.match(thirdMessages[0].content, /UAH_MODULE:agent.instructions:v1\s*-->\nOriginal instructions/);
         assert.doesNotMatch(thirdMessages[0].content, /Changed instructions/);
-        assert.deepEqual(thirdMessages.filter(message => message.role !== 'system'), [
-            { role: 'user', content: 'two' }, { role: 'assistant', content: 'second answer' }, { role: 'user', content: 'three' }]);
+        assert.equal(thirdMessages.some(message => isRuntimeContextUpdate(message)), true);
+        assert.deepEqual(visibleApiMessages(thirdMessages), [
+            { role: 'user', content: 'two' }, { role: 'assistant', content: 'second answer' }, { role: 'user', content: 'three' },
+        ]);
         const snapshot = await supervisor.execute({ type: 'snapshot' });
         assert.equal(snapshot.runs.at(-1)?.effective.modelParameters?.temperature, 0.8);
         assert.equal(snapshot.runs.at(-1)?.effective.modelId, 'other-model');
@@ -445,8 +495,9 @@ test('API sessions stream selected models with fresh endpoint metadata and persi
         assert.equal(completed.runs.find(run => run.id === firstRun.id)?.effective.modelId, 'test-model');
         const historyMessages = fixture.requests[1].body.messages as Array<{ role: string; content: string }>;
         assert.equal(historyMessages[0].role, 'system');
-        assert.match(historyMessages[0].content, /UAH_MODULE:host.contract:v2/);
-        assert.deepEqual(historyMessages.filter(message => message.role !== 'system'), [
+        assert.match(historyMessages[0].content, /UAH_MODULE:host.contract:v4/);
+        assert.equal(historyMessages.some(message => isRuntimeContextUpdate(message)), true);
+        assert.deepEqual(visibleApiMessages(historyMessages), [
             { role: 'user', content: 'first prompt' },
             { role: 'assistant', content: 'first answer' },
             { role: 'user', content: 'second prompt' },

@@ -1,12 +1,17 @@
 import { extractModelDetails } from './model-details';
+import { CONTEXT_LIMITS } from './context/meter';
+import { contextRoute } from './context/replay-domain';
+import { freezeJson } from './context/projection';
+import { planCache, type CacheFrontier, type CachePlan } from './context/cache-planner';
 import type { AgentStreamEvent, ApiUsage, ToolCall, ToolDefinition, ToolResult } from '../shared/tool-protocol.js';
 import type { ModelParameters } from '../shared/model-parameters.js';
 import type { ModelDetails, ModelCatalog, ApiTestResult } from '../shared/endpoints';
 import { createDiagnosticTrace } from './diagnostics';
 import { normalizeBaseUrl, type ApiConnection, type ApiMessage } from '../shared/endpoints.js';
+import { mergeUsageSnapshot, normalizeProviderUsage } from './context/usage-normalizer.js';
 
 const REQUEST_TIMEOUT_MS = 60_000;
-const MAX_REQUEST_BYTES = 1_000_000;
+const MAX_REQUEST_BYTES = CONTEXT_LIMITS.requestBytes;
 const MAX_RESPONSE_BYTES = 16_000_000;
 const MAX_JSON_RESPONSE_BYTES = 2_000_000;
 const MAX_SSE_FRAME_BYTES = 1_000_000;
@@ -869,16 +874,32 @@ export interface AgentApiStreamOptions extends ApiStreamOptions {
     observer?: RequestObserver;
     /** Full native history returned by the previous completed round, plus correlated tool results. */
     continuation?: unknown[];
+    /** Internal frozen compilation, shared by admission, journal and transport. */
+    preparedRequest?: PreparedAgentRequest;
+    cachePlanning?: { previous?: CacheFrontier };
+    /** Compiler inspection only; transport always enforces the byte limit. */
+    inspectOversized?: boolean;
+}
+
+export interface PreparedAgentRequest {
+    routeKey: string;
+    protocol: ApiProtocol;
+    modelId: string;
+    body: Record<string, unknown>;
+    serialized: string;
+    history: unknown[];
+    tools: ToolDefinition[];
+    cachePlan?: CachePlan;
 }
 
 const MAX_TOOL_CALLS = 64;
 const MAX_TOOL_ARGUMENT_BYTES = 1_000_000;
 
-function boundedNativeHistory(value: unknown): unknown[] {
+function boundedNativeHistory(value: unknown, inspectOversized = false): unknown[] {
     if (!Array.isArray(value) || value.length > 4_000) fail('invalid');
     let serialized: string;
     try { serialized = JSON.stringify(value); } catch { fail('invalid'); }
-    if (new TextEncoder().encode(serialized).byteLength > MAX_REQUEST_BYTES) fail('invalid');
+    if (new TextEncoder().encode(serialized).byteLength > (inspectOversized ? 16_000_000 : MAX_REQUEST_BYTES)) fail('invalid', 'context.request_body_bytes_exceeded');
     return JSON.parse(serialized) as unknown[];
 }
 
@@ -966,7 +987,7 @@ interface AgentRound {
 
 class AgentStreamAccumulator {
     private usage: ApiUsage = {};
-    private readonly anthropicUsage: Record<string, number> = {};
+    private usageRaw: Record<string, unknown> = {};
     private textCount = 0;
     private reasoningCount = 0;
     private argumentBytes = 0;
@@ -987,35 +1008,8 @@ class AgentStreamAccumulator {
 
     private usageEvents(value: unknown): AgentRound['events'] {
         if (!isRecord(value)) return [];
-        const next: ApiUsage = { ...this.usage };
-        const valid = (counter: unknown): counter is number => typeof counter === 'number'
-            && Number.isSafeInteger(counter) && counter >= 0;
-        const assign = (key: keyof ApiUsage, counter: unknown) => {
-            if (valid(counter)) next[key] = counter;
-        };
-        if (this.protocol === 'anthropic') {
-            for (const key of ['input_tokens', 'output_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens']) {
-                if (valid(value[key])) this.anthropicUsage[key] = value[key];
-            }
-            const raw = this.anthropicUsage;
-            if (raw.input_tokens !== undefined) {
-                // Anthropic's cache counters are disjoint; absent cache counters report no
-                // additional known cache component, and are not exposed as invented zeroes.
-                const input = raw.input_tokens + (raw.cache_read_input_tokens ?? 0) + (raw.cache_creation_input_tokens ?? 0);
-                if (valid(input)) next.inputTokens = input;
-                else delete next.inputTokens;
-            }
-            assign('outputTokens', raw.output_tokens);
-            assign('cachedInputTokens', raw.cache_read_input_tokens);
-            assign('cacheCreationInputTokens', raw.cache_creation_input_tokens);
-            // Anthropic does not report total_tokens. Do not invent a provider counter.
-        } else {
-            assign('inputTokens', value[this.protocol === 'openai-chat' ? 'prompt_tokens' : 'input_tokens']);
-            assign('outputTokens', value[this.protocol === 'openai-chat' ? 'completion_tokens' : 'output_tokens']);
-            assign('totalTokens', value.total_tokens);
-            const details = value[this.protocol === 'openai-chat' ? 'prompt_tokens_details' : 'input_tokens_details'];
-            if (isRecord(details)) assign('cachedInputTokens', details.cached_tokens);
-        }
+        this.usageRaw = mergeUsageSnapshot(this.usageRaw, value);
+        const next = normalizeProviderUsage(this.protocol, this.usageRaw, this.usage).usage;
         if (JSON.stringify(next) === JSON.stringify(this.usage)) return [];
         this.usage = next;
         return [{ type: 'usage', usage: { ...next } }];
@@ -1274,13 +1268,13 @@ export async function* streamAgentApi(connectionInput: ApiConnection, modelInput
     }
 }
 
-async function* streamAgentApiInternal(connectionInput: ApiConnection, modelInput: string, messagesInput: ApiMessage[],
-    signal?: AbortSignal, options: AgentApiStreamOptions = { tools: [] }): AsyncGenerator<AgentStreamEvent> {
+export function prepareAgentRequest(connectionInput: ApiConnection, modelInput: string, messagesInput: ApiMessage[],
+    options: AgentApiStreamOptions): PreparedAgentRequest {
     const connection = validateConnection(connectionInput);
     const modelId = validateModelId(modelInput);
     const messages = validateMessages(messagesInput);
     const tools = validateTools(options.tools);
-    const history = boundedNativeHistory(options.continuation ?? messages);
+    const history = boundedNativeHistory(options.continuation ?? messages, options.inspectOversized);
     const body = JSON.parse(requestBody(connection.protocol, modelId, messages, undefined, options)) as Record<string, unknown>;
     if (connection.protocol === 'openai-chat') {
         body.messages = options.instructions ? [{ role: 'system', content: options.instructions }, ...history] : history;
@@ -1299,8 +1293,20 @@ async function* streamAgentApiInternal(connectionInput: ApiConnection, modelInpu
         body.messages = history;
         if (tools.length) body.tools = tools.map(tool => ({ name: tool.name, description: tool.description, input_schema: tool.parameters }));
     }
-    const serialized = JSON.stringify(body);
-    if (new TextEncoder().encode(serialized).byteLength > MAX_REQUEST_BYTES) fail('invalid');
+    const cached = options.cachePlanning ? planCache(connectionInput, modelId, body, options.cachePlanning.previous) : undefined;
+    const serialized = JSON.stringify(cached?.body ?? body);
+    if (!options.inspectOversized && new TextEncoder().encode(serialized).byteLength > MAX_REQUEST_BYTES) fail('invalid', 'context.request_body_bytes_exceeded');
+    return freezeJson({ routeKey: contextRoute(connectionInput, modelId), protocol: connection.protocol, modelId, body: cached?.body ?? body, serialized, history, tools,
+        ...(cached ? { cachePlan: cached.plan } : {}) });
+}
+
+async function* streamAgentApiInternal(connectionInput: ApiConnection, modelInput: string, messagesInput: ApiMessage[],
+    signal?: AbortSignal, options: AgentApiStreamOptions = { tools: [] }): AsyncGenerator<AgentStreamEvent> {
+    const connection = validateConnection(connectionInput);
+    const prepared = options.preparedRequest ?? prepareAgentRequest(connectionInput, modelInput, messagesInput, options);
+    if (prepared.protocol !== connection.protocol || prepared.modelId !== modelInput || prepared.routeKey !== contextRoute(connectionInput, modelInput)) fail('invalid', 'context.route_mismatch');
+    const { serialized, history, tools } = prepared;
+    if (Buffer.byteLength(serialized) > MAX_REQUEST_BYTES) fail('invalid', 'context.request_body_bytes_exceeded');
     const scope = createRequestScope(signal, 'stream', connection.protocol,
         options.parameters ? options.parameters.timeoutSeconds * 1_000 : REQUEST_TIMEOUT_MS, options.requestIdentity);
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
@@ -1309,6 +1315,18 @@ async function* streamAgentApiInternal(connectionInput: ApiConnection, modelInpu
         const response = await fetchScoped(endpointUrl(connection.baseUrl, requestPath(connection.protocol)), {
             method: 'POST', headers: headersFor(connection, true), body: serialized,
         }, scope, options.observer);
+        if ([400, 413, 422].includes(response.status)) {
+            const bytes = await readBoundedBytes(response, 65536, scope);
+            try {
+                const payload = JSON.parse(new TextDecoder().decode(bytes));
+                const error = payload?.error ?? payload;
+                const code = error?.code ?? error?.type;
+                if (['context_length_exceeded', 'context_window_exceeded', 'prompt_too_long'].includes(code)
+                    || code === 'invalid_request_error' && typeof error?.message === 'string' && /prompt is too long|maximum context length|context window exceeded/i.test(error.message)) {
+                    throw new ApiTransportError('服务端报告上下文超出容量。', 'context_overflow');
+                }
+            } catch (error) { if (error instanceof ApiTransportError) throw error; }
+        }
         assertOk(response);
         if (!response.body) fail('invalid', 'body.missing');
         reader = response.body.getReader();

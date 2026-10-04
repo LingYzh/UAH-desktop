@@ -28,3 +28,13 @@ test('actual command/write outcomes conservatively block retries while denied/st
         assert.equal(sessionHasFileChanges(snapshot, 'other'), false);
     }
 });
+
+test('memory writes and forgetting count as durable effects but declined memory approvals do not', () => {
+    for (const name of ['save_memory', 'forget_memory']) {
+        for (const effectState of ['not_started', 'possible', 'confirmed']) {
+            const snapshot = { artifacts: [], runs: [{ sessionId: 'session', activities: [{ title: name,
+                tool: { name, outcome: { effectState } } }] }] } as unknown as Snapshot;
+            assert.equal(sessionHasFileChanges(snapshot, 'session'), effectState !== 'not_started');
+        }
+    }
+});

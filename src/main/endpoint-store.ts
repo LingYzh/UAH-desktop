@@ -7,9 +7,10 @@ import {
     type ApiConnection,
     type EndpointDraft,
     type EndpointRecord,
+    type ProviderCatalogEntry,
 } from '../shared/endpoints';
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 const MAX_ENDPOINTS = 100;
 
 export interface EndpointCipher {
@@ -52,15 +53,34 @@ export class EndpointStore {
         const directory = resolve(dataDirectory);
         mkdirSync(directory, { recursive: true });
         this.database = new DatabaseSync(resolve(directory, 'endpoints.sqlite'));
-        this.database.exec('PRAGMA foreign_keys = ON;');
-        this.database.exec('PRAGMA journal_mode = WAL;');
-        this.database.exec('PRAGMA synchronous = FULL;');
-        this.initializeSchema();
+        try {
+            this.database.exec('PRAGMA foreign_keys = ON;');
+            this.database.exec('PRAGMA journal_mode = WAL;');
+            this.database.exec('PRAGMA synchronous = FULL;');
+            this.initializeSchema();
+        } catch (error) {
+            try { this.database.close(); } catch { /* Preserve the initialization error. */ }
+            this.closed = true;
+            throw error;
+        }
     }
 
     list(): EndpointRecord[] {
         this.assertOpen();
         return this.readEndpoints().map(({ keyBlob: _keyBlob, ...endpoint }) => endpoint);
+    }
+
+    listProviders(): ProviderCatalogEntry[] {
+        this.assertOpen();
+        return this.readEndpoints()
+            .filter(endpoint => endpoint.enabled && endpoint.models.length > 0)
+            .map(endpoint => ({
+                id: endpoint.id,
+                providerId: endpoint.providerId ?? endpoint.id,
+                name: endpoint.name,
+                models: [...endpoint.models],
+                runtimeId: 'api',
+            }));
     }
 
     save(value: EndpointDraft): EndpointRecord[] {
@@ -74,12 +94,16 @@ export class EndpointStore {
                 if (Number(count.count) >= MAX_ENDPOINTS) {
                     throw new Error(`端点数量不能超过 ${MAX_ENDPOINTS} 个。`);
                 }
+                const id = randomUUID();
+                const providerId = draft.providerId ?? null;
+                this.assertProviderNamespaceAvailable(providerId, undefined, id);
                 const keyBlob = this.keyBlobFromDraft(draft.apiKey, null);
                 this.database.prepare(
-                    `INSERT INTO endpoints (id, name, protocol, base_url, models_json, model_details_json, model_overrides_json, model_parameters_json, enabled, revision, key_blob)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    `INSERT INTO endpoints (id, provider_id, name, protocol, base_url, models_json, model_details_json, model_overrides_json, model_parameters_json, enabled, revision, key_blob)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 ).run(
-                    randomUUID(),
+                    id,
+                    providerId,
                     draft.name,
                     draft.protocol,
                     draft.baseUrl,
@@ -101,16 +125,16 @@ export class EndpointStore {
             this.assertRevision(existing, draft.revision);
             this.assertEnabledModels(draft);
             const modelParameters = this.modelParametersForDraft(draft, existing);
+            const providerId = draft.providerId === undefined ? existing.providerId ?? null : draft.providerId;
+            this.assertProviderNamespaceAvailable(providerId, existing.id);
             const preserveKey = draft.apiKey === null;
-            if (preserveKey && (draft.baseUrl !== existing.baseUrl || draft.protocol !== existing.protocol)) {
-                throw new Error('修改 API 地址或协议时必须重新输入 API Key。');
-            }
             const keyBlob = this.keyBlobFromDraft(draft.apiKey, preserveKey ? existing.keyBlob : null);
             this.database.prepare(
                 `UPDATE endpoints
-                 SET name = ?, protocol = ?, base_url = ?, models_json = ?, model_details_json = ?, model_overrides_json = ?, model_parameters_json = ?, enabled = ?, revision = ?, key_blob = ?
+                 SET provider_id = ?, name = ?, protocol = ?, base_url = ?, models_json = ?, model_details_json = ?, model_overrides_json = ?, model_parameters_json = ?, enabled = ?, revision = ?, key_blob = ?
                  WHERE id = ? AND revision = ?`,
             ).run(
+                providerId,
                 draft.name,
                 draft.protocol,
                 draft.baseUrl,
@@ -149,7 +173,8 @@ export class EndpointStore {
 
     resolve(id: string): ApiConnection {
         this.assertOpen();
-        const endpoint = this.readEndpoint(validateId(id));
+        const requestedId = validateId(id);
+        const endpoint = this.readEndpoint(requestedId) ?? this.readEndpointByProviderId(requestedId);
         if (!endpoint) {
             throw new Error('端点不存在。');
         }
@@ -163,8 +188,10 @@ export class EndpointStore {
         this.assertOpen();
         const draft = parseEndpointDraft(value);
         if (draft.id === null) {
+            const id = randomUUID();
             return this.connection({
-                id: randomUUID(),
+                id,
+                ...(draft.providerId ? { providerId: draft.providerId } : {}),
                 name: draft.name,
                 protocol: draft.protocol,
                 baseUrl: draft.baseUrl,
@@ -175,8 +202,8 @@ export class EndpointStore {
                 enabled: draft.enabled,
                 revision: 0,
                 hasKey: draft.apiKey !== null && draft.apiKey !== '',
-                keyBlob: null,
-            }, draft.apiKey ?? '');
+            keyBlob: null,
+        }, draft.apiKey ?? '');
         }
 
         const existing = this.readEndpoint(draft.id);
@@ -184,12 +211,11 @@ export class EndpointStore {
             throw new Error('端点不存在。');
         }
         this.assertRevision(existing, draft.revision);
-        if (draft.apiKey === null && (draft.baseUrl !== existing.baseUrl || draft.protocol !== existing.protocol)) {
-            throw new Error('修改 API 地址或协议时必须重新输入 API Key。');
-        }
         const modelParameters = this.modelParametersForDraft(draft, existing);
+        const previewProviderId = draft.providerId === undefined ? existing.providerId : draft.providerId;
         return this.connection({
             id: existing.id,
+            ...(previewProviderId ? { providerId: previewProviderId } : {}),
             name: draft.name,
             protocol: draft.protocol,
             baseUrl: draft.baseUrl,
@@ -236,7 +262,8 @@ export class EndpointStore {
                         model_parameters_json TEXT NOT NULL DEFAULT '[]',
                         enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
                         revision INTEGER NOT NULL CHECK (revision >= 0),
-                        key_blob BLOB
+                        key_blob BLOB,
+                        provider_id TEXT
                     );
                 `);
             } else if (version === 1) {
@@ -246,8 +273,11 @@ export class EndpointStore {
             } else if (version === 2) {
                 this.database.exec("ALTER TABLE endpoints ADD COLUMN model_overrides_json TEXT NOT NULL DEFAULT '[]';");
             }
-            if (version !== 0) {
+            if (version > 0 && version < 4) {
                 this.database.exec("ALTER TABLE endpoints ADD COLUMN model_parameters_json TEXT NOT NULL DEFAULT '[]';");
+            }
+            if (version !== 0) {
+                this.database.exec('ALTER TABLE endpoints ADD COLUMN provider_id TEXT;');
             }
             this.database.exec(`PRAGMA user_version = ${SCHEMA_VERSION};`);
             this.database.exec('COMMIT;');
@@ -279,7 +309,7 @@ export class EndpointStore {
 
     private readEndpoints(): StoredEndpoint[] {
         const rows = this.database.prepare(
-            'SELECT id, name, protocol, base_url, models_json, model_details_json, model_overrides_json, model_parameters_json, enabled, revision, key_blob FROM endpoints ORDER BY rowid ASC',
+            'SELECT id, provider_id, name, protocol, base_url, models_json, model_details_json, model_overrides_json, model_parameters_json, enabled, revision, key_blob FROM endpoints ORDER BY rowid ASC',
         ).all() as Array<Record<string, unknown>>;
         if (rows.length > MAX_ENDPOINTS) {
             throw databaseError();
@@ -289,8 +319,15 @@ export class EndpointStore {
 
     private readEndpoint(id: string): StoredEndpoint | null {
         const row = this.database.prepare(
-            'SELECT id, name, protocol, base_url, models_json, model_details_json, model_overrides_json, model_parameters_json, enabled, revision, key_blob FROM endpoints WHERE id = ?',
+            'SELECT id, provider_id, name, protocol, base_url, models_json, model_details_json, model_overrides_json, model_parameters_json, enabled, revision, key_blob FROM endpoints WHERE id = ?',
         ).get(id) as Record<string, unknown> | undefined;
+        return row ? this.parseStoredEndpoint(row) : null;
+    }
+
+    private readEndpointByProviderId(providerId: string): StoredEndpoint | null {
+        const row = this.database.prepare(
+            'SELECT id, provider_id, name, protocol, base_url, models_json, model_details_json, model_overrides_json, model_parameters_json, enabled, revision, key_blob FROM endpoints WHERE provider_id = ?',
+        ).get(providerId) as Record<string, unknown> | undefined;
         return row ? this.parseStoredEndpoint(row) : null;
     }
 
@@ -298,11 +335,12 @@ export class EndpointStore {
         try {
             if (typeof row.models_json !== 'string' || typeof row.model_details_json !== 'string'
                 || typeof row.model_overrides_json !== 'string' || typeof row.model_parameters_json !== 'string'
-                || typeof row.enabled !== 'number') {
+                || typeof row.enabled !== 'number' || row.provider_id !== null && typeof row.provider_id !== 'string') {
                 throw databaseError();
             }
             const draft = parseEndpointDraft({
                 id: row.id,
+                providerId: row.provider_id,
                 name: row.name,
                 protocol: row.protocol,
                 baseUrl: row.base_url,
@@ -320,6 +358,7 @@ export class EndpointStore {
             const keyBlob = row.key_blob === null ? null : this.asBuffer(row.key_blob);
             return {
                 id: draft.id!,
+                ...(typeof draft.providerId === 'string' ? { providerId: draft.providerId } : {}),
                 name: draft.name,
                 protocol: draft.protocol,
                 baseUrl: draft.baseUrl,
@@ -378,6 +417,7 @@ export class EndpointStore {
     private connection(endpoint: StoredEndpoint, apiKey: string): ApiConnection {
         return {
             id: endpoint.id,
+            ...(endpoint.providerId ? { providerId: endpoint.providerId } : {}),
             name: endpoint.name,
             protocol: endpoint.protocol,
             baseUrl: endpoint.baseUrl,
@@ -400,6 +440,23 @@ export class EndpointStore {
     private assertEnabledModels(draft: EndpointDraft): void {
         if (draft.enabled && draft.models.length === 0) {
             throw new Error('启用端点前必须配置至少一个模型。');
+        }
+    }
+
+    private assertProviderNamespaceAvailable(providerId: string | null, ownId?: string, newInternalId?: string): void {
+        const rows = this.database.prepare('SELECT id, provider_id FROM endpoints').all() as Array<{ id: unknown; provider_id: unknown }>;
+        if (providerId !== null && newInternalId === providerId) {
+            throw new Error('Provider ID 不能与内部端点 ID 冲突。');
+        }
+        for (const row of rows) {
+            if (typeof row.id !== 'string') throw databaseError();
+            const existingProviderId = row.provider_id;
+            if (newInternalId && existingProviderId === newInternalId) {
+                throw new Error('内部端点 ID 与现有 Provider ID 冲突。');
+            }
+            if (providerId === null) continue;
+            if (row.id === providerId) throw new Error('Provider ID 不能与内部端点 ID 冲突。');
+            if (row.id !== ownId && existingProviderId === providerId) throw new Error('Provider ID 已被其他端点使用。');
         }
     }
 

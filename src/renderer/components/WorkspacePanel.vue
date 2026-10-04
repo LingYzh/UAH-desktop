@@ -1,9 +1,12 @@
 <script setup>
+import { clientError } from '../../shared/client-error.js';
+
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useWorkspace } from '../stores/workspace';
 import Icon from './Icon.vue';
 import SubagentPanel from './SubagentPanel.vue';
 import PlanFiles from './PlanFiles.vue';
+import NativePlanPanel from './NativePlanPanel.vue';
 import GitPanel from './GitPanel.vue';
 import { UiButton, UiInput, UiSelect, UiTabs, UiTabPanel, UiScrollArea, UiDiff, UiFileChanges } from '@lingyzh/ui';
 import { roundFileChanges } from '../file-changes';
@@ -40,7 +43,7 @@ async function hideBrowser() {
 async function layoutBrowser() {
     if (props.suspended || !browserReady.value || !browserArea.value || !workspace.panel.open || workspace.panel.tab !== 'browser' || workspace.page !== 'chat') return;
     const bounds = browserArea.value.getBoundingClientRect();
-    await window.uah?.browser({ type: 'bounds', sessionId: workspace.selectedId, x: Math.round(bounds.x), y: Math.round(bounds.y), width: Math.floor(bounds.width), height: Math.floor(bounds.height) }).catch((cause) => { error.value = cause.message; });
+    await window.uah?.browser({ type: 'bounds', sessionId: workspace.selectedId, x: Math.round(bounds.x), y: Math.round(bounds.y), width: Math.floor(bounds.width), height: Math.floor(bounds.height) }).catch((cause) => { error.value = clientError(cause); });
 }
 async function openBrowser() {
     if (busy.value || !workspace.selectedId || !window.uah) return;
@@ -60,7 +63,7 @@ async function openBrowser() {
         browserReady.value = true;
         await nextTick();
         await layoutBrowser();
-    } catch (cause) { if (generation === epoch) error.value = cause.message; }
+    } catch (cause) { if (generation === epoch) error.value = clientError(cause); }
     finally { busy.value = false; }
 }
 async function closeBrowser() {
@@ -69,14 +72,14 @@ async function closeBrowser() {
     browserSessions.delete(workspace.selectedId);
     browserReady.value = false;
     try { await window.uah?.browser({ type: 'close' }); }
-    catch (cause) { error.value = cause.message; }
+    catch (cause) { error.value = clientError(cause); }
 }
 async function observe() {
     if (busy.value || !window.uah) return;
     busy.value = true;
     error.value = '';
     try { observation.value = await window.uah.observeDesktop(); }
-    catch (cause) { error.value = cause.message; }
+    catch (cause) { error.value = clientError(cause); }
     finally { busy.value = false; }
 }
 watch(() => [workspace.selectedId, workspace.panel.tab, workspace.panel.open, workspace.page, props.suspended], async ([sessionId], previous) => {
@@ -109,7 +112,7 @@ onBeforeUnmount(() => { epoch++; observer?.disconnect(); hideBrowser(); });
         <UiScrollArea label="工作面板标签" axis="horizontal" :rounded="false" class="flex-shrink-0"><UiTabs dense variant="underline" v-model="workspace.panel.tab" class="panel-tabs" style="width: max-content; min-width: 100%" id-prefix="workspace" :items="tabs" aria-label="工作面板内容"><template #default="{ item }"><Icon :name="item.icon" />{{ item.label }}</template></UiTabs></UiScrollArea>
         <div v-if="error" class="inline-error" role="alert">{{ error }}</div>
         <UiTabPanel :model-value="workspace.panel.tab" value="agents" id-prefix="workspace" class="overflow-hidden" style="display: flex; flex-direction: column; flex: 1; min-height: 0"><SubagentPanel v-if="workspace.historyPanelReady" /><p v-else role="status">正在加载会话历史…</p></UiTabPanel>
-        <UiTabPanel :model-value="workspace.panel.tab" value="plans" id-prefix="workspace" class="panel-content"><PlanFiles v-if="workspace.historyPanelReady" /><p v-else role="status">正在加载会话历史…</p></UiTabPanel>
+        <UiTabPanel :model-value="workspace.panel.tab" value="plans" id-prefix="workspace" class="panel-content"><NativePlanPanel v-if="workspace.historyPanelReady && workspace.nativeMode" /><PlanFiles v-else-if="workspace.historyPanelReady" /><p v-else role="status">正在加载会话历史…</p></UiTabPanel>
         <UiTabPanel :model-value="workspace.panel.tab" value="git" id-prefix="workspace" class="panel-content"><GitPanel v-if="workspace.panel.tab === 'git' && workspace.panel.open && workspace.page === 'chat'" /></UiTabPanel>
         <UiTabPanel :model-value="workspace.panel.tab" value="files" id-prefix="workspace" class="panel-content">
             <p v-if="!workspace.historyPanelReady" role="status">正在加载会话历史…</p>

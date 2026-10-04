@@ -37,6 +37,9 @@ test('capability modules follow the exact supplied tools, not permission or dele
     const all = ['read_file', 'list_directory', 'search_files', 'write_file', 'run_command', 'enter_plan_mode', 'spawn_agent', 'list_agent_presets', 'wait_agents'];
     const first = assemblePrompt({ run: run(undefined, false, 'manual'), directory: 'D:/fixture', tools: all, settings });
     for (const id of ['workspace.read', 'workspace.edit', 'workspace.command', 'plan.enter', 'delegation.spawn', 'delegation.wait', 'delegation.presets']) assert.ok(selected(first).includes(id));
+    assert.match(first.instructions, /providerId.*调用标识/);
+    assert.match(first.instructions, /不探测凭据或在线状态/);
+    assert.match(first.instructions, /准确 providerId 调用标识和模型 ID/);
     const disabled = assemblePrompt({ run: run(undefined, false, 'bypass'), directory: 'D:/fixture', tools: [], settings });
     for (const id of selected(first).filter(id => /^(workspace\.|delegation\.(spawn|wait|presets|limits)|plan.enter)/.test(id))) assert.ok(!selected(disabled).includes(id), id);
     assert.doesNotMatch(disabled.instructions, /spawn_agent|wait_agents|write_file|run_command|enter_plan_mode/);
@@ -87,8 +90,8 @@ test('context providers are optional escaped data at the end; unchanged inputs a
     assert.match(after.instructions, /\\u003c!-- UAH_PROMPT_PROFILE/);
     assert.equal(after.profile, 'gpt');
     assert.equal(before.instructions.split('<!-- UAH_MODULE:context.')[0], after.instructions.split('<!-- UAH_MODULE:context.')[0]);
-    const revised = new Set(['host.contract', 'history.frames', 'workspace.command', 'context.environment']);
-    assert.ok(after.modules.every(item => item.version === (item.id === 'context.environment' ? 5 : revised.has(item.id) ? 2 : 1) && (!item.included ? item.characters === 0 : item.characters > 0)));
+    const revised = new Set(['host.contract', 'history.frames', 'workspace.command', 'workspace.read', 'context.environment', 'delegation.presets']);
+    assert.ok(after.modules.every(item => item.version === (item.id === 'extensions.skills' ? 2 : item.id === 'context.environment' ? 6 : ['host.contract', 'context.tools'].includes(item.id) ? 4 : revised.has(item.id) ? 2 : 1) && (!item.included ? item.characters === 0 : item.characters > 0)));
     assert.equal(after.totalCharacters, after.instructions.length);
 });
 

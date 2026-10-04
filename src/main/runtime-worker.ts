@@ -2,7 +2,7 @@ import { configureDiagnostics } from '../runtime/diagnostics';
 import { Supervisor } from '../runtime/supervisor';
 import { parseCommand } from '../shared/contracts';
 import { randomUUID } from 'node:crypto';
-import type { ApiConnection } from '../shared/endpoints';
+import type { ApiConnection, ProviderCatalogEntry } from '../shared/endpoints';
 import { discoverApiModels } from '../runtime/api-transport';
 import { ApplicationJournal } from '../runtime/application-journal';
 import { AgentStore } from './agent-store';
@@ -13,12 +13,17 @@ import { parseGitQuery } from '../shared/git';
 import { readGit } from '../runtime/git';
 import { parseContextQuery } from '../shared/request-context';
 import path from 'node:path';
+import { homedir } from 'node:os';
 import { parseJournalQuery, parseJournalSessionQuery } from '../shared/journal-view';
 import { parseSnapshotView } from '../shared/snapshot-view';
 import { JournalPolicyStore } from '../runtime/journal-policy';
 import { parseJournalPolicyCommand } from '../shared/journal-policy';
 import { prepareRuntimeUpgrade } from '../runtime/store-backup';
 import { RUNTIME_SCHEMA_VERSION } from '../runtime/store';
+import { McpManager } from '../runtime/mcp-client';
+import { CodexAppServer } from '../runtime/codex-app-server';
+import { parseNativeCodexSettings } from '../shared/native-codex';
+import type { ExtensionRuntimeBundle } from '../shared/extension-runtime';
 
 const parent = process.parentPort;
 if (!parent || !process.argv[2]) throw new Error('Runtime must be launched by the desktop host.');
@@ -36,6 +41,15 @@ async function initialize() {
         const connections = new Map<string, { resolve: (value: ApiConnection) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }>();
         const probes = new Set<AbortController>();
         const probeTasks = new Set<Promise<void>>();
+        const extensionRequests = new Map<string, { resolve: (value: any) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }>();
+        const extensionRequest = <T>(message: Record<string, unknown>): Promise<T> => new Promise((resolve, reject) => {
+            const id = randomUUID();
+            const timer = setTimeout(() => { extensionRequests.delete(id); reject(new Error('扩展读取超时。')); }, 10_000);
+            extensionRequests.set(id, { resolve, reject, timer });
+            parent.postMessage({ ...message, id });
+        });
+        const resolveExtensions = () => extensionRequest<ExtensionRuntimeBundle>({ kind: 'resolve-extensions' });
+        const mcp = new McpManager(async () => (await resolveExtensions()).connectors);
         const resolveConnection = (endpointId: string): Promise<ApiConnection> => new Promise((resolve, reject) => {
                 const id = randomUUID();
                 const timer = setTimeout(() => { connections.delete(id); reject(new Error('端点读取超时。')); }, 5000);
@@ -43,8 +57,13 @@ async function initialize() {
                 parent.postMessage({ kind: 'resolve-connection', id, endpointId });
             });
         const supervisor = new Supervisor({
+            listProviders: () => extensionRequest<ProviderCatalogEntry[]>({ kind: 'list-providers' }),
+            mcp,
+            resolveExtensions,
+            readSkill: (skillId, relativePath) => extensionRequest({ kind: 'read-skill', skillId, relativePath }),
             executionHelperPath,
             dataDirectory: process.argv[2],
+            homeDirectory: process.env.UAH_MEMORY_HOME || (process.env.UAH_DATA_DIR ? path.join(process.argv[2], 'context-home') : homedir()),
             getCaptureRaw: () => journalPolicy.get().captureRaw,
             resolveAgent: (id) => agents.resolve(id),
             getAgentSettings: () => agents.get(),
@@ -54,6 +73,27 @@ async function initialize() {
         let queue = Promise.resolve();
         let closing = false;
         parent.on('message', ({ data }) => {
+            if (data.kind === 'extension-result') {
+                const request = extensionRequests.get(data.id);
+                if (request) {
+                    clearTimeout(request.timer); extensionRequests.delete(data.id);
+                    if (data.error) request.reject(new Error(data.error)); else request.resolve(data.result);
+                }
+                return;
+            }
+            if (data.kind === 'test-connector' || data.kind === 'native-probe') {
+                if (closing || probeTasks.size) { parent.postMessage({ kind: 'reply', id: data.id, error: '检测正在进行或应用正在关闭。' }); return; }
+                const operation = async () => {
+                    if (data.kind === 'test-connector') return mcp.test(data.connectorId);
+                    const client = new CodexAppServer(parseNativeCodexSettings(data.settings));
+                    try { return await client.probe(); } finally { await client.close(); }
+                };
+                const task = operation().then(result => parent.postMessage({ kind: 'reply', id: data.id, result }))
+                    .catch(error => parent.postMessage({ kind: 'reply', id: data.id, error: error instanceof Error ? error.message : '检测失败。' }))
+                    .finally(() => probeTasks.delete(task));
+                probeTasks.add(task);
+                return;
+            }
             if (data.kind === 'connection') {
                 const request = connections.get(data.id);
                 if (request) {
@@ -133,8 +173,8 @@ async function initialize() {
                         if (request.reasoningEffort === undefined) result.reasoningEffort = run.effective.modelParameters?.reasoningEffort ?? 'default';
                         parent.postMessage({ kind: 'reply', id: data.id, result });
                     } else if (data.kind === 'request-context') {
-                        const { runId } = parseContextQuery(data.query);
-                        parent.postMessage({ kind: 'reply', id: data.id, result: supervisor.requestContext(runId) });
+                        const query = parseContextQuery(data.query);
+                        parent.postMessage({ kind: 'reply', id: data.id, result: 'sessionId' in query ? supervisor.sessionContext(query.sessionId) : supervisor.requestContext(query.runId) });
                     } else if (data.kind === 'journal-policy') {
                         parent.postMessage({ kind: 'reply', id: data.id, result: journalPolicy.execute(parseJournalPolicyCommand(data.command)) });
                     } else if (data.kind === 'session-purge-begin') {

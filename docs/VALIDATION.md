@@ -380,3 +380,125 @@ UAH完整单元165/165通过，新增首次展开reactivity回归后renderer wor
 最终检查点：命令 provenance 与删除 renderer 收尾后，`harness-release-final-full.log` 共 746 项，744 通过/2 文件 symlink 权限跳过/零失败；`harness-release-final-typecheck.log` 与 `harness-final-build.log` 通过。Electron `journal-desktop-zZSgh8` 与 `tool-chat-73bIC5` 六场景复验通过，root 再看日志深色900/125%截图确认内部滚动、底部动作可达。新增 renderer 删除 7/7 包含成功重试清除旧错误、响应丢失和迟到 snapshot；命令记录不保存额外 EncodedCommand 正文。此为本轮最终代码检查点，不代表已提交或发布。
 
 最终原生复验：21/21，证据 `native-execution-mt0fyD`、`native-credential-filter-jHTq40`；连续执行/释放、树退出、超时/取消/EOF/crash、输出限额及凭据边界通过，exe 文件版本按真实文件核对。后端/managed 28/28、真实命令隐私 2/2。D:/UI 干净，安装依赖固定 @lingyzh/ui 0.2.1，git diff --check 通过（仅既有换行转换提示）。
+
+## D09 原生与扩展管理（2026-10-03）
+
+最终全量 810 项：808 通过、2 个既有 Windows 文件 symlink 权限跳过、零失败（artifacts/d09-tests.log）。typecheck/build 通过（d09-typecheck.log、d09-build.log），构建保留既有大 chunk 提示。专项 MCP 12、扩展存储 13、原生协议+Supervisor 31、API 扩展循环 7 均通过；原生脱敏导出可 replay 公开文本，覆盖为 partial。
+
+Electron 扩展专项 `npm run test:extensions`：13 项、7 张截图，artifacts/extensions-desktop-fPoJsd，页面错误为空。覆盖 HTTP MCP 实际握手、插件诊断、插件启用后技能的键盘开关、禁用状态原生 probe、配置保存/页面重载、原生中文聊天与本轮 usage。root 已检查浅色1440、深色900/125%列表与滚动弹窗、键盘焦点、最终聊天文件快照提示。搜索 search-Yyxl0j 6 项、端点 endpoints-pNjl2C 9 项回归通过。
+
+真实本机 Codex 0.156.1 app-server --stdio 只读 probe 已通过，模型目录 7 项、登录有效、进程正常退出（d09-native-probe.json）；未发送真实 Provider 请求。远端 Git clone 与外部 MCP 服务未实测，协议使用本地 SDK fixture。完整范围与剩余限制见 HARNESS-D09.md。UI 仓库干净，未提交或发布。
+
+### 原生绑定迭代验收（2026-10-03）
+
+- 全量 822 项，820通过、2个既有 Windows symlink 权限跳过、零失败：artifacts/d09-iteration-tests.log。修复 request-capture fixture 对随机 fetch 禁用端口的遗漏；typecheck、build与diff check通过。
+- 新增扫描7/7、renderer目录3/3；原生协议23/23。覆盖 draft probe 不保存、不创建线程，model字段与展示id区分、isDefault与顺序保留、迟到响应不撤销停用、启动目标变化隔离目录、item/tool/call 不可跨入UAH子代理。
+- Electron专项21项，9张截图：artifacts/extensions-desktop-PExS3g；扫描与自动填写、模型默认项、保存前不变更配置、重载恢复全部模型、教学弹窗和关闭后焦点、子代理边界、原生中文对话通过，无页面错误。
+- root查看浅色1440与深色900/125%截图；候选使用简短来源标签避免长路径挤压，完整路径仍在可编辑输入框。帮助、开关说明及边界卡片清晰，内部滚动与底部动作可达。复用既有UI组件，无共享外观改动；D:/UI干净。
+- 本机自动发现3种启动方式并探测元数据。未发送真实模型任务，未新增原生与UAH子代理工具桥。
+
+## 原生委派与内置技能（2026-10-03）
+
+- 全量 `npm test`：851 项，849 通过、2 项既有 Windows 文件 symlink 权限跳过、零失败（`artifacts/native-bridge-final-tests.log`）。最终 typecheck/build 通过（`native-bridge-final-typecheck.log`、`native-bridge-final-build.log`）；构建仍有既有大 chunk 提示。`git diff --check` 通过，只有换行转换提示。
+- 原生协议 36/36：动态工具 start-only 注册、活动身份绑定、等价调用去重／冲突拒绝、限额、异常、提前完成与取消；未注册能力仍拒绝。委派集成 11/11：原生父任务同时调用 API 与原生子任务、角色及上下文隔离、API 文件审批和命令/MCP 不可用、权限不可提升、全局开关／深度／并发上限、父任务停止传播及 API→原生拒绝。无显式 wait 的父任务会收到自动结果续轮；用量累计与共享预算结算有断言。
+- 内置技能 5/5、旧扩展存储 13/13；17 个资源文件按字节复制到构建目录。覆盖默认启用、持久停用、同名独立、不可卸载、路径/链接边界及资源完整性。两个 skill-creator quick_validate 均通过；Windows Python 使用 `-X utf8`。
+- Electron `extensions-desktop-x7diTg`：24 项、9 张截图、页面错误为空（`native-bridge-desktop.log`）。覆盖内置技能启停及原生父子委派终态；root 检查技能浅色列表、原生深色900/125%边界说明与最终浅色聊天工具活动，无新增共享样式。最终构建复验见下文。
+- 实机 Codex 0.156.1 元数据验证：model/list、临时 thread/start 接受动态工具和禁用原生协作/unified_exec 配置，进程正常 close；`native-bridge-metadata-probe.json`。没有发送 turn/start 或真实付费模型任务，不能把注册成功当成真实模型自主调用的验收。上游非并行工具调度依据固定在 rust-v0.156.1，升级须复核。
+- 本轮公开限制见 [NATIVE-DELEGATION.md](NATIVE-DELEGATION.md)：API 父任务不能反向启动原生子代理；原生 API 下级无命令/MCP；原生预算和日志仅覆盖宿主可观察数据；内置 Grilling 在 UAH 缺少交互提问工具时按技能文本回退。D:/UI 干净，固定 @lingyzh/ui@0.2.1，未提交或发布。
+
+最终构建复验：`artifacts/extensions-desktop-2OTgeH` 同样24项、9截图、无页面错误（`native-bridge-final-desktop.log`）；root复核深色900/125%边界卡片，内部滚动和底部动作正常。全量检查之后补充失败子任务的 wait 结果及后续原生轮次可继续测试，委派专项达到12/12（`native-bridge-final-delegation.log`），最终类型检查通过；这项测试没有修改产品代码。
+
+## 原生权限、Plan/Goal 与真实 Luna 验收（2026-10-03）
+
+- 最终全量 `npm test`：882 项，880 通过、2 项既有 Windows symlink 权限跳过、零失败，见 `artifacts/native-mode-final-tests.log`。typecheck/build 通过，见 `native-mode-final-typecheck.log`、`native-mode-final-build.log`；构建仅有既有 chunk 大小提示。
+- 覆盖三档原生权限、MCP 不再阻止只读启动、Plan 模式与权限分离、原生问题卡片回答/取消/过期拒绝、原生目标自动续轮、查询不发模型请求、用户停止暂停目标及同线程恢复、暂停失败不假报。旧轮次 usage 不得绑定当前 turn；独立问题 item 不要求属于活动 reasoning item；原生 plan delta 进入公开文本。
+- Provider 单测与桌面验证：修改协议或端点保留加密 key、模型选择与覆盖参数，检测/测试仍使用原 key，renderer 不获取明文。端点专项 10 项通过：`artifacts/endpoints-Z6o3ZM`、`native-mode-endpoints.log`。
+- 最终 Electron 扩展专项 30 项、11 张截图、无页面错误：`artifacts/extensions-desktop-2Ff9R5`、`native-mode-final-desktop.log`。root 复核相同最终 UI 的浅色1440与深色900/125%问答、菜单、设置；问题下拉初始显示“请选择”，没有默认替用户提交，滚动后提交动作可达。复用固定 @lingyzh/ui@0.2.1，无共享外观或组件能力缺口，D:/UI 干净。
+- 用户授权使用现有 OpenAI OAuth，仅 Luna。真实连续三个轮次均使用 gpt-6-luna：保留 MCP 配置的只读普通对话成功；Plan 正好一次问答回传，接收 A 后输出“Print marker A.”；Goal 使用原生工具到 complete。证据 `artifacts/native-luna-smoke.json`，包含 answered 断言与事件/用量。原生 MCP 启动兼容已验证，未借此宣称外部 MCP 业务服务已实测。
+- 真实 UAH 原生委派：父、唯一子代理均 gpt-6-luna / readonly / codex-native；父调用 uah_spawn_agent 和 uah_wait_agents，收到 UAH_CHILD_LUNA_OK 后返回 UAH_PARENT_LUNA_OK，23.15秒完成。父输入22640、输出10、缓存输入22272；子输入19967、输出10、缓存输入1792。证据 `artifacts/native-luna-delegation.json`。没有 API 模型、其他模型或文件/命令/外部 MCP 业务调用；未读取或复制账号凭据。
+- 客户端错误集中使用当前简体中文提示，保留日志诊断及模型/工具原文；renderer 预期已相应更新。行为说明见 NATIVE-CODEX-COMMANDS.md。未提交、推送或发布。
+
+全量完成后新增一项无产品代码变更的回归：“问题答案持久化失败仍清理等待项”。该项单独运行通过（1/1，`artifacts/native-mode-question-cleanup-test.log`）；不计入上面的882项全量数字。
+
+## 原生内容、真实上下文、附件与计划修订（2026-10-03）
+
+- 最终全量以 `npx tsx --test --test-concurrency=4 tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs` 运行：913 项、911 通过、2 项既有 Windows symlink 权限跳过、0 失败，见 `artifacts/native-rich-final-bounded-tests.log`。此前默认高并发复跑中，两个既有 API fixture 等待超时；保留 `native-rich-final-tests.log`，未删改失败记录。较早默认全量912项亦通过。最终 typecheck/build 通过，见同前缀 final-typecheck/final-build 日志；仅有既有 chunk 大小提示。
+- 原生公开思考摘要、命令/MCP/dynamic/fileChange 参数和结果、分片累积及脱敏、错误退出码、错线程/错轮次拒绝、私有推理不入公开记录均有测试。真实上下文保留 last/total 分离，安全整数、缺省未知、缓存写入零值均覆盖。附件覆盖严格验证、大小/编码限制、工件完整性及回收引用、路径类附件不读取内容、图片和文本进入实际 turn/start。
+- 最终 Electron `node tests/desktop/native-rich.mjs`：29 项检查、10 张浅/深色截图、无页面错误和外部 API 请求，证据 `artifacts/native-rich-fkkGbk`，日志 `native-rich-final-desktop.log`。真实 File 经 preload 的选择、拖入、粘贴路径均通过；包含内存 PNG、文本快照和 PDF 路径引用。Plan 正文/步骤、Revise 不发送、执行退出 Plan、上下文详情及工具参数/结果均已断言。
+- root 已复核菜单、附件、工具、上下文和计划面板的浅色1440/深色900且125%缩放截图；菜单与对话框动作可达，窄布局可内部滚动。Revise 自动关闭工作面板返回输入框，避免反馈输入被遮住。事前盘点复用 UiMenu/MenuItem、Dialog、Card、Button、Markdown、UsageMeter，无共享组件缺口，无共享外观改动；D:/UI 保持干净，固定 @lingyzh/ui@0.2.1。
+- 用户授权的真实调用均为本机已有登录的 gpt-6-luna，未读取/复制凭据。`artifacts/native-context-live.json` 确认真正 tokenUsage 通知：last.total19907、input19900、output7、cached16128、reasoning0、capacity258400。核对固定 CLI 源码后使用 last.totalTokens 作为上下文值；UI 原始比例不同于 CLI 扣除12000基线的剩余比例。没有暴露完整系统/历史/工具分类用量。
+- `artifacts/native-attachment-live.json`：实际图片工件 localImage 加文本快照，模型返回 `ATTACHMENT_OK red LUNA_ATTACHMENT_TEXT`，本轮上下文20418/258400。`artifacts/native-plan-live.json`：三个真实轮次 mode 为 plan、plan、default，最终返回修订后的 PLAN_EXECUTED_2；该简单任务没有发出原生 plan item，因此真实测试只证明模式/反馈/执行切换，正文/进度同步由协议及桌面 fixture 验证。
+- 本轮 API 附件未启用；其他文件只是路径引用，历史迁移到新原生线程不承诺重放旧附件二进制；只展示公开思考摘要。详细行为与限制见 NATIVE-CODEX-COMMANDS.md。未提交、推送或发布。
+- 既有扩展桌面回归 `npm run test:extensions` 最终通过30项、11截图、无页面错误，证据 `artifacts/extensions-desktop-g0EGyi`、`native-rich-extension-regression.log`。最终 typecheck 和 diff-check 通过，UI 工作区仍干净。
+
+## Provider 调用 ID 与原生目录（2026-10-03）
+
+- 用户经 harness 提问确认采用可编辑调用 ID，并保留内部标识。新增 Provider ID 表单及列表展示，空白回退默认 ID；端点库 v4→v5 增加可选 alias，更新和删除仍使用内部 ID。EndpointStore 专项15/15通过，覆盖旧版本迁移、未来版本拒绝、别名格式/重复/保留字/内部ID冲突、大小写及 Unicode、清空和缺字段保留、key不变、目录不解密凭据。
+- 完整回归最终 `npx tsx --test --test-concurrency=4 tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs`：923项、921通过、2项既有Windows权限跳过、0失败，`artifacts/provider-id-final-tests.log`。首次全量的4项旧提示词版本断言已更新；另2项遇到fixture随机端口被网络库禁用，原始失败保留于 `provider-id-full-tests.log`，相关34项复跑通过（`provider-id-port-recheck.log`）。未降低产品网络安全限制。
+- 原生/API目录及alias委派、条件提示词与委派工具注册定向44/44通过。API子代理使用调用别名解析后，在effective和session.initialConfig中保存canonical内部ID；不去掉resolver的身份匹配检查。目录按次读取并白名单投影，无额外地址/密钥字段；API来源未接入与空目录分开，原生只声明当前模型。目录及角色合计256KiB上限明确报错。`delegation.presets`升v2、`context.tools`升v3；已核对冻结gpt/claude迁移模板，不改旧完整绑定文件。
+- `npm run test:endpoints` 10项通过，新增断言覆盖companyID→公司→留空默认→恢复、ID冲突、已有会话/密钥/模型配置保持。证据 `artifacts/endpoints-mtawD8`。root复核浅色列表与深色900/125%编辑器：ID可见、描述换行无横向溢出、底部动作可达。事前盘点UiField/Input/Card及真实demo，无共享UI能力缺口，未修改D:/UI或增加业务样式。
+- 最终构建上 `node tests/desktop/provider-catalog.mjs` 3/3通过，无页面错误：真实Electron preload→main→utility process→native动态工具链路查询目录，别名修改后下一次查询即时更新，停用后不再返回API条目，保留native当前模型。证据 `artifacts/provider-catalog-DzoI9e`、`provider-id-final-desktop-catalog.log`。模型协议为本地fixture，未新增真实付费模型调用。
+- 最终typecheck/build通过，日志 `provider-id-final-typecheck.log`、`provider-id-final-build.log`；构建仅有既有chunk大小提示。diff-check通过。字段/行为说明见NATIVE-DELEGATION.md，未提交、推送或发布。
+## 2026-10-03 原生工具展示、展开性能与线程确认
+
+- UI 盘点复用既有 UiActivity/Collapse/CodeBlock/Markdown/Card/Button。没有新增通用能力或共享 CSS；D:/UI 干净，固定 npm UI 版本不变。业务层首次展开挂载，真实组件负责折叠动画。新开始的主轮次恢复滚动跟随，防止此前展开旧内容后新确认停留在视口外。
+- 全量 `npx tsx --test --test-concurrency=4 tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs`：935 项，933 通过、2 既有 Windows 权限跳过、0 失败。日志 `artifacts/native-activity-v2-all-tests.log`。`npm run typecheck`、`npm run build` 均通过，对应同前缀日志。
+- 原生运行时专项 25/25：首次/兼容续接无需迁移确认；配置变更先停等，批准才启动；取消、非精确回答、Stop 不创建线程；等待期间历史/运行时/委派工具配置变化使批准失效；最近失败无 thread 时仍找到更早线程；旧 Goal 操作不跨线程伪装续接。确认前不消耗请求预算、不发 native-start。
+- 工具呈现与分组专项 16/16，包含 UAH 前缀/原生动态包装/未知工具/原始结果/精确身份去重/思考公开摘要。未知与原生工具显示真实名称，原始文本不作为 HTML 执行。测试日志 `artifacts/native-activity-v2-renderer-tests.log`。
+- Electron Provider 目录及展示专项 4/4，无页面错误，证据 `artifacts/provider-catalog-RUrMOb`。root 核对 `native-provider-summary.png`：准确工具名、可读角色/Provider/模型目录、按需展开原始返回均可见。
+- Electron 原生富内容专项 32/32，无页面错误、无外部请求；12 张截图，最终证据 `artifacts/native-rich-Rfqwc0`。覆盖附件、思考/命令/MCP、上下文、Plan/Revise，以及新增线程确认先取消再批准。root 复核浅色 1440、深色 900/125%：确认原因、旧 ID、迁移说明和两按钮可读、可滚动到达，无横向溢出。早期新增脚本在窄屏工作面板覆盖输入框时超时，测试先关闭面板后通过；截图在缩放稳定后滚动到确认按钮，避免截到旧活动。证据保留在 `native-rich-2TwPvb`。
+- `npm run test:rich-chat` 4/4，验证流式渐进、主动向上阅读保持位置、底部跟随和完整终态。最终证据 `artifacts/rich-chat-r4jThR`。
+- 性能同场景单次前后对照均成功：15 轮本地 fixture、约 1.02 MB 活动，无模型调用。侧栏开时思考/工具布局 101/108→72/64ms，滚动写入 10/11→0/0，折叠 DOM 2932→1882。报告 `artifacts/native-activity-performance-CQHSB0` 与 `native-activity-performance-xeVCqn`；测量范围和不确定性见 `NATIVE-SESSION-INVESTIGATION-2026-10-03.md`。不是所有长会话的帧率保证。
+- 指定用户会话只读取证：12 native runs、3 threads，10 对重复动态工具身份匹配；一次恢复失败后换线程可确认，另一次具体恢复条件不可从旧日志判定。没有读取凭据/私有推理、调用真实模型或改写用户会话。`git diff --check` 通过；累计改动未提交、推送或发布。
+- 2026-10-03 追加 RPC 报错透传：原生协议/运行时/客户端错误专项84/84，typecheck/build通过（`artifacts/native-rpc-error-tests.log`、`native-rpc-error-build.log`）。新增测试覆盖 thread/resume 原始原因/错误码、Bearer/URL脱敏、长度上限，以及错误进入失败run与导出后仍不含已配置连接器秘密。首次超长测试把12KB文本直接放入启动参数，被既有8KiB限制拒绝；改为fixture内部生成超长响应后通过，没有放宽产品限制。未运行真实模型，用户将重新复现。
+- 2026-10-03 消息时间戳：typecheck/build通过，steer-loop 9/9，原生桌面35项/14截图通过。验证 `<time datetime>` 与真实createdAt相等、完成时间显示至秒；root检查 artifacts/native-rich-KfyG4n/message-time-light-1440.png 与 message-time-dark-900-125.png，浅深色和缩放均可读无横溢。使用既有UI组件及工具类，无共享样式改动；缺失时间不猜测。日志 message-time-desktop.log、message-time-steering.log、message-time-build.log。
+
+## 2026-10-04：项目规则与独立 Markdown 记忆（无专用 UI）
+
+- 用户明确不需要记忆 UI；没有新增页面、入口、IPC 或共享组件。D:/UI 保持干净，本功能无需视觉验收。规则及记忆通过运行时工具和 Markdown 维护，使用原有工具审批。
+- 最终全量 `npx tsx --test --test-concurrency=4 tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs`：972 项，970 通过、2 项既有 Windows 权限跳过、0 失败；证据 `artifacts/memory-all-tests.log`。`npm run typecheck` 和 `npm run build` 均通过，日志为 `artifacts/memory-typecheck.log`、`artifacts/memory-build.log`。构建仍有已有的大 chunk 提示。
+- 来源与存储专项27/27：作用域及mtime选择、override、无新规则不增加请求、继承导入作用域/兄弟目录共享引用、循环/越界/ADS/链接、缺失home懒读取、外部白名单、跨项目私有隔离、哈希CAS、并发存储实例、手改正文、托管区块保留、墓碑去重、已提交记录/索引失败区分。证据 `artifacts/memory-storage-tests.log`。
+- API/原生循环专项7/7，包含在最终全量日志中：Chat Completions、Responses、Anthropic 实际请求均读取最新主规则和固定偏好；首轮与来源列表不含外部正文，明确search/read后才出现；候选写入后下一请求索引可见，固定5次工具循环且无隐藏总结请求。readonly/Plan/子代理不提供记忆写工具；bypass也不能把未批准的active偏好伪称用户确认。首次子目录写入先返回RULE_CONTEXT_CHANGED且文件未写，重决策后才写。原生thread/start和turn/start都没有新增规则/记忆模块或知识工具注入。
+- 首轮默认高并发全量中，旧提示词模块版本断言6项失败，已随host.contract/context.tools版本更新；一项既有MCP分页测试偶发失败，独立12/12和最终限制并发的全量均通过。早期缺失home导致请求失败已修复，并增加不创建目录的回归。未掩盖这些中间失败。
+- 所有新增测试使用临时home、项目与本地HTTP/native fixture，不读取真实用户记忆，不调用真实模型。未运行新增桌面测试（本功能无UI变更），未提交、推送或发布。机制与限制见 MEMORY-AND-PROJECT-RULES.md；任意shell/MCP内部访问不在明确path的规则拦截范围内。
+
+## 2026-10-04：记忆流程核查与日期主题文件名
+
+- root 只读取证指定会话 bf4db85c-0214-40dd-bc4e-0d65a1ef0d4f 的完整导出：3464 连续事件、17 次请求，读取的产物逐一校验 SHA-256。三作用域记忆、真实激活审批、固定偏好、预期负例和遗忘清理均有证据。记录中的“跨会话”实际为同一 session 的只读子代理；不扩大其验证结论。详见 MEMORY-SESSION-INVESTIGATION-2026-10-04.md。
+- 全量 `npx tsx --test --test-concurrency=4 tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs`：979 项、977 通过、2 项既有 Windows 权限跳过、0 失败，证据 artifacts/memory-names-all-tests.log。
+- root 最后补强已提交遗忘后的读回失败分类，保留 confirmed/reconcile_first。补强后存储/知识工具/运行循环定向 26/26 通过，artifacts/memory-names-final-focused.log。覆盖可选 slug、中文/长标题、重名避让手写 Markdown、旧 UUID 兼容、元数据 ID 歧义、错误 UUID 文件名、真实索引路径、改标题不改路径、遗忘改名与部分失败报告。
+- 独立根会话及关闭后重建 Supervisor 读取同一 Markdown 的集成测试通过；新会话输入不继承旧提示，索引提供真实 basename，正文经 read_context 读取，固定 8 次模拟 provider 请求。重启范围为运行时对象重建，不宣称完成操作系统进程重启实测。
+- 最终 typecheck/build 均通过：artifacts/memory-names-typecheck.log、memory-names-build.log；保留已有 chunk 大小提示。diff-check 通过，D:/UI 干净。本次没有 UI 改动，未增加桌面视觉测试；所有写入测试均使用临时目录，没有改写被核查会话或真实用户记忆，没有真实模型调用、提交、推送或发布。
+- 中间存储专项曾出现 1 项错误分类失败：按 ID 扫描遇硬链接被当作未找到；已修为明确拒绝不安全文件，最终15/15通过。并行编辑期间的类型错误已修复，最终检查通过。
+
+## 2026-10-04：取消累计估算 token 停止
+
+- 删除累计 token 的请求准入和报告超额停止条件；保留估算/服务商报告计数，累计及在途统计采用饱和加法，达到数值表示上限也不停止。新快照 maxEstimatedTokens=null、estimatedTokensExceeded=false；合法旧数字上限及已超限快照恢复时保留计数并取消限制。仅保留旧错误代码用于历史兼容，没有新的 estimated_tokens 抛出点。
+- 全量 `npx tsx --test --test-concurrency=4 tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs`：981 项、979 通过、2 项既有 Windows 权限跳过、0 失败，artifacts/token-unlimited-all-tests.log。最终 typecheck/build 通过（token-unlimited-typecheck.log、token-unlimited-build.log），构建保留已有 chunk 提示，diff-check 通过。
+- 纯预算14/14、调用循环8/8通过：旧低数字上限不阻止高usage后的实际临时文件写入/下一请求；450万输出token仍完成；provider使用量向下修订仍原样保留，累计计数不回退。请求/工具/时限/并发限制及单次上下文检查保持原测试验证。
+- root恢复及提示词专项25/25通过，token-unlimited-recovery-tests.log：模拟旧400万上限、已累计500万且超限的停止任务，重启后可核对并续接，token上限归一null、计数保留、旧工具不重放。context.environment v6明确仅统计，冻结Claude/GPT迁移模板不修改。
+- RecoveryDialog仅删除token额度显示并更新解释文字，沿用现有组件/布局/样式，无组件缺口和视觉设计改动，D:/UI保持干净。未额外运行桌面视觉测试。全部新增验证使用临时数据和本地协议fixture，不调用真实模型、不恢复真实用户任务；没有提交、推送或发布。
+
+## 2026-10-04 API 上下文 V2 验收
+
+实现与限制见 [CONTEXT-ENGINE-V2.md](CONTEXT-ENGINE-V2.md)。全量日志 artifacts/context-v2-regression-final.log：1026 项，1024 通过、2 跳过、0 失败；三协议各 30 轮工具并跨后续用户回合／重启，前缀稳定、工具无重复。后补 operational pause 单文件 11/11 通过。最终 build 日志 artifacts/context-v2-build-final.log；保留既有大 chunk 提示。
+
+桌面 artifacts/git-context-1oHPTE：cache 234/1234 显示 18.96%，剩余分类按 64000 减可见估算；未知／不完整 usage 不补零。root 查看 context-usage-light.png（1440px）与 context-usage-dark.png（900px、125%），现有组件布局和滚动正常。共享 UI 无修改。
+
+用户授权真实验收（独立非敏感前缀，无用户历史和工具）：DS deepseek-flash、公司 gpt-6-luna 均 Responses，各 3/3 成功。DS input 2636，cache 0/2432/2432，coverage partial；公司 input 2615，cache 0/2612/2612，write 2612/0/0，coverage complete。证据 artifacts/context-usage-live-probe-20261004/{deepseek,company}-run.jsonl。warm 占比 92.26%／99.89%，仅为小样本端点机制验收，不是生产长任务收益证明。
+
+## 2026-10-05：上下文会话统计与长任务恢复
+
+- 全量：1042 项，1040 通过、2 跳过、0 失败，artifacts/context-v3-regression-final.log。
+- 末轮定向：context-prune、compaction-loop、request-context 共 13/13，artifacts/context-v3-final-recovery.log；归档身份 SQL 投影额外 journal-recovery 与 prune 共 7/7（agent 执行）。session usage 六项与 scaling 五项包含在全量中。
+- typecheck / build 通过：artifacts/context-v3-typecheck-final.log、context-v3-build-final.log。UI @lingyzh/ui 0.2.3 发布与安装已核对官方 npm integrity，UI 仓库发布记录完整。
+- 桌面 Git/context 通过：artifacts/context-v3-desktop-final.log，证据 artifacts/git-context-TUV2ao。新会话启动草稿、显式选择历史、会话累计18.96%测试值、冷灰剩余分类、输出等预留、浅色1440与深色900/125%均覆盖，root复核截图。测试值不代表服务端收益。
+- 240 次持久化、160 次后重启的 scaling 专项记录 artifact 增长及耗时；无硬编码时间门槛，不宣称全量请求序列化及引用写入已消除。
+- 真实模型验收结果待本轮报告；零测试、缺少真实补丁或模型失败不能算 coding 通过。
+
+### 本轮最终验收补充
+
+- 最终全量采用4并发：1044项、1042通过、2跳过、0失败，artifacts/context-v3-regression-bounded.log；解决测试环境并发争用，不放宽产品断言。新增部分缓存配对统计与请求上下文专项12/12，压力专项9/9。typecheck/build通过。
+- 最终桌面专项再次通过：artifacts/git-context-6VDefi；root复核浅色截图。原浅深主题及125%验收保留。
+- 真实 coding 与缓存对账见 [CONTEXT-LIVE-VALIDATION-2026-10-05.md](CONTEXT-LIVE-VALIDATION-2026-10-05.md)。缓存比例是相同尝试配对字段的加权比；出现缺失时同时展示已上报覆盖，避免跨字段错配或把缺失补零。
+- 真实试验进一步修正 provider 基准校验：粗略估算不能否定有效报告；超限时不受提前压缩的25%增长节流限制。压力测试已验证真实摘要提交后继续工具调用，无法充分缩小时保留错误。

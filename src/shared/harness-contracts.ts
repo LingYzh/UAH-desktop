@@ -108,7 +108,7 @@ export interface UsageRecord {
     attemptId: string;
     /** Revision replaces the previous snapshot for this attempt; it is not a delta. */
     revision: number;
-    purpose: 'agent' | 'connection_test' | 'auxiliary';
+    purpose: 'agent' | 'connection_test' | 'auxiliary' | 'compaction';
     scope: { kind: 'session'; sessionId: string; runId: string } | { kind: 'application' };
     protocol: ApiProtocol;
     adapterVersion: string;
@@ -116,6 +116,8 @@ export interface UsageRecord {
     completeness: 'complete' | 'partial' | 'unknown';
     rawUsage: JsonValue;
     counters: UsageCounters;
+    normalization?: { version: 1; sourcePaths: string[]; diagnostics: Array<{ code: string; paths: string[] }>;
+        inputUncachedTokens: number | null; reasoningTokens: number | null };
     providerResponseId: string | null;
     /** Namespaces response IDs without storing endpoint credentials. */
     accountNamespace: string;
@@ -147,11 +149,14 @@ export interface ModelFrame {
     accountNamespace: string;
     publicFingerprint: string;
     prefixLength: number;
+    /** A full V2 continuation may replace the prefix only while its public ancestry still matches. */
+    surface?: { historyDigest: string; turns: number };
     content: ArtifactReference;
     continuationCoverage: 'native' | 'unavailable';
 }
 
 export interface TranscriptPayloads {
+    'native.event': { method: string; content: ArtifactReference; coverage: 'partial' };
     'goal.verified': { verificationId: string; method: 'user_review'; evidence: ArtifactReference };
     'message.accepted': { messageId: string; revision: number; role: 'user' | 'assistant'; content: ArtifactReference };
     'history.revised': { messageId: string; revision: number; branchId: string; cutoffEventId: string | null; content?: ArtifactReference; deleted?: boolean };
@@ -180,6 +185,8 @@ export interface TranscriptPayloads {
     'recovery.reviewed': { reviewId: string; runIds: string[]; throughSeq: number; evidence: ArtifactReference };
     'recovery.resumed': { sourceRunId: string; fingerprint: string; evidence: ArtifactReference };
     'context.admission': { assessment: JsonValue };
+    'context.surface': { ownerId: string; revision: number; epoch: number; reason: string; state: ArtifactReference; entries: ArtifactReference[] };
+    'context.request': { requestId: string; attemptId: string; ownerId: string; revision: number; manifest: ArtifactReference };
     'plan.version': { planId: string; version: number; status: 'submitted' | 'approved'; content: ArtifactReference };
     'permission.changed': { policyVersion: number; mode: string };
     'control.requested': { action: 'stop' | 'steer' | 'retry' | 'resume' | 'fork'; expectedStepId: string | null; content: ArtifactReference | null };

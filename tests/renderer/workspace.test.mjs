@@ -108,7 +108,7 @@ test('branch creation failure preserves the source; a late save does not steal n
     gate.reject(new Error('fixture storage failure'));
     await pending;
     assert.equal(workspace.selectedId, source.id);
-    assert.match(workspace.error, /storage failure/);
+    assert.match(workspace.error, /操作未完成/);
     gate = deferred();
     const late = workspace.branchFrom(run);
     workspace.newSession(); workspace.draft.input = 'keep this draft';
@@ -166,7 +166,7 @@ test('first API use waits for explicit Agent, model, permission, effort and dire
     workspace.dispose();
 });
 
-test('initialization and New Session seed only from the newest created session initialConfig snapshot', async () => {
+test('startup opens a new-session draft seeded from the newest initialConfig while explicit selection and New Session work', async () => {
     const older = {
         id: 'older', createdAt: '2026-09-26T10:00:00.000Z',
         requested: { runtimeId: 'api', agentId: 'default', endpointId: 'endpoint', modelId: 'second-model' },
@@ -181,13 +181,19 @@ test('initialization and New Session seed only from the newest created session i
     };
     const workspace = initializeWorkspace({ ...empty(), sessions: [latest, older] });
     await workspace.initialize();
-    assert.equal(workspace.selectedId, 'latest');
+    assert.equal(workspace.selectedId, null);
+    assert.equal(workspace.selected, undefined);
+    assert.deepEqual(workspace.snapshot.sessions.map(session => session.id), ['latest', 'older']);
     assert.equal(workspace.currentAgent, 'reviewer');
-    assert.equal(workspace.draft.model, modelValue());
-    assert.deepEqual(workspace.sessionControls, { permissionMode: 'bypass', reasoningEffort: 'none' });
+    assert.equal(workspace.currentModel, modelValue());
+    assert.deepEqual(workspace.sessionControls, { permissionMode: 'manual', reasoningEffort: 'high' });
     assert.equal(workspace.draft.directory, null);
     assert.equal(workspace.draft.directoryChosen, true);
 
+    workspace.select('latest');
+    assert.equal(workspace.selectedId, 'latest');
+    assert.equal(workspace.currentAgent, 'reviewer');
+    assert.deepEqual(workspace.sessionControls, { permissionMode: 'bypass', reasoningEffort: 'none' });
     workspace.currentAgent = 'default';
     workspace.currentModel = modelValue('endpoint', 'second-model');
     workspace.selected.controls.permissionMode = 'readonly';
@@ -205,6 +211,34 @@ test('initialization and New Session seed only from the newest created session i
     assert.equal(workspace.currentModel, '');
     assert.equal(workspace.draft.directoryChosen, false);
     assert.deepEqual(workspace.sessionControls, { permissionMode: '', reasoningEffort: '' });
+    workspace.dispose();
+});
+
+test('a delayed startup snapshot retains history without selecting its previous session', async () => {
+    const gate = deferred();
+    const commands = [];
+    const previous = { id: 'previous-session', createdAt: '2026-09-27T10:00:00.000Z', initialConfig: apiInitialConfig() };
+    globalThis.window = { uah: {
+        onEvent: () => () => {},
+        command: async command => {
+            commands.push(command.type);
+            return command.type === 'snapshot' ? gate.promise : empty();
+        },
+        agents: async () => ({ profiles: copyProfiles(apiProfiles) }),
+        endpoints: async () => ({ endpoints: endpointList }),
+    } };
+    setActivePinia(createPinia());
+    const workspace = useWorkspace();
+    const initializing = workspace.initialize();
+
+    assert.equal(workspace.selectedId, null);
+    gate.resolve({ ...empty(), sessions: [previous], viewSessionId: null });
+    await initializing;
+
+    assert.equal(workspace.selectedId, null);
+    assert.equal(workspace.snapshot.sessions[0].id, previous.id);
+    assert.equal(workspace.currentModel, modelValue());
+    assert.deepEqual(commands, ['snapshot']);
     workspace.dispose();
 });
 
@@ -232,7 +266,7 @@ test('failed first send preserves the selected configuration and still permits e
     workspace.draft.input = 'review';
     await workspace.send();
 
-    assert.match(workspace.error, /fixture failure/);
+    assert.match(workspace.error, /操作未完成/);
     assert.equal(workspace.selectedId, 'new-session');
     assert.equal(workspace.currentAgent, 'reviewer');
     assert.equal(workspace.currentModel, modelValue());

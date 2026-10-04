@@ -26,6 +26,7 @@ export interface ModelCatalog {
 
 export interface EndpointRecord {
     id: string;
+    providerId?: string;
     name: string;
     protocol: ApiProtocol;
     baseUrl: string;
@@ -42,6 +43,14 @@ export interface ApiConnection extends Omit<EndpointRecord, 'hasKey'> {
     apiKey: string;
 }
 
+export interface ProviderCatalogEntry {
+    id: string;
+    providerId: string;
+    name: string;
+    models: string[];
+    runtimeId: 'api';
+}
+
 export interface ApiMessage {
     role: 'user' | 'assistant';
     content: string;
@@ -49,6 +58,8 @@ export interface ApiMessage {
 
 export interface EndpointDraft {
     id: string | null;
+    /** Omitted keeps an existing alias; null or blank restores the internal ID. */
+    providerId?: string | null;
     name: string;
     protocol: ApiProtocol;
     baseUrl: string;
@@ -114,6 +125,20 @@ export function normalizeBaseUrl(value: unknown): string {
 function revision(value: unknown): number {
     if (!Number.isSafeInteger(value) || (value as number) < 0) throw new TypeError('端点版本无效。');
     return value as number;
+}
+
+function providerId(value: unknown): string | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null) return null;
+    if (typeof value !== 'string') throw new TypeError('Provider ID 格式无效。');
+    if (/[\u0000-\u001f\u007f]/.test(value)) throw new TypeError('Provider ID 不能包含控制字符。');
+    const id = value.trim();
+    if (!id) return null;
+    if (id.toLowerCase().startsWith('native:')) throw new TypeError('Provider ID 不能使用 native: 保留前缀。');
+    if (Array.from(id).length > 100 || !/^[\p{L}\p{N}_.-]+$/u.test(id)) {
+        throw new TypeError('Provider ID 只能包含 Unicode 字母、数字、下划线、连字符和句点，长度为 1–100 个字符。');
+    }
+    return id;
 }
 
 function positiveInteger(value: unknown): number {
@@ -202,7 +227,7 @@ function modelParameters(value: unknown, models: string[]): Array<{ id: string; 
 }
 
 export function parseEndpointDraft(value: unknown): EndpointDraft {
-    record(value, ['id', 'name', 'protocol', 'baseUrl', 'models', 'enabled', 'revision', 'apiKey'], ['modelDetails', 'modelOverrides', 'modelParameters']);
+    record(value, ['id', 'name', 'protocol', 'baseUrl', 'models', 'enabled', 'revision', 'apiKey'], ['providerId', 'modelDetails', 'modelOverrides', 'modelParameters']);
     if (!['openai-chat', 'openai-responses', 'anthropic'].includes(value.protocol as string)) throw new TypeError('API 协议无效。');
     if (typeof value.enabled !== 'boolean') throw new TypeError('启用状态无效。');
     if (!Array.isArray(value.models) || value.models.length > 500) throw new TypeError('模型目录最多包含 500 项。');
@@ -213,8 +238,10 @@ export function parseEndpointDraft(value: unknown): EndpointDraft {
     const parsedDetails = modelDetails(value.modelDetails, models);
     const parsedOverrides = modelDetails(value.modelOverrides, models);
     const parsedParameters = modelParameters(value.modelParameters, models);
+    const parsedProviderId = providerId(value.providerId);
     return {
         id: value.id === null ? null : text(value.id, 200),
+        ...(parsedProviderId === undefined ? {} : { providerId: parsedProviderId }),
         name: text(value.name, 100),
         protocol: value.protocol as ApiProtocol,
         baseUrl: normalizeBaseUrl(value.baseUrl),

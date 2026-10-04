@@ -5,6 +5,9 @@ import type { ModelFrame } from '../shared/harness-contracts';
 import { boundedHistoryText, conversationMessages, displayedReply, visibleRootRuns } from '../shared/conversation-history';
 
 export type HistoryTurn = { messages: ApiMessage[]; modelFrame?: ModelFrame };
+export function publicHistoryDigest(turns: readonly HistoryTurn[]): string {
+    return createHash('sha256').update(JSON.stringify(turns.map(turn => turn.messages))).digest('hex');
+}
 export function modelTurnFingerprint(run: RunRecord): string {
     return createHash('sha256').update(JSON.stringify({ input: run.input, ...(run.steering?.length ? { steering: run.steering } : {}), reply: displayedReply(run), history: run.history ?? null,
         state: run.state, plan: run.plan ? { id: run.plan.id, version: run.plan.version ?? 1, content: run.plan.content } : null })).digest('hex');
@@ -44,7 +47,8 @@ export function historyTurns(snapshot: Snapshot, sessionId: string, options: { b
 }
 
 export function nativeHistory(turns: HistoryTurn[], target: { protocol: ApiProtocol; modelId: string; accountNamespace: string }, read: (frame: ModelFrame) => unknown): unknown[] {
-    return turns.flatMap(turn => {
+    let result: unknown[] = [];
+    for (const [index, turn] of turns.entries()) {
         const frame = turn.modelFrame;
         if (frame?.schemaVersion === 1 && frame.continuationCoverage === 'native' && frame.protocol === target.protocol
             && frame.modelId === target.modelId && frame.accountNamespace === target.accountNamespace) {
@@ -53,12 +57,18 @@ export function nativeHistory(turns: HistoryTurn[], target: { protocol: ApiProto
                 if ((stored.captureCoverage === 'complete' || (stored.captureCoverage === 'partial' && stored.rawCapture === 'disabled'))
                     && stored.continuationCoverage === 'native' && Array.isArray(stored.continuation)
                     && Number.isSafeInteger(frame.prefixLength) && frame.prefixLength >= 0 && frame.prefixLength < stored.continuation.length) {
+                    if (frame.surface && frame.surface.turns === index + 1
+                        && frame.surface.historyDigest === publicHistoryDigest(turns.slice(0, index + 1))) {
+                        result = structuredClone(stored.continuation); continue;
+                    }
+                    if (frame.surface && frame.prefixLength === 0) { result.push(...structuredClone(turn.messages)); continue; }
                     const items = stored.continuation.slice(frame.prefixLength);
                     const first = items[0] as { role?: string };
-                    if (first?.role === 'user') return items;
+                    if (first?.role === 'user') { result.push(...items); continue; }
                 }
             } catch { /* Missing/corrupt/private-incompatible frames fall back to visible evidence. */ }
         }
-        return structuredClone(turn.messages);
-    });
+        result.push(...structuredClone(turn.messages));
+    }
+    return result;
 }

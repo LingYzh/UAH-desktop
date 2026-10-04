@@ -103,6 +103,26 @@ test('budget recovery creates a new identity, retains cumulative charges and nev
     }
 });
 
+test('legacy estimated-token suspension resumes without a token grant or replaying tools', async t => {
+    const f = await fixture(t); const source = await f.stopped();
+    const budget = structuredClone(source.budgetState) as { tokensCharged: number; estimatedTokensExceeded: boolean; limits: { maxEstimatedTokens: number | null } };
+    budget.tokensCharged = 5_000_000; budget.estimatedTokensExceeded = true; budget.limits.maxEstimatedTokens = 4_000_000;
+    await f.restart(database => database.commit({ runs: [{ ...source, budgetState: budget, budgetStopCode: 'estimated_tokens', stopReason: '已达到估算用量限制。' }] }));
+    const review = await f.supervisor.recoveryReview(f.sessionId, source.id);
+    assert.equal(review.canResume, true, review.reasons.join(';'));
+    assert.equal(review.grant.maxEstimatedTokens, null);
+    const reply = await f.supervisor.execute({ type: 'resume-run', runId: source.id, fingerprint: review.fingerprint, input: 'Finish using saved evidence.' });
+    const resumed = reply.runs.find(run => run.resumeOfRunId === source.id)!;
+    const completed = await f.terminal(resumed.id);
+    assert.equal(completed.state, 'completed', completed.error);
+    const current = completed.budgetState as typeof budget;
+    assert.ok(current.tokensCharged >= 5_000_000);
+    assert.equal(current.limits.maxEstimatedTokens, null);
+    assert.equal(current.estimatedTokensExceeded, false);
+    assert.equal(f.journal().filter(event => event.type === 'tool.dispatch').length, 1);
+    assert.equal(f.requests.length, 2);
+});
+
 test('file drift requires an explicit no-HTTP reconciliation and fresh permissions after connection await', async t => {
     const f = await fixture(t); const source = await f.stopped(); const review = await f.supervisor.recoveryReview(f.sessionId, source.id);
     writeFileSync(join(f.project, 'saved.txt'), 'EXTERNAL CHANGE');

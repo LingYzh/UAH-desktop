@@ -6,15 +6,14 @@ import Icon from './Icon.vue';
 import { UiButton, UiInput, UiDialog } from '@lingyzh/ui';
 
 const props = defineProps({ open: Boolean, sessions: { type: Array, default: () => [] }, latestStates: Object, runs: { type: Array, default: () => [] } });
-const emit = defineEmits(['close', 'select-session', 'navigate-settings', 'navigate-endpoints', 'present-change']);
+const emit = defineEmits(['close', 'select-session', 'navigate-settings', 'navigate-endpoints', 'navigate-extensions', 'present-change']);
 const dialog = ref(null);
 const input = ref(null);
 const query = ref('');
 const shortcuts = [
     { id: 'models', label: '模型与账号', disabled: false },
-    { id: 'mcp', label: 'MCP 连接器', disabled: true },
-    { id: 'plugins', label: '插件与技能', disabled: true },
-    { id: 'memory', label: '记忆', disabled: true },
+    { id: 'mcp', label: 'MCP 连接器', disabled: false },
+    { id: 'plugins', label: '插件与技能', disabled: false },
     { id: 'settings', label: '设置', disabled: false }
 ];
 const normalizedQuery = computed(() => query.value.trim().toLocaleLowerCase());
@@ -26,7 +25,7 @@ function focusSearch() { input.value?.focus(); input.value?.select(); }
 let pendingSelection = null;
 function close() { emit('close'); }
 function selectSession(id) { pendingSelection = () => emit('select-session', id); close(); }
-function selectShortcut(item) { pendingSelection = () => emit(item.id === 'models' ? 'navigate-endpoints' : 'navigate-settings'); close(); }
+function selectShortcut(item) { pendingSelection = () => ['mcp', 'plugins'].includes(item.id) ? emit('navigate-extensions', item.id) : emit(item.id === 'models' ? 'navigate-endpoints' : 'navigate-settings'); close(); }
 function closed() {
     const action = pendingSelection;
     pendingSelection = null;

@@ -45,13 +45,31 @@ async function fixture(t: { after: (fn: () => Promise<void>) => void }, handler:
 }
 const names = (body: any) => (body.tools || []).map((tool: any) => tool.function.name);
 const results = (body: any) => body.messages.filter((message: any) => message.role === 'tool');
+const runtimeContextMarker = '[UAH runtime context update v2]';
+const stripRuntimeContextUpdate = (content: string): string => {
+    const marker = content.indexOf(runtimeContextMarker);
+    return marker < 0 ? content : content.slice(0, marker).trimEnd();
+};
+const lastSemanticMessage = (body: any) => body.messages.map((message: any) => ({
+    ...message,
+    ...(typeof message.content === 'string' ? { content: stripRuntimeContextUpdate(message.content) } : {}),
+})).filter((message: any) => message.content).at(-1);
+const lastTaskInput = (body: any) => body.messages.map((message: any) => ({
+    ...message,
+    ...(typeof message.content === 'string' ? { content: stripRuntimeContextUpdate(message.content) } : {}),
+})).filter((message: any) => message.role === 'user' && message.content).at(-1)?.content;
+const latestRuntimeContextUpdate = (body: any) => {
+    const content = body.messages.filter((message: any) => typeof message.content === 'string' && message.content.includes(runtimeContextMarker)).at(-1)?.content ?? '';
+    const marker = content.lastIndexOf(runtimeContextMarker);
+    return marker < 0 ? '' : content.slice(marker);
+};
 function identity(value: ApprovalIdentity): ApprovalIdentity { const { runtimeId, sessionId, runId, turnId, requestId, policyVersion } = value; return { runtimeId, sessionId, runId, turnId, requestId, policyVersion }; }
 
 test('real draft write/read/submit keeps an identity, rejects subsequent batch calls and waits for manual implementation approval', async t => {
     const f = await fixture(t, (body, response, number) => {
         if (number === 1) { assert.ok(!names(body).includes('write_file')); assert.ok(!names(body).includes('run_command')); answer(response, '', [{ name: 'write_plan', args: { content: 'First draft' } }, { name: 'write_plan', args: { content: originalPlan } }, { name: 'read_plan', args: {} }]); }
         else if (number === 2) { assert.equal(results(body).at(-1).content, originalPlan); answer(response, '', [{ name: 'submit_plan', args: {} }, { name: 'write_plan', args: { content: 'never overwrite submitted plan' } }]); }
-        else if (number === 3) { assert.equal(body.model, 'two'); assert.ok(body.messages.at(-1).content.includes(originalPlan)); answer(response, '', [{ name: 'write_file', args: { path: 'fixture.txt', content: 'implemented', expectedContent: null } }]); }
+        else if (number === 3) { assert.equal(body.model, 'two'); assert.ok(lastSemanticMessage(body).content.includes(originalPlan)); answer(response, '', [{ name: 'write_file', args: { path: 'fixture.txt', content: 'implemented', expectedContent: null } }]); }
         else { assert.equal(results(body).at(-1).content, 'File written.'); answer(response, 'Implementation verified.'); }
     });
     const run = await f.start(); const done = await f.terminal(run.id); const proposal = done.runs[0].plan!;
@@ -77,7 +95,7 @@ test('revision starts with an independent seeded real file and preserves the sub
     const amended = `${originalPlan}\n\nAdd compatibility coverage.`;
     const f = await fixture(t, (body, response, number) => {
         if (number === 1) answer(response, 'Plan ready.', [{ name: 'submit_plan', args: { plan: originalPlan } }]);
-        else if (number === 2) { assert.ok(body.messages.at(-1).content.includes('Add compatibility coverage')); answer(response, '', [{ name: 'read_plan', args: {} }]); }
+        else if (number === 2) { assert.ok(lastSemanticMessage(body).content.includes('Add compatibility coverage')); answer(response, '', [{ name: 'read_plan', args: {} }]); }
         else { assert.equal(results(body).at(-1).content, originalPlan); answer(response, '', [{ name: 'write_plan', args: { content: amended } }, { name: 'submit_plan', args: {} }]); }
     });
     const run = await f.start(); const done = await f.terminal(run.id); const proposal = done.runs[0].plan!;
@@ -129,7 +147,7 @@ test('clarification and tool-incapable Plan models never fabricate drafts or app
 
 test('children remain readonly and cannot write/read/submit plans or approve root state', async t => {
     const f = await fixture(t, (body, response) => {
-        const input = body.messages.filter((message: any) => message.role === 'user').at(-1)?.content;
+        const input = lastTaskInput(body);
         if (input === 'child exploration') {
             assert.ok(!names(body).some((name: string) => ['write_file', 'run_command', 'write_plan', 'read_plan', 'submit_plan', 'enter_plan_mode'].includes(name)));
             if (!results(body).length) answer(response, '', [{ name: 'write_plan', args: { content: originalPlan } }, { name: 'submit_plan', args: { plan: originalPlan } }, { name: 'enter_plan_mode', args: {} }]);
@@ -150,7 +168,7 @@ test('resolve-plan IPC requires explicit implementation permission or feedback w
 test('a root cannot enter Plan while an owned child remains live', async t => {
     let childResponse: ServerResponse | undefined; let parentRound = 0; let parentDenied = false;
     const f = await fixture(t, (body, response) => {
-        const input = body.messages.filter((message: any) => message.role === 'user').at(-1)?.content;
+        const input = lastTaskInput(body);
         if (input === 'live exploration') { childResponse = response; return; }
         if (++parentRound === 1) answer(response, '', [{ name: 'spawn_agent', args: { prompt: 'live exploration', agent: { type: 'inherit' }, context: { mode: 'none' } } }]);
         else if (parentRound === 2) answer(response, '', [{ name: 'enter_plan_mode', args: {} }]);
@@ -171,8 +189,8 @@ test('task versions survive clarification, user Markdown edits, agent revision a
     const f = await fixture(t, (body, response, number) => {
         if (number === 1) answer(response, '', [{ name: 'write_plan', args: { content: originalPlan, title: 'Task Alpha' } }, { name: 'submit_plan', args: {} }]);
         else if (number === 2) answer(response, 'Clarification only.');
-        else if (number === 3) { assert.ok(body.messages.at(-1).content.includes('User Markdown')); assert.ok(body.messages.at(-1).content.includes('Please improve tests')); assert.match(body.messages.at(-1).content, /当前任务标题：User title；当前版本：2/); answer(response, '', [{ name: 'write_plan', args: { content: revised } }, { name: 'submit_plan', args: {} }]); }
-        else { assert.ok(body.messages.at(-1).content.includes(revised)); assert.match(body.messages.at(-1).content, /批准版本：3/); assert.match(body.messages[0].content, /UAH_MODULE:plan.transition/); assert.match(body.messages[0].content, /宿主批准/); answer(response, 'Implementation complete.'); }
+        else if (number === 3) { assert.ok(lastSemanticMessage(body).content.includes('User Markdown')); assert.ok(lastSemanticMessage(body).content.includes('Please improve tests')); assert.match(lastSemanticMessage(body).content, /当前任务标题：User title；当前版本：2/); answer(response, '', [{ name: 'write_plan', args: { content: revised } }, { name: 'submit_plan', args: {} }]); }
+        else { assert.ok(lastSemanticMessage(body).content.includes(revised)); assert.match(lastSemanticMessage(body).content, /批准版本：3/); assert.match(latestRuntimeContextUpdate(body), /UAH_MODULE:plan.transition/); assert.match(latestRuntimeContextUpdate(body), /宿主批准/); answer(response, 'Implementation complete.'); }
     });
     const first = await f.start(); let state = await f.terminal(first.id); const v1 = state.runs[0].plan!;
     assert.equal(v1.version, 1); assert.equal(v1.title, 'Task Alpha'); assert.ok(v1.documentId); assert.ok(v1.draftPath);
@@ -218,8 +236,8 @@ test('new task invalidates old approval; external draft changes and edit/approva
 test('manual mode exits are events, preserve unapproved plans and expose read_plan without writes', async t => {
     const f = await fixture(t, (body, response, number) => {
         if (number === 1) answer(response, '', [{ name: 'submit_plan', args: { plan: originalPlan } }]);
-        else if (number === 2) { assert.match(body.messages[0].content, /UAH_MODULE:plan.transition/); assert.match(body.messages[0].content, /不是计划审批/); assert.ok(names(body).includes('read_plan')); assert.ok(!names(body).includes('write_plan')); answer(response, '', [{ name: 'read_plan', args: {} }]); }
-        else { assert.doesNotMatch(body.messages[0].content, /UAH_MODULE:plan.transition/); assert.equal(results(body).at(-1).content, originalPlan); answer(response, 'Read existing plan.'); }
+        else if (number === 2) { assert.match(latestRuntimeContextUpdate(body), /UAH_MODULE:plan.transition/); assert.match(latestRuntimeContextUpdate(body), /不是计划审批/); assert.ok(names(body).includes('read_plan')); assert.ok(!names(body).includes('write_plan')); answer(response, '', [{ name: 'read_plan', args: {} }]); }
+        else { assert.doesNotMatch(latestRuntimeContextUpdate(body), /UAH_MODULE:plan.transition/); assert.equal(results(body).at(-1).content, originalPlan); answer(response, 'Read existing plan.'); }
     });
     const first = await f.start(); await f.terminal(first.id);
     let state = await f.execute({ type: 'set-session-controls', sessionId: f.sessionId, revision: 0, controls: { permissionMode: 'readonly', reasoningEffort: 'default' } });

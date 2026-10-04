@@ -6,7 +6,7 @@
 
 项目：D:/UAH；配套 UI 库：D:/UI
 
-交付状态（2026-10-02）：D00–D08 的本轮桌面实现已接入，包括实际会话尾部窗口、人工独立目标验收、原始捕获开关、孤立文件清理、永久会话删除、升级一致性备份/迁移故障回滚及日志分片轮转。核心生产路径已完成协议、Windows、离线及 Electron 分项验证，最新整合证据见 `HANDOFF.md`、`VALIDATION.md` 与各 HARNESS 专项文档。目标验收为 user_review，不冒充自动模型评审；长期历史仍有启动扫描及全历史面板成本。D09 保持按需求另行接入；真实 Provider 效率基准、提交和发布未执行，不把本地验收称为已发布或可选扩展全部完成。
+交付状态（2026-10-03）：D00–D08 已接入，包括会话尾部窗口、人工独立目标验收、原始捕获开关、孤立文件清理、永久会话删除、升级备份/迁移故障回滚及日志分片轮转。D09 已按用户确认范围交付 Codex app-server、MCP/插件/技能管理与原生可观察活动/日志，原生父任务还可通过 UAH 委派 API／原生 Codex 子代理，并内置 grilling 与 powershell-windows-cli；详见 `HARNESS-D09.md`、`NATIVE-DELEGATION.md`；OAuth、其他原生运行时、大型高级看板仍为后续可选范围。核心路径已有协议、Windows、离线及 Electron 验证，最新证据见 `HANDOFF.md`、`VALIDATION.md`。目标验收为 user_review；长期历史仍有启动扫描和全历史面板成本。真实 Provider 效率基准、提交和发布未执行，不把本地验收称为已发布或可选扩展全部完成。
 
 本方案可以独立用于桌面端任务拆解、实现、迁移和验收，不要求先阅读 Android 方案，也不以 Android 开发完成为发布前提。两端只协调 TranscriptEvent、ToolOutcome、UsageRecord 等公共语义和黄金测试样本，各自保留技术栈、持久化实现及生命周期。
 

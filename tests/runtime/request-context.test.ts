@@ -48,6 +48,8 @@ test('details bound stored content while estimates retain full visible lengths, 
 
 test('context bridge validates finite query and Git module follows supplied tool catalog', () => {
     assert.deepEqual(parseContextQuery({ runId: 'run' }), { runId: 'run' });
+    assert.deepEqual(parseContextQuery({ sessionId: 'session' }), { sessionId: 'session' });
+    assert.throws(() => parseContextQuery({ runId: 'run', sessionId: 'session' }));
     for (const value of [null, {}, { runId: '' }, { runId: 'run', path: 'secret' }, Object.create({ runId: 'run' }), { get runId() { throw new Error('must not execute'); } }]) assert.throws(() => parseContextQuery(value), /无效的上下文查询/);
     const run = { id: 'run', effective: { modelId: 'model', permissionMode: 'plan' } } as RunRecord;
     const context = { GIT_STATUS_AND_TASK_CONTEXT: { branch: '<injected>' } };
@@ -112,7 +114,8 @@ test('Supervisor refreshes Git per request, persists latest usage and visible co
         assert.equal(first.state, 'completed', first.error);
         assert.equal(requests.length, 2);
         assert.doesNotMatch(requests[0].messages[0].content, /second.txt/);
-        assert.match(requests[1].messages[0].content, /second.txt/);
+        assert.equal(requests[1].messages[0].content, requests[0].messages[0].content, 'Git changes do not rewrite system instructions');
+        assert.match(JSON.stringify(requests[1].messages.slice(1)), /second.txt/);
         assert.ok(requests[0].tools.some((tool: any) => tool.function.name === 'git_diff'));
         let detail = supervisor.requestContext(first.id)!;
         assert.equal(detail.round, 1);
@@ -121,14 +124,25 @@ test('Supervisor refreshes Git per request, persists latest usage and visible co
         assert.match(detail.sections.find(section => section.id === 'history')!.content, /git-call|second.txt/);
         assert.doesNotMatch(JSON.stringify(detail), /endpoint-key-never-display/);
         assert.equal((first.requestContext as any).sections[0].content, undefined);
+        const totals = supervisor.sessionContext(sessionId)!.sessionUsage!;
+        assert.equal(totals.attemptCount, 2);
+        assert.equal(totals.inputTokens.total, 2468);
+        assert.equal(totals.cachedInputTokens.total, 200);
+        assert.equal(totals.cacheHitRate, 200 / 2468);
         await supervisor.shutdown();
         supervisor = new Supervisor({ dataDirectory: data, onEvent() {}, resolveConnection: async () => connection });
         detail = supervisor.requestContext(first.id)!;
         assert.equal(detail.usage?.cachedInputTokens, 100);
+        assert.deepEqual(supervisor.sessionContext(sessionId)!.sessionUsage, totals);
         await supervisor.execute({ type: 'start-run', sessionId, input: 'next without usage' });
         const second = (await finish()).runs.at(-1)!;
         assert.equal(second.requestContext?.usage, undefined);
         assert.ok(second.requestContext!.estimatedInputTokens > 0);
+        const partialTotals = supervisor.sessionContext(sessionId)!.sessionUsage!;
+        assert.equal(partialTotals.attemptCount, 3);
+        assert.equal(partialTotals.inputTokens.total, null);
+        assert.equal(partialTotals.inputTokens.knownSum, 2468);
+        assert.equal(partialTotals.cacheHitRate, null);
         await supervisor.execute({ type: 'edit-reply', runId: first.id, output: 'edited' });
         assert.equal(supervisor.requestContext(first.id), null);
         assert.equal(supervisor.requestContext(second.id), null);

@@ -16,6 +16,6 @@ export interface RecoveryReview {
     canReconcile: boolean;
     resources: RecoveryResource[];
     uncertainRuns: string[];
-    grant: { maxRequests: number; maxTools: number; maxElapsedMs: number; maxEstimatedTokens: number; maxConcurrentRequests: number };
+    grant: { maxRequests: number; maxTools: number; maxElapsedMs: number; maxEstimatedTokens: number | null; maxConcurrentRequests: number };
     budgetState: unknown;
 }

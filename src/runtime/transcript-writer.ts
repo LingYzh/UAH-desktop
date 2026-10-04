@@ -42,7 +42,7 @@ const KNOWN_EVENTS = new Set(['message.accepted', 'history.revised', 'history.fr
     'request.dispatch', 'request.retry', 'provider.frame', 'response.native', 'artifact.created', 'response.started', 'response.delta',
     'response.terminal', 'tool.batch', 'approval.decided', 'approval.requested', 'tool.dispatch', 'tool.result',
     'usage.snapshot', 'budget.updated', 'progress.updated', 'context.admission', 'plan.version', 'permission.changed', 'control.requested', 'control.applied', 'delegation.delivery',
-    'context.compaction', 'recording.checkpoint', 'recovery.reviewed', 'recovery.resumed', 'goal.verified']);
+    'context.compaction', 'context.surface', 'context.request', 'recording.checkpoint', 'recovery.reviewed', 'recovery.resumed', 'goal.verified', 'native.event']);
 const MAX_COVERAGE_JSON_BYTES = 16 * 1024 * 1024;
 type Segment = TranscriptManifest['segments'][number];
 interface RotationIndex { segments: Segment[]; signatures: string[]; firstSeq: number }

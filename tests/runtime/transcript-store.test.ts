@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
-import { RuntimeStore } from '../../src/runtime/store';
+import { RuntimeStore, RUNTIME_SCHEMA_VERSION } from '../../src/runtime/store';
 import { TranscriptWriter } from '../../src/runtime/transcript-writer';
 import { JournalArtifacts } from '../../src/runtime/journal-artifacts';
 import type { ArtifactReference, TranscriptEvent } from '../../src/shared/harness-contracts';
@@ -171,7 +171,7 @@ test('v2 migration retains existing rows with empty journal; future database ver
     assert.deepEqual(migrated.journalWatermark('legacy'), { durableSeq: 0, exportedSeq: 0 });
     migrated.close();
     db = new DatabaseSync(join(directory, 'runtime.sqlite'));
-    assert.equal((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 3);
+    assert.equal((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, RUNTIME_SCHEMA_VERSION);
     db.exec('PRAGMA user_version = 99;'); db.close();
     assert.throws(() => new RuntimeStore(directory), /newer than supported/);
 });

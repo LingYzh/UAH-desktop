@@ -24,6 +24,7 @@ test('recovery pairs invocation identities by session and run, preserves event o
         store.commit({ journal: [event('a', 'a1', 1, 'tool.dispatch'), event('a', 'a2', 2, 'tool.result'),
             event('b', 'b1', 1, 'tool.dispatch'), event('b', 'b1', 2, 'tool.result')] });
         assert.deepEqual([...store.readUnresolvedDispatchRuns()], ['a1']);
+        assert.deepEqual(store.readToolDispatchIdentities('a'), [{ invocationId: 'same-id', toolCallId: 'call' }]);
         store.commit({ journal: [event('a', 'a1', 3, 'tool.result'), event('a', 'a1', 4, 'tool.dispatch')] });
         assert.deepEqual([...store.readUnresolvedDispatchRuns()], ['a1']);
         store.commit({ journal: [event('a', 'a1', 5, 'tool.result')] });

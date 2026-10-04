@@ -10,6 +10,14 @@ import type { Snapshot } from '../../src/shared/contracts';
 import type { PermissionMode } from '../../src/shared/permissions';
 
 interface Body { messages: Array<{ role: string; content: string }>; tools?: Array<{ function: { name: string } }> }
+const contextMarker = '[UAH runtime context update v2]';
+const stripRuntimeContextUpdate = (content: string | null | undefined) => {
+    if (typeof content !== 'string') return '';
+    const marker = content.indexOf(contextMarker);
+    return marker < 0 ? content : content.slice(0, marker).trimEnd();
+};
+const lastTaskInput = (body: Body) => body.messages.map(message => ({ ...message, content: stripRuntimeContextUpdate(message.content) }))
+    .filter(message => message.role === 'user' && message.content).at(-1)?.content;
 function answer(response: ServerResponse, text: string, calls: Array<{ name: string; args: unknown }> = []) {
     response.writeHead(200, { 'content-type': 'text/event-stream' });
     const delta = calls.length ? { tool_calls: calls.map((call, index) => ({ index, id: `call-${index}`, type: 'function', function: { name: call.name, arguments: JSON.stringify(call.args) } })) } : { content: text };
@@ -69,7 +77,7 @@ test('actual manual-to-Plan requests reassemble modules against the exact changi
 
 test('inherited GPT child receives only the Subagent role while parent retains only Main-agent role', async t => {
     const f = await fixture(t, (body, response) => {
-        const child = body.messages.filter(message => message.role === 'user').at(-1)?.content === 'CHILD TASK';
+        const child = lastTaskInput(body) === 'CHILD TASK';
         const system = body.messages[0].content;
         assert.ok(modules(body).includes(child ? 'role.subagent' : 'role.primary'));
         assert.ok(!modules(body).includes(child ? 'role.primary' : 'role.subagent'));

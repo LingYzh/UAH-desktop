@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createServer, type ServerResponse } from 'node:http';
 import { randomInt } from 'node:crypto';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { join, resolve, dirname, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -105,26 +105,72 @@ test('elapsed budget interrupts pending manual approval and stops owned children
     const state = await f.wait(state => state.runs.find(run => run.id === root.id)?.harnessState === 'suspended_budget' && state.runs.every(run => ['completed', 'failed', 'stopped'].includes(run.state)));
     assertSuspended(state.runs.find(run => run.id === root.id)!, 'elapsed_ms'); assert.ok(state.runs.some(run => run.parentRunId === root.id)); assert.ok(state.approvals.length > 0 && state.approvals.every(approval => approval.status === 'expired')); assert.equal(existsSync(join(f.project, 'deadline.txt')), false);
 });
-test('reported token overrun saves observed usage and completed response before blocking write', async t => {
-    const f = await fixture(t, (_body, response) => answer(response, [write('overrun.txt')], 500000), { taskBudget: { maxEstimatedTokens: 100000 } }); const root = await f.start(); const stopped = await f.terminal(root.id); assertSuspended(stopped, 'estimated_tokens');
-    assert.equal(f.requests.length, 1); assert.equal(existsSync(join(f.project, 'overrun.txt')), false); const events = f.events(); assert.equal(events.filter(event => event.type === 'tool.dispatch').length, 0);
-    assert.ok(events.some(event => event.type === 'usage.snapshot' && event.payload.usage.counters.totalTokens === 500000)); assert.ok(events.some(event => event.type === 'response.terminal' && event.payload.status === 'completed'));
-    const budget = stopped.budgetState as Record<string, unknown>; assert.equal(budget.tokensCharged, 500000); assert.equal(budget.inFlight, 0); assert.equal(budget.estimatedTokensExceeded, true);
+test('legacy token limit is ignored after high usage; the write and next request complete', async t => {
+    const f = await fixture(t, (_body, response, number) => {
+        answer(response, number === 1 ? [write('overrun.txt')] : [], number === 1 ? 500000 : 1);
+    }, { taskBudget: { maxEstimatedTokens: 100000 } });
+    const root = await f.start(); const completed = await f.terminal(root.id);
+    assert.equal(completed.state, 'completed', completed.error);
+    assert.equal(f.requests.length, 2);
+    assert.equal(readFileSync(join(f.project, 'overrun.txt'), 'utf8'), 'MUST NOT WRITE');
+    const events = f.events();
+    assert.equal(events.filter(event => event.type === 'tool.dispatch').length, 1);
+    assert.equal(events.filter(event => event.type === 'tool.result').length, 1);
+    assert.ok(events.some(event => event.type === 'usage.snapshot' && event.payload.usage.counters.totalTokens === 500000));
+    assert.ok(events.some(event => event.type === 'usage.snapshot' && event.payload.usage.counters.totalTokens === 1));
+    const budget = completed.budgetState as Record<string, unknown>;
+    const limits = budget.limits as Record<string, unknown>;
+    assert.ok(Number(budget.tokensCharged) >= 500000, 'observed usage remains in the cumulative accounting');
+    assert.equal(budget.estimatedTokensExceeded, false);
+    assert.equal(limits.maxEstimatedTokens, null, 'legacy numeric configuration is accepted but ignored');
+    assert.equal(budget.inFlight, 0);
 });
-test('later smaller provider usage preserves billing revisions without erasing observed budget overrun', async t => {
-    const f = await fixture(t, (_body, response) => {
+test('lower later provider usage does not roll back cumulative accounting or billing revisions', async t => {
+    const f = await fixture(t, (_body, response, number) => {
+        if (number > 1) { answer(response, [], 1); return; }
         response.writeHead(200, { 'content-type': 'text/event-stream' });
         for (const totalTokens of [500000, 1]) response.write(`data: ${JSON.stringify({ choices: [], usage: { prompt_tokens: totalTokens - 1, completion_tokens: 1, total_tokens: totalTokens } })}\n\n`);
         const call = write('high-watermark.txt');
         response.end(`data: ${JSON.stringify({ choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: 'high-watermark-write', type: 'function', function: { name: call.name, arguments: JSON.stringify(call.args) } }] }, finish_reason: 'tool_calls' }] })}\n\ndata: [DONE]\n\n`);
     }, { taskBudget: { maxEstimatedTokens: 100000 } });
-    const root = await f.start(); const stopped = await f.terminal(root.id); assertSuspended(stopped, 'estimated_tokens');
-    assert.equal(f.requests.length, 1); assert.equal(existsSync(join(f.project, 'high-watermark.txt')), false);
-    const events = f.events(); assert.equal(events.filter(event => event.type === 'tool.dispatch').length, 0);
-    assert.ok(events.some(event => event.type === 'response.terminal' && event.payload.status === 'completed'));
-    const revisions = events.filter(event => event.type === 'usage.snapshot').map(event => event.payload.usage).sort((a, b) => a.revision - b.revision);
-    assert.deepEqual(revisions.map(usage => usage.counters.totalTokens), [null, 500000, 1], 'all original provider usage revisions remain truthful');
-    assert.equal(revisions.at(-1)!.counters.totalTokens, 1, 'latest billing ledger value is not replaced by the budget high-watermark');
-    assert.equal((revisions.at(-1)!.rawUsage as Record<string, unknown>).total_tokens, 1);
-    const budget = stopped.budgetState as Record<string, unknown>; assert.ok(Number(budget.tokensCharged) >= 500000); assert.equal(budget.estimatedTokensExceeded, true); assert.equal(budget.inFlight, 0);
+    const root = await f.start(); const completed = await f.terminal(root.id);
+    assert.equal(completed.state, 'completed', completed.error);
+    assert.equal(f.requests.length, 2);
+    assert.equal(readFileSync(join(f.project, 'high-watermark.txt'), 'utf8'), 'MUST NOT WRITE');
+    const events = f.events(); assert.equal(events.filter(event => event.type === 'tool.dispatch').length, 1);
+    const revisions = events.filter(event => event.type === 'usage.snapshot').map(event => event.payload.usage);
+    const highUsage = revisions.find(usage => usage.counters.totalTokens === 500000);
+    assert.ok(highUsage);
+    const firstRequest = revisions.filter(usage => usage.requestId === highUsage.requestId).sort((left, right) => left.revision - right.revision);
+    assert.deepEqual(firstRequest.map(usage => usage.counters.totalTokens), [null, 500000, 1], 'all provider revisions remain truthful');
+    assert.equal(firstRequest.at(-1)!.counters.totalTokens, 1, 'latest billing value is not replaced by a cumulative budget counter');
+    assert.equal((firstRequest.at(-1)!.rawUsage as Record<string, unknown>).total_tokens, 1);
+    const budget = completed.budgetState as Record<string, unknown>;
+    const limits = budget.limits as Record<string, unknown>;
+    assert.ok(Number(budget.tokensCharged) >= 500000, 'smaller later reports do not erase previously observed usage');
+    assert.equal(budget.estimatedTokensExceeded, false);
+    assert.equal(limits.maxEstimatedTokens, null);
+    assert.equal(budget.inFlight, 0);
+});
+test('provider-reported output above the former four-million default completes', async t => {
+    const outputTokens = 4_500_000;
+    const totalTokens = outputTokens + 100;
+    const f = await fixture(t, (_body, response) => {
+        response.writeHead(200, { 'content-type': 'text/event-stream' });
+        response.end(`data: ${JSON.stringify({
+            choices: [{ index: 0, delta: { content: 'High output fixture completed.' }, finish_reason: 'stop' }],
+            usage: { prompt_tokens: 100, completion_tokens: outputTokens, total_tokens: totalTokens },
+        })}\n\ndata: [DONE]\n\n`);
+    });
+    const root = await f.start(); const completed = await f.terminal(root.id);
+    assert.equal(completed.state, 'completed', completed.error);
+    assert.equal(f.requests.length, 1);
+    const usage = f.events().find(event => event.type === 'usage.snapshot' && event.payload.usage.counters.totalTokens === totalTokens);
+    assert.ok(usage && usage.type === 'usage.snapshot');
+    assert.equal(usage.payload.usage.counters.outputTokens, outputTokens);
+    const budget = completed.budgetState as Record<string, unknown>;
+    const limits = budget.limits as Record<string, unknown>;
+    assert.ok(Number(budget.tokensCharged) >= totalTokens);
+    assert.equal(budget.estimatedTokensExceeded, false);
+    assert.equal(limits.maxEstimatedTokens, null);
 });

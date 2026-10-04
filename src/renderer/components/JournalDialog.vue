@@ -1,4 +1,6 @@
 <script setup>
+import { clientError } from '../../shared/client-error.js';
+
 import { computed, onBeforeUnmount, ref, watch, useId } from 'vue';
 import { UiDialog, UiButton, UiTable, UiBadge, UiAlert, UiCodeBlock, UiSwitch, UiField, UiTextarea } from '@lingyzh/ui';
 import { useWorkspace } from '../stores/workspace';
@@ -50,7 +52,7 @@ async function query(action, extra = {}) {
             if (result.error) error.value = `清理中途停止，剩余 ${result.remainingFiles} 个候选未删除：${result.error}`;
         }
         if (action === 'export' && result) notice.value = `已导出至 ${result.destination} · 截止事件 ${result.targetSeq} · ${result.partial ? '部分覆盖' : '完整覆盖'}`;
-    } catch (cause) { if (epoch === generation) error.value = cause?.message || String(cause); }
+    } catch (cause) { if (epoch === generation) error.value = clientError(cause); }
     finally { if (epoch === generation) busy.value = false; }
 }
 async function setCaptureRaw(captureRaw) {
@@ -62,7 +64,7 @@ async function setCaptureRaw(captureRaw) {
         if (epoch !== generation || !props.open) return;
         policy.value = saved;
         notice.value = '日志设置已保存，从下一次模型请求或连接测试生效。';
-    } catch (cause) { if (epoch === generation) error.value = cause?.message || String(cause); }
+    } catch (cause) { if (epoch === generation) error.value = clientError(cause); }
     finally { if (epoch === generation) busy.value = false; }
 }
 watch(() => [props.open, workspace.selectedId], ([open], previous) => {
@@ -89,7 +91,7 @@ onBeforeUnmount(() => { generation++; });
                 <UiBadge :tone="summary.coverage === 'complete' ? 'success' : 'warning'">{{ summary.coverage === 'complete' ? '完整覆盖' : summary.coverage === 'legacy_partial' ? '旧记录 · 部分覆盖' : '部分覆盖' }}</UiBadge>
             </div>
             <p class="muted small">已持久化 {{ summary.health.durableSeq }} · 已写出 {{ summary.health.exportedSeq }}。每次请求尝试分别展示用量，未知字段不计作零。</p>
-            <UiAlert v-if="summary.health.error" tone="warning" class="mb-3">{{ summary.health.error }}</UiAlert>
+            <UiAlert v-if="summary.health.error" tone="warning" class="mb-3">{{ clientError(summary.health.error) }}</UiAlert>
             <UiTable :headers="headers" :items="rows" item-value="attemptId" label="逐请求用量" empty-text="此会话暂无模型请求记录" height="280px" fixed-header dense>
                 <template #item.requestId="{ item }"><UiButton size="sm" variant="ghost" :disabled="busy" :aria-label="`查看请求 ${item.requestId} 尝试 ${item.attemptId}`" @click="query('request', { requestId: item.requestId, attemptId: item.attemptId })">查看详情</UiButton></template>
             </UiTable>

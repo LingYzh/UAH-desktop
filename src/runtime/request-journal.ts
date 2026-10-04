@@ -5,6 +5,7 @@ import type { ApiUsage } from '../shared/tool-protocol';
 import type { RequestObserver } from './api-transport';
 import { RunJournal } from './run-journal';
 import { redactJournalValue } from './journal-artifacts';
+import { mergeUsageSnapshot, normalizeProviderUsage } from './context/usage-normalizer';
 
 const ADAPTER_VERSION = 'uah-api-v1';
 const REDACTION_POLICY_VERSION = 'uah-journal-v2';
@@ -158,18 +159,21 @@ export class RequestJournal {
         if (!record(payload)) return;
         const raw = this.connection.protocol === 'openai-responses' && record(payload.response) ? payload.response.usage
             : this.connection.protocol === 'anthropic' && record(payload.message) ? payload.message.usage : payload.usage;
-        if (record(raw)) this.rawUsage = sanitize(raw, this.connection.apiKey).value;
+        if (record(raw)) this.rawUsage = sanitize(mergeUsageSnapshot(record(this.rawUsage) ? this.rawUsage : {}, raw), this.connection.apiKey).value;
     }
     usage(normalized: ApiUsage): void {
         const count = (value: number | undefined) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
         const counters = { inputTokens: count(normalized.inputTokens), outputTokens: count(normalized.outputTokens),
             cachedInputTokens: count(normalized.cachedInputTokens), cacheCreationInputTokens: count(normalized.cacheCreationInputTokens), totalTokens: count(normalized.totalTokens) };
         const supplied = Object.values(counters).filter(value => value !== null).length;
+        const evidence = normalizeProviderUsage(this.connection.protocol, this.rawUsage, normalized);
         const usage: UsageRecord = { schemaVersion: 1, ...this.attempt(), revision: ++this.usageRevision,
             purpose: this.options.purpose ?? 'agent', scope: this.options.scope ?? { kind: 'session', sessionId: this.run.sessionId, runId: this.run.id },
             protocol: this.connection.protocol, adapterVersion: ADAPTER_VERSION,
-            source: this.rawUsage === null ? 'unavailable' : 'provider', completeness: supplied === 0 ? 'unknown' : supplied === 5 ? 'complete' : 'partial',
+            source: this.rawUsage === null ? 'unavailable' : 'provider', completeness: supplied === 0 ? 'unknown' : evidence.coverage,
             rawUsage: this.rawUsage, counters, providerResponseId: null, accountNamespace: this.connection.id,
+            normalization: { version: 1, sourcePaths: evidence.sourcePaths, diagnostics: evidence.diagnostics,
+                inputUncachedTokens: evidence.inputUncachedTokens ?? null, reasoningTokens: evidence.reasoningTokens ?? null },
             reportedCost: null, estimatedCost: null };
         this.journal.event(this.run, 'usage.snapshot', { usage });
     }

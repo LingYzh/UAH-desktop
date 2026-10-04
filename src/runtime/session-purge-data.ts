@@ -9,7 +9,7 @@ export function eraseSessionRows(db: DatabaseSync, sessionId: string): void {
             db.prepare(`DELETE FROM ${table} WHERE run_id IN (SELECT id FROM runs WHERE session_id = ?)`).run(sessionId);
         }
     }
-    for (const table of ['artifacts', 'events', 'canonical_events', 'journal_exports', 'runs'] as const) {
+    for (const table of ['artifacts', 'events', 'canonical_events', 'journal_exports', 'context_surfaces', 'context_entries', 'runs'] as const) {
         if (tables.has(table)) db.prepare(`DELETE FROM ${table} WHERE session_id = ?`).run(sessionId);
     }
     if (tables.has('sessions')) db.prepare('DELETE FROM sessions WHERE id = ?').run(sessionId);

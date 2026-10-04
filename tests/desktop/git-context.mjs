@@ -31,7 +31,7 @@ const server = http.createServer(async (request, response) => {
     try {
         const chunks = []; for await (const chunk of request) chunks.push(chunk);
         const body = JSON.parse(Buffer.concat(chunks).toString()); requests.push(body);
-        const input = body.messages.filter(message => message.role === 'user').at(-1)?.content;
+        const input = body.messages.filter(message => message.role === 'user' && !message.content?.startsWith('[UAH runtime context update v2]')).at(-1)?.content;
         const result = body.messages.find(message => message.role === 'tool' && message.tool_call_id === 'fixture-read');
         const tool = input === 'LOOP TASK' && !result;
         const delta = tool ? { tool_calls: [{ index: 0, id: 'fixture-read', type: 'function', function: { name: 'read_file', arguments: JSON.stringify({ path: 'tracked.txt' }) } }] } : { content: result ? 'Loop verified.' : 'Usage verified.' };
@@ -56,7 +56,9 @@ async function choose(directory) {
 }
 async function create(title, directory, modelId = 'known') {
     const state = await page.evaluate(({ title, directory, endpointId, modelId }) => window.uah.command({ type: 'create-session', title, directory, selection: { endpointId, modelId }, agentId: 'default', controls: { permissionMode: 'readonly', reasoningEffort: 'default' } }), { title, directory, endpointId: savedEndpoint, modelId });
-    await page.reload(); return state.sessions.at(-1).id;
+    await page.reload();
+    await page.getByRole('navigation', { name: '会话列表' }).getByRole('button', { name: new RegExp(title) }).click();
+    return state.sessions.at(-1).id;
 }
 async function send(input) {
     await page.getByRole('textbox', { name: '消息', exact: true }).fill(input); await page.getByRole('button', { name: '发送消息', exact: true }).click();
@@ -88,7 +90,7 @@ async function assertContextGeometry(dialog, label) {
     const geometry = await dialog.evaluate(element => {
         const shell = element.querySelector('.ui-dialog-scroll');
         const outer = shell.querySelector(':scope > .ui-scroll-viewport');
-        const code = element.querySelector('.ui-code-block code');
+        const code = element.querySelector('.ui-collapse.is-open .ui-code-block code');
         const inner = code.closest('.ui-scroll-viewport');
         const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
         let text; while ((text = walker.nextNode()) && !text.textContent.trim()) {}
@@ -138,53 +140,57 @@ try {
     firstRun = await send('USAGE TASK');
     const context = await page.evaluate(runId => window.uah.requestContext({ runId }), firstRun.id);
     check('provider usage reaches persisted request summary', context.capacity === 64000 && context.usage.inputTokens === 1234 && context.usage.outputTokens === 67 && context.usage.cachedInputTokens === 234);
-    check('request projection contains actual Git environment', context.sections.find(section => section.id === 'environment').content.includes('qa-context'));
-    await page.getByRole('button', { name: /最近请求上下文：1.9%/ }).click();
-    const dialog = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: '请求上下文', exact: true }) }); await dialog.getByText('输出 token：67', { exact: true }).waitFor();
-    await dialog.getByText('缓存读取 token（包含在输入内）：234', { exact: true }).waitFor();
+    check('request projection contains actual Git environment', context.sections.find(section => section.id === 'history').content.includes('qa-context'));
+    await page.getByRole('button', { name: /会话上下文：/ }).click();
+    const dialog = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: '会话上下文', exact: true }) }); await dialog.getByText('累计输出 token：67', { exact: true }).waitFor();
+    await dialog.getByText('累计缓存读取 token：234', { exact: true }).waitFor();
+    await dialog.getByText('会话缓存命中率（累计缓存读取 / 累计输入）：18.96%', { exact: true }).waitFor();
+    const remaining = await dialog.locator('.ui-usage-legend li').filter({ hasText: '剩余可用上下文' }).innerText();
+    check('remaining category accounts for pressure/reserves', remaining.includes(Math.max(0, context.capacity - Math.max(context.estimatedInputTokens + context.pressure.outputReserve + context.pressure.toolReserve + context.pressure.errorReserve, context.pressure.requiredTokens)).toLocaleString()));
     check('context dialog shows model/capacity and measured usage', (await dialog.innerText()).includes('known') && (await dialog.innerText()).includes('64,000'));
     for (const [theme, width, zoom] of [['light', 1440, 1], ['dark', 900, 1.25]]) {
         await capture(`context-usage-${theme}`, theme, width, zoom);
         const geometry = await dialog.evaluate(element => { const shell = element.querySelector('.ui-dialog-scroll'); const viewport = shell.querySelector(':scope > .ui-scroll-viewport'); return { shell: shell.scrollTop, top: viewport.scrollTop, aligned: Math.abs(viewport.getBoundingClientRect().top - shell.getBoundingClientRect().top) < 1 }; });
         check(`${theme}: unopened sections show usage at viewport top`, geometry.shell === 0 && geometry.top === 0 && geometry.aligned);
     }
-    await dialog.getByRole('button', { name: /^环境与 Git ·/ }).click();
-    check('context section expands through library collapse', await dialog.getByRole('button', { name: /^环境与 Git ·/ }).getAttribute('aria-expanded') === 'true');
+    await dialog.getByRole('button', { name: /^消息与工具结果 ·/ }).click();
+    check('context section expands through library collapse', await dialog.getByRole('button', { name: /^消息与工具结果 ·/ }).getAttribute('aria-expanded') === 'true');
     await dialog.getByText(/qa-context/).first().waitFor();
     for (const [theme, width, zoom] of [['light', 1440, 1], ['dark', 900, 1.25]]) {
         await app.evaluate(({ BrowserWindow }, { width, zoom }) => { const window = BrowserWindow.getAllWindows()[0]; window.setSize(width, 900); window.webContents.setZoomFactor(zoom); }, { width, zoom });
         await page.waitForTimeout(250);
         await assertContextGeometry(dialog, `${theme} ${width}/${zoom}`);
         await capture(`context-expanded-${theme}`, theme, width, zoom);
-        if (theme === 'dark') { const scroll = dialog.getByRole('region', { name: '最近请求上下文' }); check('context dialog scrolls expanded content at 900px/125%', await scroll.evaluate(element => { element.scrollTop = element.scrollHeight; return element.scrollHeight > element.clientHeight && element.scrollTop > 0; })); await capture('context-scrolled-dark', theme, width, zoom); }
+        if (theme === 'dark') { const scroll = dialog.getByRole('region', { name: '会话上下文详情' }); check('context dialog scrolls expanded content at 900px/125%', await scroll.evaluate(element => { element.scrollTop = element.scrollHeight; return element.scrollHeight > element.clientHeight && element.scrollTop > 0; })); await capture('context-scrolled-dark', theme, width, zoom); }
     }
-    await dialog.getByRole('button', { name: /^环境与 Git ·/ }).click(); await capture('context-collapsed-dark', 'dark', 900, 1.25);
+    await dialog.getByRole('button', { name: /^消息与工具结果 ·/ }).click(); await capture('context-collapsed-dark', 'dark', 900, 1.25);
     await dialog.getByRole('button', { name: '关闭', exact: true }).click(); await capture('reset-size-loop', 'light', 1440, 1);
     loopRun = await send('LOOP TASK'); const loop = await page.evaluate(runId => window.uah.requestContext({ runId }), loopRun.id);
     check('second tool request records native call/result', loop.round === 1 && loop.sections.find(section => section.id === 'history').content.includes('fixture-read') && loop.sections.find(section => section.id === 'history').content.includes('UNSTAGED LINE'));
     check('usage-less tool continuation does not reuse prior request usage', loop.usage === undefined && loop.estimatedInputTokens > 0);
-    check('Git remains in actual tool continuation environment', loop.sections.find(section => section.id === 'environment').content.includes('qa-context'));
-    await page.getByRole('button', { name: /最近请求上下文：.*本地估算/ }).waitFor();
+    check('Git remains in actual tool continuation environment', loop.sections.find(section => section.id === 'history').content.includes('qa-context'));
+    await page.getByRole('button', { name: /会话上下文：.*本地估算/ }).waitFor();
     await app.close(); await launch();
+    check('relaunch opens a new-session draft without restoring history', await page.getByRole('button', { name: /会话上下文：未统计/ }).isVisible());
     check('context survives real Electron restart', (await page.evaluate(runId => window.uah.requestContext({ runId }), loopRun.id)).requestId === loop.requestId);
     await choose(nonRepository); await create('Git context nonrepo', nonRepository, 'unknown');
     await page.getByRole('button', { name: '非 Git 仓库', exact: true }).waitFor();
     check('nonrepository state is explicit', (await page.evaluate(directory => window.uah.git({ directory, kind: 'status' }), nonRepository)).snapshot.state === 'not-repository');
     await send('UNKNOWN CAPACITY'); const unknown = (await snapshot()).runs.at(-1);
     check('unknown model capacity remains unknown', unknown.requestContext.capacity === undefined);
-    await page.getByRole('button', { name: /最近请求上下文：容量未知.*本地估算/ }).click();
-    const laterDialog = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: '请求上下文', exact: true }) });
-    await laterDialog.locator('p').filter({ hasText: 'unknown · 请求 1' }).waitFor();
+    await page.getByRole('button', { name: /会话上下文：容量未知.*本地估算/ }).click();
+    const laterDialog = page.getByRole('dialog').filter({ has: page.getByRole('heading', { name: '会话上下文', exact: true }) });
+    await laterDialog.locator('p').filter({ hasText: 'unknown ·' }).waitFor();
     await laterDialog.getByRole('button', { name: '关闭', exact: true }).click();
     await create('Git context empty', null, 'unknown'); await page.getByRole('button', { name: '没有仓库', exact: true }).waitFor();
     check('no-directory state is explicit', (await page.evaluate(() => window.uah.git({ directory: null, kind: 'status' }))).snapshot.state === 'no-directory');
-    await page.getByRole('button', { name: /最近请求上下文：未统计/ }).click(); await page.getByText('本会话还没有模型请求快照。', { exact: true }).waitFor();
+    await page.getByRole('button', { name: /会话上下文：未统计/ }).click(); await page.getByText('此会话尚无可用的 API 上下文记录。', { exact: true }).waitFor();
     await laterDialog.getByRole('button', { name: '关闭', exact: true }).click();
     await page.getByRole('navigation', { name: '会话列表' }).getByRole('button', { name: /Git context known/ }).click();
-    await page.getByRole('button', { name: /qa-context · 26 项改动/ }).waitFor(); await page.getByRole('button', { name: /最近请求上下文：.*本地估算/ }).waitFor(); check('session switch restores correct Git and context', true);
+    await page.getByRole('button', { name: /qa-context · 26 项改动/ }).waitFor(); await page.getByRole('button', { name: /会话上下文：.*本地估算/ }).waitFor(); check('session switch restores correct Git and context', true);
     await page.evaluate(runId => window.uah.command({ type: 'delete-reply', runId }), loopRun.id);
     check('deleted response context detail is unavailable', await page.evaluate(async runId => (await window.uah.requestContext({ runId })) === null, loopRun.id));
-    await page.getByRole('button', { name: /最近请求上下文：未统计/ }).waitFor();
+    await page.getByRole('button', { name: /会话上下文：未统计/ }).waitFor();
     check('history mutation clears displayed request estimate', true);
     await app.close(); await launch();
     check('deleted context remains unavailable after restart', await page.evaluate(async runId => (await window.uah.requestContext({ runId })) === null, loopRun.id));

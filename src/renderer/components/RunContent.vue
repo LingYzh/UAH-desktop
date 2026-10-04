@@ -1,9 +1,10 @@
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { UiActivity, UiMarkdown } from '@lingyzh/ui';
 import { useWorkspace } from '../stores/workspace';
 import { activityGroups } from '../activity-groups';
 import { openMarkdownLink } from '../markdown-links';
+import { nativeReasoningSummary, coalesceNativeActivities } from '../tool-presentation.js';
 import RunActivity from './RunActivity.vue';
 const props = defineProps({ run: { type: Object, required: true }, readonly: Boolean });
 const workspace = useWorkspace();
@@ -11,8 +12,15 @@ const view = computed(() => workspace.activityView(props.run));
 const expanded = computed(() => view.value.expanded);
 const edited = computed(() => props.run.history?.editedOutput !== undefined);
 const planContainsReply = computed(() => !edited.value && props.run.plan && props.run.plan.content.trim() === props.run.output.trim());
-const groups = computed(() => activityGroups((props.run.activities || []).filter(item => !(edited.value || planContainsReply.value) || item.kind !== 'text')));
+const activities = computed(() => coalesceNativeActivities(props.run.activities || []).map(item => item.kind === 'reasoning'
+    ? { ...item, content: nativeReasoningSummary(item) }
+    : item));
+const groups = computed(() => activityGroups(activities.value.filter(item => !(edited.value || planContainsReply.value) || item.kind !== 'text')));
 const groupKey = group => `group:${group.id}`;
+const openedGroups = ref({});
+watch(() => groups.value.filter(group => expanded.value[groupKey(group)]).map(group => group.id), ids => {
+    for (const id of ids) openedGroups.value[id] = true;
+}, { immediate: true });
 const toolCount = group => group.items.filter(item => ['tool', 'agent'].includes(item.kind)).length;
 const groupStatus = group => group.items.some(item => item.status === 'approval') && props.run.state === 'approval' ? '等待审批' : group.items.some(item => item.status === 'running') && props.run.state === 'running' ? '运行中' : group.items.some(item => item.status === 'failed') ? '有操作失败' : '';
 watch(groups, values => {
@@ -30,7 +38,7 @@ watch(groups, values => {
 <template>
     <template v-for="group in groups" :key="group.id">
         <UiActivity v-if="group.tool && toolCount(group) > 1" v-model:open="expanded[groupKey(group)]" variant="inline" icon="terminal" :title="`使用了 ${toolCount(group)} 个工具`" :status="groupStatus(group)" :scrollable="false">
-            <RunActivity v-for="activity in group.items" :key="activity.id" :run="run" :activity="activity" :readonly="readonly" />
+            <template v-if="openedGroups[group.id]"><RunActivity v-for="activity in group.items" :key="activity.id" :run="run" :activity="activity" :readonly="readonly" /></template>
         </UiActivity>
         <RunActivity v-else :run="run" :activity="group.items[0]" :readonly="readonly" />
     </template>

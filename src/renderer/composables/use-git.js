@@ -1,3 +1,4 @@
+import { clientError } from '../../shared/client-error.js';
 import { onBeforeUnmount, ref, toValue, watch } from 'vue';
 
 /** A read-only directory query, scoped to the currently visible session. */
@@ -22,7 +23,7 @@ export function useGit(directory, scope, refreshSignal = () => '') {
             const response = await query('status');
             if (request === statusRequest && response) result.value = response;
         } catch (cause) {
-            if (request === statusRequest) error.value = cause?.message || String(cause);
+            if (request === statusRequest) error.value = clientError(cause);
         } finally {
             if (request === statusRequest) busy.value = false;
         }

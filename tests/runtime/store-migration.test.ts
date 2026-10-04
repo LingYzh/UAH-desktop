@@ -5,7 +5,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { RuntimeStore } from '../../src/runtime/store';
+import { RuntimeStore, RUNTIME_SCHEMA_VERSION } from '../../src/runtime/store';
 import type { RunRecord, SessionRecord, ArtifactSnapshot, ApprovalRecord, RuntimeEvent } from '../../src/shared/contracts';
 import { conversationMessages } from '../../src/shared/conversation-history';
 
@@ -82,7 +82,7 @@ for (const version of [1, 2] as const) {
             assert.equal(migrated.readRun('plan')?.plan?.history?.[0].content, 'Version one plan');
             assert.deepEqual([...migrated.readLegacyJournalSessionIds()], [f.records.session.id]);
             assert.deepEqual(migrated.readJournal(f.records.session.id), []);
-            const state = sqliteState(join(f.root, 'runtime.sqlite')); assert.equal(state.version, 3);
+            const state = sqliteState(join(f.root, 'runtime.sqlite')); assert.equal(state.version, RUNTIME_SCHEMA_VERSION);
             assert.ok(state.schema.some(row => row.name === 'runs_created_at')); assert.ok(state.schema.some(row => row.name === 'runs_session_created_at'));
         } finally { migrated.close(); }
     });

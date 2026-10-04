@@ -15,6 +15,16 @@ test('user templates retain all non-placeholder text and bind every slot', () =>
     assert.match(CLAUDE_SUBAGENT_INSTRUCTIONS, /spawn_agent 的 prompt 参数/);
 });
 
+test('provider discovery instructions follow the tools actually registered', () => {
+    const run = { effective: { modelId: 'fixture', permissionMode: 'readonly' } } as RunRecord;
+    assert.match(JSON.stringify(runtimePromptContext(run, null, [])), /本轮没有子代理 Provider 目录工具/);
+    for (const tool of ['list_agent_presets', 'uah_list_agent_presets']) {
+        const context = JSON.stringify(runtimePromptContext(run, null, [tool]));
+        assert.match(context, /按需读取启用的 Provider/);
+        assert.match(context, /不代表服务在线/);
+    }
+});
+
 test('runtime slots are current per request without changing saved instructions', () => {
     const run = { effective: { modelId: 'fixture', endpointId: 'provider', permissionMode: 'readonly' }, depth: 1, parentRunId: 'root' } as RunRecord;
     const first = renderPromptContext(CLAUDE_SUBAGENT_INSTRUCTIONS, runtimePromptContext(run, 'D:\\First', ['read_file']));
@@ -22,6 +32,7 @@ test('runtime slots are current per request without changing saved instructions'
     assert.match(first, /"directory":"D:\\\\First"/);
     assert.match(first, /"tools":\["read_file"\]/);
     assert.match(first, /"role":"subagent"/);
+    assert.match(first, /token 用量仅作统计，不作为任务停止条件/);
     assert.match(next, /"directory":null/);
     assert.match(next, /"tools":\[\]/);
     assert.doesNotMatch(CLAUDE_SUBAGENT_INSTRUCTIONS, /D:\\\\First/);

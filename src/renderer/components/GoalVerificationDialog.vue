@@ -1,4 +1,6 @@
 <script setup>
+import { clientError } from '../../shared/client-error.js';
+
 import { ref, watch, onBeforeUnmount, useId } from 'vue';
 import { UiDialog, UiButton, UiAlert, UiTable, UiTextarea, UiField } from '@lingyzh/ui';
 import { useWorkspace } from '../stores/workspace';
@@ -23,7 +25,7 @@ async function refresh() {
     try {
         const result = await window.uah.journal({ action: 'verification', sessionId: run.sessionId, runId: run.id });
         if (epoch === generation) review.value = result;
-    } catch (cause) { if (epoch === generation) error.value = cause?.message || String(cause); }
+    } catch (cause) { if (epoch === generation) error.value = clientError(cause); }
     finally { if (epoch === generation) busy.value = false; }
 }
 async function accept() {
@@ -35,7 +37,7 @@ async function accept() {
         if (epoch !== generation) return;
         if (workspace.error) throw new Error(workspace.error);
         criteria.value = ''; busy.value = false; await refresh();
-    } catch (cause) { if (epoch === generation) error.value = cause?.message || String(cause); }
+    } catch (cause) { if (epoch === generation) error.value = clientError(cause); }
     finally { if (epoch === generation) busy.value = false; }
 }
 watch(() => props.run, () => { generation++; busy.value = false; criteria.value = ''; error.value = ''; review.value = null; if (props.run) refresh(); }, { immediate: true });

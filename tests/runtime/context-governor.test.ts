@@ -51,14 +51,20 @@ test('shared reservations charge request/token/in-flight capacity immediately wi
     assert.throws(() => budget.reserveRequest(0), exceeded('requests')); assert.throws(() => budget.settleRequest(first, 30), TypeError);
     assert.throws(() => budget.settleRequest('unknown', null), TypeError); now = 15; assert.equal(budget.snapshot().elapsedMs, 5);
 });
-test('reported overrun settles truthfully and subsequent request/tool admission or check rejects', () => {
+test('estimated and provider token totals are recorded without stopping later work', () => {
     const budget = new TaskTreeBudget({ maxEstimatedTokens: 10 }); const id = budget.reserveRequest(5);
-    assert.doesNotThrow(() => budget.settleRequest(id, 12)); assert.equal(budget.snapshot().tokensCharged, 12); assert.equal(budget.snapshot().inFlight, 0); assert.equal(budget.snapshot().estimatedTokensExceeded, true);
-    assert.throws(() => budget.check(), exceeded('estimated_tokens')); assert.throws(() => budget.reserveRequest(0), exceeded('estimated_tokens')); assert.throws(() => budget.reserveTools(1), exceeded('estimated_tokens'));
+    assert.doesNotThrow(() => budget.settleRequest(id, 12)); assert.equal(budget.snapshot().tokensCharged, 12); assert.equal(budget.snapshot().inFlight, 0); assert.equal(budget.snapshot().estimatedTokensExceeded, false);
+    assert.doesNotThrow(() => budget.check());
+    const next = budget.reserveRequest(50_000_000); budget.settleRequest(next, 60_000_000);
+    budget.reserveTools(1);
+    assert.equal(budget.snapshot().tokensCharged, 60_000_012);
     assert.throws(() => budget.settleRequest(id, null), TypeError);
     const saturated = new TaskTreeBudget(); const first = saturated.reserveRequest(1); const second = saturated.reserveRequest(1);
     saturated.settleRequest(first, Number.MAX_SAFE_INTEGER); saturated.settleRequest(second, Number.MAX_SAFE_INTEGER);
-    assert.equal(saturated.snapshot().tokensCharged, Number.MAX_SAFE_INTEGER); assert.equal(saturated.snapshot().estimatedTokensExceeded, true); assert.equal(saturated.snapshot().inFlight, 0);
+    assert.equal(saturated.snapshot().tokensCharged, Number.MAX_SAFE_INTEGER); assert.equal(saturated.snapshot().estimatedTokensExceeded, false); assert.equal(saturated.snapshot().inFlight, 0);
+    assert.doesNotThrow(() => saturated.check());
+    const afterSaturation = saturated.reserveRequest(Number.MAX_SAFE_INTEGER); saturated.settleRequest(afterSaturation, null);
+    assert.equal(saturated.snapshot().tokensCharged, Number.MAX_SAFE_INTEGER);
 });
 test('tool reservations are atomic and elapsed admission uses only the monotonic clock', () => {
     let now = 0; const budget = new TaskTreeBudget({ maxTools: 3, maxElapsedMs: 10, monotonicNow: () => now });
@@ -72,10 +78,11 @@ test('invalid budget configuration/reservation never consumes counters', () => {
     for (const options of [{ maxRequests: 0 }, { maxTools: -1 }, { maxElapsedMs: Infinity }, { maxConcurrentRequests: 1.5 }, { maxEstimatedTokens: null }, { monotonicNow: () => NaN }, { unknown: 1 }]) assert.throws(() => new TaskTreeBudget(options as never), TypeError);
     const budget = new TaskTreeBudget({ maxEstimatedTokens: 5 });
     for (const amount of [-1, NaN, 0.1, Infinity]) assert.throws(() => budget.reserveRequest(amount), TypeError);
-    assert.throws(() => budget.reserveRequest(6), exceeded('estimated_tokens')); assert.equal(budget.snapshot().requestsUsed, 0);
+    const oversized = budget.reserveRequest(6); assert.equal(budget.snapshot().requestsUsed, 1); assert.equal(budget.snapshot().tokensCharged, 6);
+    budget.settleRequest(oversized, 6);
     const id = budget.reserveRequest(5); assert.throws(() => budget.settleRequest(id, -1), TypeError); assert.equal(budget.snapshot().inFlight, 1); budget.settleRequest(id, null);
     for (const amount of [-1, NaN, 0.1]) assert.throws(() => budget.reserveTools(amount), TypeError); assert.equal(budget.snapshot().toolsUsed, 0);
-    assert.deepEqual(new TaskTreeBudget().snapshot().limits, { maxRequests: 64, maxTools: 256, maxElapsedMs: 1800000, maxEstimatedTokens: 4000000, maxConcurrentRequests: 4 });
+    assert.deepEqual(new TaskTreeBudget().snapshot().limits, { maxRequests: 64, maxTools: 256, maxElapsedMs: 1800000, maxEstimatedTokens: null, maxConcurrentRequests: 4 });
 });
 
 test('restore retains charges and execution time but abandons in-flight reservations', () => {
@@ -121,25 +128,30 @@ test('restore overrides cumulative limits without resetting request or tool cons
     increased.reserveRequest(1); increased.reserveTools(1);
     assert.equal(increased.snapshot().requestsUsed, 3);
     assert.equal(increased.snapshot().toolsUsed, 3);
-    assert.equal(increased.snapshot().limits.maxEstimatedTokens, saved.limits.maxEstimatedTokens);
+    assert.equal(increased.snapshot().limits.maxEstimatedTokens, null);
 });
 
-test('explicit token increase clears an old overrun but never admits saturated totals', () => {
+test('legacy numeric token limits and overrun snapshots restore normalized and unrestricted', () => {
     const budget = new TaskTreeBudget({ maxEstimatedTokens: 10, monotonicNow: () => 0 });
     budget.settleRequest(budget.reserveRequest(5), 12);
     const saved = budget.snapshot();
-    assert.throws(() => TaskTreeBudget.restore(saved).check(), exceeded('estimated_tokens'));
-    assert.throws(() => TaskTreeBudget.restore(saved, { maxEstimatedTokens: 11 }).check(), exceeded('estimated_tokens'));
-    const increased = TaskTreeBudget.restore(saved, { maxEstimatedTokens: 13, monotonicNow: () => 0 });
-    assert.equal(increased.snapshot().estimatedTokensExceeded, false);
-    increased.reserveRequest(1);
-    assert.equal(increased.snapshot().tokensCharged, 13);
-    const saturated = { ...saved, tokensCharged: Number.MAX_SAFE_INTEGER };
-    const blocked = TaskTreeBudget.restore(saturated, { maxEstimatedTokens: Number.MAX_SAFE_INTEGER });
-    assert.throws(() => blocked.reserveRequest(0), exceeded('estimated_tokens'));
-    assert.equal(blocked.snapshot().estimatedTokensExceeded, true);
-    const lowered = TaskTreeBudget.restore({ ...saved, estimatedTokensExceeded: false, tokensCharged: 10 }, { maxEstimatedTokens: 9 });
-    assert.throws(() => TaskTreeBudget.restore(lowered.snapshot()).check(), exceeded('estimated_tokens'));
+    const legacy = { ...saved, estimatedTokensExceeded: true,
+        limits: { ...saved.limits, maxEstimatedTokens: 10 } };
+    const restored = TaskTreeBudget.restore(legacy, { monotonicNow: () => 0 });
+    assert.equal(restored.snapshot().limits.maxEstimatedTokens, null);
+    assert.equal(restored.snapshot().estimatedTokensExceeded, false);
+    assert.equal(restored.snapshot().tokensCharged, 12);
+    restored.reserveRequest(1_000_000); restored.reserveTools(1);
+    assert.equal(restored.snapshot().requestsUsed, 2);
+
+    const legacyWithinLimit = { ...saved, estimatedTokensExceeded: false,
+        limits: { ...saved.limits, maxEstimatedTokens: 15 } };
+    assert.equal(TaskTreeBudget.restore(legacyWithinLimit).snapshot().limits.maxEstimatedTokens, null);
+
+    const saturatedLegacy = { ...legacy, tokensCharged: Number.MAX_SAFE_INTEGER };
+    const saturated = TaskTreeBudget.restore(saturatedLegacy, { monotonicNow: () => 0 });
+    assert.doesNotThrow(() => saturated.reserveRequest(0));
+    assert.equal(saturated.snapshot().tokensCharged, Number.MAX_SAFE_INTEGER);
 });
 
 test('restore rejects incomplete or contradictory persistent evidence', () => {
@@ -158,8 +170,9 @@ test('restore rejects incomplete or contradictory persistent evidence', () => {
         { ...saved, elapsedMs: NaN }, { ...saved, elapsedMs: Infinity }, { ...saved, elapsedMs: -1 },
         { ...saved, elapsedMs: Number.MAX_SAFE_INTEGER + 1 }, { ...saved, limits: { ...saved.limits, maxRequests: 0 } },
         { ...saved, limits: { ...saved.limits, maxConcurrentRequests: Infinity } },
+        { ...saved, limits: { ...saved.limits, maxEstimatedTokens: 'unlimited' } },
         { ...saved, limits: { ...saved.limits, extra: 1 } }, { ...saved, requestsUsed: 1, tokensCharged: 5, tokensReserved: 1 },
-        { ...saved, requestsUsed: 5, inFlight: 5 }, { ...saved, requestsUsed: 1, tokensCharged: 5_000_000 },
+        { ...saved, requestsUsed: 5, inFlight: 5 },
         { ...saved, requestsUsed: 1, tokensCharged: 5, tokensReserved: 6, inFlight: 1 }];
     for (const value of invalid) assert.throws(() => TaskTreeBudget.restore(value), TypeError);
 });

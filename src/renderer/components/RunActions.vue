@@ -4,6 +4,7 @@ import { UiMessageActions, UiDialog, UiField, UiTextarea, UiButton, snackbar, wr
 import { useWorkspace } from '../stores/workspace';
 import { displayedReply } from '../../shared/conversation-history';
 import { sessionHasFileChanges } from '../../shared/run-effects';
+import { messageTime } from '../message-time';
 const props = defineProps({ run: { type: Object, required: true }, index: { type: Number, required: true } });
 const workspace = useWorkspace();
 const dialogId = useId();
@@ -15,12 +16,13 @@ const actions = computed(() => [
     { id: 'copy', icon: 'copy', label: '复制回复', disabled: !displayedReply(props.run) },
     { id: 'edit', icon: 'edit', label: '编辑历史回复', disabled: !idle.value },
     { id: 'branch', icon: 'branch', label: '从此回复创建分支', disabled: !idle.value },
-    ...(!(workspace.snapshot.historyWindow?.hasFileChanges || sessionHasFileChanges(workspace.snapshot, props.run.sessionId)) ? [{ id: 'regenerate', icon: 'refresh', label: '重新生成最新回复', disabled: !idle.value || workspace.runs.at(-1)?.id !== props.run.id }] : []),
+    ...(!props.run.native && !(workspace.snapshot.historyWindow?.hasFileChanges || sessionHasFileChanges(workspace.snapshot, props.run.sessionId)) ? [{ id: 'regenerate', icon: 'refresh', label: '重新生成最新回复', disabled: !idle.value || workspace.runs.at(-1)?.id !== props.run.id }] : []),
     { id: 'delete', icon: 'trash', label: '删除回复记录', disabled: !idle.value },
 ]);
 const label = computed(() => {
     const duration = Date.parse(props.run.finishedAt) - Date.parse(props.run.createdAt);
-    return `第 ${props.index + 1} 轮${Number.isFinite(duration) && duration >= 0 ? ` · ${Math.max(1, Math.round(duration / 1000))} 秒` : ''}`;
+    const ended = { completed: '完成于', stopped: '停止于', failed: '失败于' }[props.run.state] || '结束于';
+    return `第 ${props.index + 1} 轮${Number.isFinite(duration) && duration >= 0 ? ` · ${Math.max(1, Math.round(duration / 1000))} 秒` : ''} · ${ended} ${messageTime(props.run.finishedAt)}（本地时间）`;
 });
 const title = computed(() => ({ edit: '编辑已保存回复', regenerate: '重新生成最新回复？', delete: '删除这组回复记录？' }[operation.value]));
 const confirmLabel = computed(() => ({ edit: '仅保存历史修改', regenerate: '重新生成', delete: '删除记录' }[operation.value]));

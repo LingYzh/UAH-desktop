@@ -16,6 +16,7 @@
         "typecheck": "tsc --noEmit",
         "test": "tsx --test tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs",
         "test:desktop": "node tests/desktop/smoke.mjs",
+        "test:extensions": "node tests/desktop/extensions.mjs",
         "test:endpoints": "node tests/desktop/endpoints.mjs",
         "test:agents": "node tests/desktop/agents.mjs",
         "test:agent-presets": "node tests/desktop/agent-presets.mjs",
@@ -35,9 +36,10 @@
         "build:ui": "node scripts/build-ui.mjs"
     },
     "dependencies": {
+        "@lingyzh/ui": "0.2.3",
+        "@modelcontextprotocol/sdk": "1.32.0",
         "pinia": "4.0.3",
-        "vue": "3.5.43",
-        "@lingyzh/ui": "0.2.1"
+        "vue": "3.5.43"
     },
     "devDependencies": {
         "@types/node": "^24.0.0",

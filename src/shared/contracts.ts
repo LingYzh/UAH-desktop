@@ -1,4 +1,5 @@
 import type { ApiProtocol, EndpointCommand, EndpointReply } from './endpoints';
+import { validateAttachments } from './attachments';
 import type { AgentCommand, AgentSettings } from './agents';
 import type { ModelParameters } from './model-parameters';
 import type { PermissionMode } from './permissions';
@@ -10,6 +11,8 @@ export type { RunIdentity, RequestIdentity, InvocationIdentity, HarnessRunState,
     TranscriptEvent, TranscriptManifest, RequestSnapshot, UsageRecord } from './harness-contracts';
 
 export interface RuntimeConfig {
+    nativeCollaborationMode?: 'default' | 'plan';
+    nativeRevision?: number;
     runtimeId: string;
     modelId: string;
     agentId: string;
@@ -29,6 +32,7 @@ export interface RuntimeConfig {
 }
 
 export interface SessionRecord {
+    nativeCollaborationMode?: 'default' | 'plan';
     branchHistory?: Array<{ messages: import('./endpoints').ApiMessage[]; modelFrame?: import('./harness-contracts').ModelFrame }>;
     branchArtifacts?: import('./harness-contracts').ArtifactReference[];
     activePlanRunId?: string;
@@ -71,11 +75,17 @@ export interface RunActivity {
     tool?: { name: string; arguments: Record<string, unknown>; result?: string; isError?: boolean; artifactId?: string; outcome?: import('./harness-contracts').ToolOutcome };
 }
 export interface RunRecord {
+    nativePlan?: { content?: string; explanation?: string; steps?: Array<{ step: string; status: 'pending' | 'inProgress' | 'completed' }> };
+    attachments?: Array<Omit<import('./attachments').NativeAttachmentPayload, 'data'> & { artifact?: import('./harness-contracts').ArtifactReference }>;
+    nativeContext?: import('./native-context').NativeContextUsage;
+    nativeQuestions?: Array<{ id: string; status: 'pending' | 'answered' | 'cancelled'; questions: import('../runtime/codex-app-server').NativeUserQuestion[] }>;
+    nativeCommand?: import('./native-codex-commands').NativeInputCommand;
+    native?: { goal?: import('../runtime/codex-app-server').NativeThreadGoal | null; threadId: string; turnId?: string; coverage: 'partial'; controller: 'codex'; revision: number; configFingerprint?: string; usage?: import('./tool-protocol').ApiUsage };
     goalVerification?: import('./goal-verification').GoalVerification;
     resumeOfRunId?: string;
     reconciliation?: { reviewId: string; throughSeq: number; reviewedAt: string; resourceFingerprint: string };
     activeStepId?: string;
-    steering?: Array<{ id: string; expectedStepId: string; input: string; status: 'queued' | 'applied' }>;
+    steering?: Array<{ id: string; expectedStepId: string; input: string; status: 'queued' | 'applied'; createdAt?: string }>;
     contextState?: { version: string; taskState: import('./harness-contracts').ArtifactReference };
     budgetState?: import('./harness-contracts').JsonValue;
     toolProgress?: import('./harness-contracts').ToolProgressState;
@@ -162,11 +172,13 @@ export type Command =
     | { type: 'delete-reply'; runId: string }
     | { type: 'regenerate-run'; runId: string; selection?: { endpointId: string; modelId: string } | null }
     | { type: 'resolve-plan'; runId: string; planId: string; decision: 'approve' | 'revise'; permissionMode?: 'manual' | 'accept-edits' | 'auto' | 'bypass'; feedback?: string; selection?: { endpointId: string; modelId: string } | null }
+    | { type: 'answer-native-question'; runId: string; questionId: string; answers: Record<string, { answers: string[] }> }
     | { type: 'set-session-controls'; sessionId: string; controls: SessionControls; revision: number }
     | {
           type: 'start-run';
           sessionId: string;
           input: string;
+          attachments?: import('./attachments').NativeAttachmentPayload[];
           selection?: { endpointId: string; modelId: string } | null;
           agentId?: string;
       }
@@ -217,10 +229,16 @@ export interface BrowserState {
 }
 
 export interface DesktopBridge {
+    chooseAttachments(): Promise<import('./attachments').NativeAttachmentDescriptor[]>;
+    importAttachments(files: File[]): Promise<import('./attachments').NativeAttachmentDescriptor[]>;
+    releaseAttachments(ids: string[]): Promise<void>;
+    extensions(command: import('./extensions').ExtensionCommand): Promise<import('./extensions').ExtensionSnapshot>;
+    testConnector(id: string): Promise<unknown>;
+    nativeCodex(command: import('./extension-runtime').NativeSettingsCommand): Promise<import('./extension-runtime').NativeStatus>;
     journalPolicy(command: import('./journal-policy').JournalPolicyCommand): Promise<import('./journal-policy').JournalPolicy>;
     journal(query: import('./journal-view').JournalQuery): Promise<unknown>;
     git(query: import('./git').GitQuery): Promise<import('./git').GitResult>;
-    requestContext(query: { runId: string }): Promise<import('./request-context').RequestContextDetail | null>;
+    requestContext(query: import('../shared/request-context').ContextQuery): Promise<import('./request-context').RequestContextDetail | null>;
     openLogs(): Promise<void>;
     openExternal(url: string): Promise<void>;
     writeClipboard(text: string): Promise<void>;
@@ -402,6 +420,21 @@ export function parseCommand(value: unknown): Command {
             assertExactKeys(value, ['type', 'runId'], 'command');
             return { type: 'delete-reply', runId: readString(value.runId, 'runId') };
         }
+        case 'answer-native-question': {
+            assertExactKeys(value, ['type', 'runId', 'questionId', 'answers'], 'command');
+            if (!value.answers || typeof value.answers !== 'object' || Array.isArray(value.answers)) fail('问答格式无效。');
+            const entries = Object.entries(value.answers);
+            if (new TextEncoder().encode(JSON.stringify(value.answers)).length > 64000) fail('回答内容超过限制。');
+            if (entries.length > 8) fail('回答数量超过限制。');
+            const answers: Record<string, { answers: string[] }> = Object.create(null);
+            for (const [id, entry] of entries) {
+                readString(id, 'question id');
+                assertExactKeys(entry, ['answers'], 'answer');
+                if (!Array.isArray(entry.answers) || entry.answers.length > 8 || entry.answers.some(answer => typeof answer !== 'string' || answer.length > 4000)) fail('回答内容无效或超过限制。');
+                answers[id] = { answers: entry.answers as string[] };
+            }
+            return { type: 'answer-native-question', runId: readString(value.runId, 'runId'), questionId: readString(value.questionId, 'questionId'), answers };
+        }
         case 'set-session-controls': {
             assertExactKeys(value, ['type', 'sessionId', 'controls', 'revision'], 'command');
             if (!Number.isSafeInteger(value.revision) || (value.revision as number) < 0) fail('revision must be a non-negative safe integer');
@@ -409,9 +442,10 @@ export function parseCommand(value: unknown): Command {
                 controls: parseSessionControls(value.controls), revision: value.revision as number };
         }
         case 'start-run': {
+            const hasAttachments = Object.hasOwn(value, 'attachments');
             const hasSelection = Object.hasOwn(value, 'selection');
             const hasAgentId = Object.hasOwn(value, 'agentId');
-            assertExactKeys(value, ['type', 'sessionId', 'input', ...(hasSelection ? ['selection'] : []), ...(hasAgentId ? ['agentId'] : [])], 'command');
+            assertExactKeys(value, ['type', 'sessionId', 'input', ...(hasSelection ? ['selection'] : []), ...(hasAgentId ? ['agentId'] : []), ...(hasAttachments ? ['attachments'] : [])], 'command');
             let selection: { endpointId: string; modelId: string } | null = null;
             if (hasSelection && value.selection !== null) {
                 assertExactKeys(value.selection, ['endpointId', 'modelId'], 'selection');
@@ -427,6 +461,7 @@ export function parseCommand(value: unknown): Command {
                 type: 'start-run',
                 sessionId: readString(value.sessionId, 'sessionId'),
                 input,
+                ...(hasAttachments ? { attachments: validateAttachments(value.attachments) } : {}),
                 ...(hasSelection ? { selection } : {}),
                 ...(agentId ? { agentId } : {}),
             };

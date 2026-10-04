@@ -1,6 +1,7 @@
 import { build as bundle } from 'esbuild';
 import { build as buildRenderer } from 'vite';
 import { spawn } from 'node:child_process';
+import { cpSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,6 +31,11 @@ export async function buildDesktop() {
         external: ['electron'],
         sourcemap: true
     });
+    cpSync(
+        path.join(repositoryRoot, 'resources/builtin-skills'),
+        path.join(repositoryRoot, 'dist/builtin-skills'),
+        { recursive: true, force: true },
+    );
 }
 
 if (process.argv[1]?.endsWith('build.mjs')) {

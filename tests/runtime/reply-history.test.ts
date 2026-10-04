@@ -12,6 +12,15 @@ import { parseCommand, type Command, type RunRecord } from '../../src/shared/con
 import { visibleRootRuns, latestVisibleRootRun, conversationMessages } from '../../src/shared/conversation-history';
 import { parentConversation } from '../../src/shared/delegation';
 
+const runtimeContextPrefix = '[UAH runtime context update v2]';
+function publicApiMessages(body: { messages: any[] }): any[] {
+    return body.messages.filter(message => message.role !== 'system'
+        && !(message.role === 'user' && typeof message.content === 'string' && message.content.startsWith(runtimeContextPrefix)));
+}
+function requestInput(body: { messages: any[] }): string {
+    return publicApiMessages(body).filter(message => message.role === 'user').at(-1)?.content ?? '';
+}
+
 async function fixture(t: { after: (fn: () => Promise<void>) => void }) {
     const directory = mkdtempSync(join(tmpdir(), 'uah-history-')); const project = join(directory, 'project'); mkdirSync(project);
     const settings = defaultAgentSettings(); settings.profiles[0].instructions = 'Original agent';
@@ -20,8 +29,8 @@ async function fixture(t: { after: (fn: () => Promise<void>) => void }) {
     const server = createServer(async (request, response) => {
         const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
         const body = JSON.parse(Buffer.concat(chunks).toString()); requests.push(body);
-        const input = body.messages.filter((message: any) => message.role === 'user').at(-1).content;
-        if (input === 'fail' && requests.filter(item => item.messages.at(-1)?.content === 'fail').length === 1) { response.writeHead(400); response.end('fixture failure'); return; }
+        const input = requestInput(body);
+        if (input === 'fail' && requests.filter(item => requestInput(item) === 'fail').length === 1) { response.writeHead(400); response.end('fixture failure'); return; }
         response.writeHead(200, { 'content-type': 'text/event-stream' });
         const tools = body.messages.filter((message: any) => message.role === 'tool');
         const delta = input === 'write' && !tools.length ? { tool_calls: [{ index: 0, id: 'edit-call', type: 'function', function: { name: 'write_file', arguments: JSON.stringify({ path: 'edit.txt', expectedContent: null, content: 'actual file edit' }) } }] } : { content: `answer ${input}` };
@@ -72,7 +81,7 @@ test('regenerate uses current selection/controls and locked Agent; retries never
     assert.equal(done.runs.at(-1)!.state, 'completed'); assert.equal(retry.retryOfRunId, failed.id); assert.equal(retry.input, failed.input);
     assert.equal(retry.effective.modelId, 'two'); assert.equal(retry.effective.agentInstructions, first.effective.agentInstructions);
     assert.equal(retry.effective.permissionMode, 'readonly'); assert.equal(retry.effective.modelParameters?.reasoningEffort, 'high');
-    assert.deepEqual(f.requests.at(-1).messages.filter((message: any) => message.role !== 'system'), [{ role: 'user', content: 'first' }, { role: 'assistant', content: 'answer first' }, { role: 'user', content: 'fail' }]);
+    assert.deepEqual(publicApiMessages(f.requests.at(-1)), [{ role: 'user', content: 'first' }, { role: 'assistant', content: 'answer first' }, { role: 'user', content: 'fail' }]);
     assert.deepEqual(visibleRootRuns(done.runs, f.sessionId).map(run => run.id), [first.id, retry.id]);
     await assert.rejects(f.execute({ type: 'regenerate-run', runId: failed.id }), /最后一轮/);
     await f.execute({ type: 'delete-reply', runId: retry.id });
@@ -91,7 +100,7 @@ test('branch copies only visible text through cutoff with independent edits and 
     assert.equal(branch.controls?.permissionMode, 'readonly');
     await f.execute({ type: 'edit-reply', runId: first.id, output: 'changed after branch' });
     await f.start('branch task', branch.id);
-    assert.deepEqual(f.requests.at(-1).messages.filter((message: any) => message.role !== 'system'), [...branch.branchMessages!, { role: 'user', content: 'branch task' }]);
+    assert.deepEqual(publicApiMessages(f.requests.at(-1)), [...branch.branchMessages!, { role: 'user', content: 'branch task' }]);
     assert.deepEqual((await f.restart()).sessions.find(session => session.id === branch.id)?.branchMessages, branch.branchMessages);
     await f.execute({ type: 'edit-reply', runId: first.id, output: '字'.repeat(400000) });
     const count = (await f.snapshot()).sessions.length;

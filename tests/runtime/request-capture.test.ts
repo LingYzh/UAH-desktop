@@ -30,11 +30,11 @@ async function fixture(t: { after(fn: () => Promise<void>): void }, protocol: Ap
         requests.push(JSON.parse(Buffer.concat(chunks).toString('utf8')));
         res.writeHead(200, { 'content-type': 'text/event-stream' }); res.end(stream);
     });
-    const blockedPorts = new Set([3659, 4045, 5060, 5061, 6000, 6566, 6665, 6666, 6667, 6668, 6669, 6697, 10080]);
+    // Node's fetch forbidden-port list ends at 10080; Windows may allocate lower ports.
     while (true) {
         await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
         const current = server.address(); assert.ok(current && typeof current !== 'string');
-        if (!blockedPorts.has(current.port)) break;
+        if (current.port > 10080) break;
         await new Promise<void>(resolve => server.close(() => resolve()));
     }
     const address = server.address(); assert.ok(address && typeof address !== 'string');
