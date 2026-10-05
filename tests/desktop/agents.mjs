@@ -9,6 +9,8 @@ const requests = [];
 const serverErrors = [];
 const pageErrors = [];
 const checks = [];
+const runtimeContextUpdatePrefix = '[UAH runtime context update ';
+const runtimeContextUpdateMarker = '[UAH runtime context update v2]\n';
 const modelIds = ['fixture-model', 'fixture-model-alt'];
 const modelParameters = [
     {
@@ -58,6 +60,21 @@ function writeSse(response, data) {
     response.write(`data: ${data}\n\n`);
 }
 
+function splitRuntimeContextUpdates(messages) {
+    const updates = messages.filter((message) => message.role === 'user'
+        && typeof message.content === 'string'
+        && message.content.startsWith(runtimeContextUpdatePrefix));
+    for (const update of updates) {
+        assert.ok(update.content.startsWith(runtimeContextUpdateMarker), 'runtime context update uses the known V2 marker');
+    }
+    return {
+        conversation: messages.filter((message) => !(message.role === 'user'
+            && typeof message.content === 'string'
+            && message.content.startsWith(runtimeContextUpdateMarker))),
+        updates,
+    };
+}
+
 const server = http.createServer((request, response) => {
     void (async () => {
         const url = new URL(request.url || '/', 'http://127.0.0.1');
@@ -72,7 +89,11 @@ const server = http.createServer((request, response) => {
             authorization: request.headers.authorization,
             apiKey: request.headers['x-api-key'],
         });
-        const input = body.messages?.at(-1)?.content;
+        const input = body.messages
+            ?.filter((message) => message.role === 'user'
+                && typeof message.content === 'string'
+                && !message.content.startsWith(runtimeContextUpdateMarker))
+            .at(-1)?.content;
         const output = input === 'fixture first turn' ? 'fixture reply one'
             : input === 'fixture second turn' ? 'fixture reply two'
                 : 'fixture response';
@@ -505,9 +526,12 @@ try {
         assert.equal(first.body.reasoning_effort, 'high');
         assert.deepEqual(first.body.stop, ['STOP-A']);
         assert.equal(first.body.messages[0].role, 'system');
-        assert.ok(first.body.messages[0].content.startsWith('fixture agent instruction\n'));
+        assert.ok(first.body.messages[0].content.includes('<!-- UAH_MODULE:agent.instructions:v1 -->\nfixture agent instruction\n'));
         assert.match(first.body.messages[0].content, /spawn_agent/);
-        assert.deepEqual(first.body.messages.slice(1), [
+        const firstMessages = splitRuntimeContextUpdates(first.body.messages);
+        assert.equal(firstMessages.updates.length, 1, 'first request includes the V2 runtime context update');
+        assert.ok(firstMessages.updates[0].content.startsWith(runtimeContextUpdateMarker), 'context update marker is exact');
+        assert.deepEqual(firstMessages.conversation.slice(1), [
             { role: 'user', content: 'fixture first turn' },
         ]);
         assert.equal(second.body.model, modelIds[1]);
@@ -517,9 +541,10 @@ try {
         assert.equal(second.body.reasoning_effort, 'low');
         assert.deepEqual(second.body.stop, ['STOP-B']);
         assert.equal(second.body.messages[0].role, 'system');
-        assert.ok(second.body.messages[0].content.startsWith('fixture agent instruction\n'));
+        assert.ok(second.body.messages[0].content.includes('<!-- UAH_MODULE:agent.instructions:v1 -->\nfixture agent instruction\n'));
         assert.match(second.body.messages[0].content, /spawn_agent/);
-        assert.deepEqual(second.body.messages.slice(1), [
+        const secondMessages = splitRuntimeContextUpdates(second.body.messages);
+        assert.deepEqual(secondMessages.conversation.slice(1), [
             { role: 'user', content: 'fixture second turn' },
         ]);
         for (const request of requests) {
@@ -697,9 +722,9 @@ try {
         await sendTurn('fixture plan turn', 'fixture response');
         const planRequest = requests.at(-1).body;
         assert.equal(planRequest.reasoning_effort, 'high');
-        assert.match(planRequest.messages[0].content, /\[会话模式：Plan\]/);
+        assert.match(planRequest.messages[0].content, /<!-- UAH_MODULE:session\.permissions:v1 -->\n# 当前权限：plan\n/);
         assert.match(planRequest.messages[0].content, /禁止修改工作区文件或执行命令/);
-        assert.ok(planRequest.messages[0].content.startsWith('fixture agent instruction'));
+        assert.ok(planRequest.messages[0].content.includes('<!-- UAH_MODULE:agent.instructions:v1 -->\nfixture agent instruction\n'));
         const planSnapshot = await snapshot();
         const planRun = planSnapshot.runs.find(run => run.input === 'fixture plan turn');
         assert.ok(planRun);
@@ -757,6 +782,14 @@ try {
         assert.equal(endpointList.endpoints[0].id, endpointId);
         assert.deepEqual(endpointList.endpoints[0].modelParameters, modelParameters);
         const restored = await snapshot();
+        const originalSession = restored.sessions.find((item) => item.id === lockedRuns[0].sessionId);
+        assert.ok(originalSession);
+        const historicalSession = page.locator('.session-button').filter({
+            has: page.getByText(originalSession.title, { exact: true }),
+        });
+        assert.equal(await historicalSession.count(), 1, 'fixture history title identifies one saved session');
+        await historicalSession.click();
+        await page.locator(`.chat-workspace [data-run-id="${lockedRuns[0].id}"]`).waitFor({ state: 'visible' });
         for (const original of lockedRuns) {
             assert.deepEqual(restored.runs.find((run) => run.id === original.id)?.effective, original.effective);
         }
@@ -788,7 +821,6 @@ try {
         assert.equal(await page.getByRole('combobox', { name: '权限模式', exact: true }).inputValue(), 'accept-edits');
         assert.equal(await page.getByRole('combobox', { name: '思考强度', exact: true }).inputValue(), 'high');
         assert.equal(await page.getByRole('button', { name: '无目录', exact: true }).count(), 0);
-        const originalSession = restored.sessions.find(item => item.id === lockedRuns[0].sessionId);
         assert.deepEqual(originalSession.initialConfig, {
             agentId: 'default', selection: { endpointId, modelId: modelIds[0] },
             controls: { permissionMode: 'accept-edits', reasoningEffort: 'high' }, directory: null,

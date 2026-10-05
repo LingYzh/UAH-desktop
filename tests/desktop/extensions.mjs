@@ -88,7 +88,15 @@ try {
     await capture('native-args-help-dark-900-125.png', 'dark', 900, 1.25);
     await help.getByRole('button', { name: '知道了', exact: true }).click();
     await help.waitFor({ state: 'hidden' });
-    check('argument tutorial restores focus to the settings action', await dialog.getByRole('button', { name: '启动参数怎么写', exact: true }).evaluate(element => element === document.activeElement));
+    const helpTrigger = dialog.getByRole('button', { name: '启动参数怎么写', exact: true });
+    check('pointer dismissal releases the tutorial action focus', await helpTrigger.evaluate(element => element !== document.activeElement));
+    check('pointer dismissal preserves the parent settings dialog', await dialog.isVisible());
+    await helpTrigger.focus();
+    await helpTrigger.press('Enter');
+    await help.waitFor();
+    await help.press('Escape');
+    await help.waitFor({ state: 'hidden' });
+    check('keyboard dismissal restores focus to the settings action', await helpTrigger.evaluate(element => element === document.activeElement));
     await dialog.getByLabel('可执行文件绝对路径', { exact: true }).fill(process.execPath);
     await dialog.getByLabel('启动参数（JSON 数组）', { exact: true }).fill(JSON.stringify([path.join(root, 'tests/fixtures/codex-app-server-fixture.mjs'), JSON.stringify({ goalCompletionStatus: 'complete', userInputInputMatch: 'PLAN_QUESTION_FIXTURE', userInputRequest: { questions: [{ id: 'scope', header: '范围', question: '本次计划选择哪个范围？', options: [{ label: '仅测试', description: '只验证原生计划问答链路。' }, { label: '扩展验证', description: '增加一项验证。' }] }] }, dynamicInputMatch: '中文原生桌面测试', dynamicCalls: [
         { tool: 'uah_spawn_agent', arguments: { prompt: '完成独立子任务', agent: { type: 'inherit' }, context: { mode: 'none' } } },

@@ -1,5 +1,7 @@
 # UAH / UI 新会话交接
 
+本轮 UI 发布与消费端升级的最新状态见文末「2026-10-05：升级 UI 0.3.2」；此前0.2.3及未发布描述属于历史记录。
+
 更新日期：2026-10-04。本文记录历次增量，文末为最新状态；新会话先检查实际 Git 状态和用户最新要求。
 
 当前覆盖说明：原生模式已采用只读／默认权限／完全访问三个 Codex 预设，保留 MCP；Plan 独立为 `/plan`，Goal 使用原生接口。Provider 修改协议或端点默认保留已存 key。最新行为见 [NATIVE-CODEX-COMMANDS.md](NATIVE-CODEX-COMMANDS.md)，下文相反表述属于历史记录。
@@ -518,3 +520,21 @@ API 每次请求读取已授权目录及已涉及子目录的主规则；同作�
 - 最终桌面专项再次通过：artifacts/git-context-6VDefi；root复核浅色截图。原浅深主题及125%验收保留。
 - 真实 coding 与缓存对账见 [CONTEXT-LIVE-VALIDATION-2026-10-05.md](CONTEXT-LIVE-VALIDATION-2026-10-05.md)。缓存比例是相同尝试配对字段的加权比；出现缺失时同时展示已上报覆盖，避免跨字段错配或把缺失补零。
 - 真实试验进一步修正 provider 基准校验：粗略估算不能否定有效报告；超限时不受提前压缩的25%增长节流限制。压力测试已验证真实摘要提交后继续工具调用，无法充分缩小时保留错误。
+
+## 2026-10-05：升级 UI 0.3.2
+
+用户要求发布本轮 UI 最新版。UI 独立仓库先发布布局／表单／级联／Tabs 全量更新0.3.0，再通过实际消费端回归发现并修复嵌套选择器更新循环和旧slot选中文字同步，最终正式版本为0.3.2；UI提交9961a7858a0757f588c70935ccd7f237cf1cfab4／标签v0.3.2／GitHub Actions37293347476成功，官方npm latest已核对。
+
+UAH从官方registry固定安装@lingyzh/ui 0.3.2，package.json、lockfile、node_modules一致，Vue3.5.43维持dedupe，无file依赖或复制UI源码。官方tarball https://registry.npmjs.org/@lingyzh/ui/-/ui-0.3.2.tgz；integrity sha512-XaR61MNq1VH4hz+eFeh42/tCSqYI2XmctYzK0zInd1tpaW8aRgth5l2IOavOKsAQurQOrJCa36kuvgwHDqURUg==。
+
+TypeScript7不再提供ts.sys，Vite Vue plugin显式使用Node的existsSync/readFileSync/realpathSync处理SFC导入类型，保留Vue dedupe及Electron隔离。最终typecheck、build、build:ui通过，日志artifacts/ui-0.3.2-{typecheck,build,build-ui}.log。
+
+桌面测试同步UI默认手动Tabs键盘行为、只读示例和新文档布局；外观几何检查仅定位实际可见的两个composer按钮；教程弹窗验证鼠标关闭释放焦点、键盘关闭返回焦点。API测试夹具读取最后真实用户消息，单独识别与验证V2上下文更新，并检查条件提示词模块；应用重启先保持新草稿，测试通过真实会话列表选择历史后再验证Agent锁定，原模型、权限、历史、持久化和委派断言保留。没有修改运行时代码。
+
+最终Agent专项15组通过，证据artifacts/agents-sQ9goh。实际模型能力嵌套弹窗已恢复响应，root复核artifacts/endpoints-RFzBqw/model-capabilities-dark-narrow.png。此前全量单测1045项、1043通过／2跳过，外观7项、扩展32项通过；其产品代码未再改变。最终完整UI与端点结果另补充记录。
+
+### 0.3.2 消费端最终验收
+
+最终完整UI25/25（含60个文档路由）、Agent15/15、端点11/11通过，无pageerror；证据分别为artifacts/ui-q949vX、artifacts/agents-sQ9goh、artifacts/endpoints-98M7dG，日志artifacts/ui-0.3.2-gallery.log、ui-0.3.2-agents-final.log、ui-0.3.2-endpoints-final.log。实际能力弹窗初始化／选择／保存正常；错误浮层为absolute、滚动后顶部位置不变，body顶部padding覆盖浮层高度且外层scrollTop为0，原旧行占位断言已同步用户要求。root复核最终endpoint-error-fixed.png、模型能力深色窄屏图像，主题与控件布局正确。
+
+UI独立仓库已发布并推送v0.3.2；UAH本轮只升级固定npm依赖、编译适配和桌面测试夹具／记录，没有改动业务组件或运行时代码，也没有发布桌面应用安装包。此前单测／外观／扩展验证仍适用；最终source API和样式与UI已验收版本一致。无阻断项。

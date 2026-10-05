@@ -36,7 +36,7 @@
         "build:ui": "node scripts/build-ui.mjs"
     },
     "dependencies": {
-        "@lingyzh/ui": "0.2.3",
+        "@lingyzh/ui": "0.3.2",
         "@modelcontextprotocol/sdk": "1.32.0",
         "pinia": "4.0.3",
         "vue": "3.5.43"

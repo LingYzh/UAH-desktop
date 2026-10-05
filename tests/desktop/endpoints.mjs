@@ -11,6 +11,29 @@ const requests = [];
 const catalogRequests = [];
 const openResponses = new Set();
 let mode = 'normal';
+const runtimeContextUpdatePrefix = '[UAH runtime context update ';
+const runtimeContextUpdateMarker = '[UAH runtime context update v2]\n';
+
+function splitRuntimeContextUpdates(messages = []) {
+    const updates = messages.filter((message) => message.role === 'user'
+        && typeof message.content === 'string'
+        && message.content.startsWith(runtimeContextUpdatePrefix));
+    for (const update of updates) {
+        assert.ok(update.content.startsWith(runtimeContextUpdateMarker), 'runtime context update uses the known V2 marker');
+    }
+    return {
+        conversation: messages.filter((message) => !(message.role === 'user'
+            && typeof message.content === 'string'
+            && message.content.startsWith(runtimeContextUpdateMarker))),
+        updates,
+    };
+}
+
+function lastConversationUserMessage(messages) {
+    return splitRuntimeContextUpdates(messages).conversation
+        .filter((message) => message.role === 'user' && typeof message.content === 'string')
+        .at(-1)?.content;
+}
 
 function readRequest(request) {
     return new Promise((resolve, reject) => {
@@ -75,7 +98,7 @@ const server = http.createServer(async (request, response) => {
         response.on('close', () => openResponses.delete(response));
         return;
     }
-    const input = body.messages?.at(-1)?.content;
+    const input = lastConversationUserMessage(body.messages);
     const output = input === '第一轮真实流式'
         ? '你好，第一轮流式回复。'
         : input === '第二轮带历史'
@@ -551,10 +574,15 @@ try {
         await page.getByRole('button', { name: '发送消息', exact: true }).click();
         await page.locator('.turn .status').last().filter({ hasText: '已完成' }).waitFor();
         await page.getByText('第二轮已经读取历史。', { exact: true }).waitFor();
-        const second = requests.findLast((request) => request.body.messages?.at(-1)?.content === '第二轮带历史');
+        const first = requests.findLast((request) => lastConversationUserMessage(request.body.messages) === '第一轮真实流式');
+        assert.ok(first);
+        const firstMessages = splitRuntimeContextUpdates(first.body.messages);
+        assert.ok(firstMessages.updates.length >= 1, 'first conversation request includes valid V2 runtime context');
+        assert.ok(firstMessages.updates.every((update) => update.content.startsWith(runtimeContextUpdateMarker)));
+        const second = requests.findLast((request) => lastConversationUserMessage(request.body.messages) === '第二轮带历史');
         assert.ok(second);
         assert.equal(second.body.messages.filter(message => message.role === 'system').length, 1);
-        assert.deepEqual(second.body.messages.filter(message => message.role !== 'system'), [
+        assert.deepEqual(splitRuntimeContextUpdates(second.body.messages).conversation.filter(message => message.role !== 'system'), [
             { role: 'user', content: '第一轮真实流式' },
             { role: 'assistant', content: '你好，第一轮流式回复。' },
             { role: 'user', content: '第二轮带历史' },
@@ -577,7 +605,7 @@ try {
         await page.getByRole('textbox', { name: '消息', exact: true }).fill('重启后的密钥验证');
         await page.getByRole('button', { name: '发送消息', exact: true }).click();
         await page.locator('.turn .status').last().filter({ hasText: '已完成' }).waitFor();
-        assert.ok(requests.some((request) => request.body.messages?.at(-1)?.content === '重启后的密钥验证' && request.authorized));
+        assert.ok(requests.some((request) => lastConversationUserMessage(request.body.messages) === '重启后的密钥验证' && request.authorized));
     });
 
     await check('shows a real 401 endpoint test error and stops a hanging API stream', async () => {
@@ -621,12 +649,24 @@ try {
         await page.getByRole('button', { name: '测试连接', exact: true }).click();
         await page.getByRole('alert').filter({ hasText: 'HTTP 401' }).waitFor();
         const dialog = page.locator('dialog[open]');
+        await page.waitForFunction(() => {
+            const dialog = document.querySelector('dialog[open]');
+            const alert = dialog?.querySelector('[role=alert]');
+            const body = dialog?.querySelector('.ui-dialog-body');
+            return alert && body && parseFloat(getComputedStyle(body).paddingTop) >= alert.getBoundingClientRect().height + 8;
+        });
+        const alertTopBeforeScroll = await dialog.locator('[role=alert]').evaluate(element => element.getBoundingClientRect().top);
         await dialog.locator('.ui-dialog-scroll > .ui-scroll-viewport').evaluate(e => { e.scrollTop = e.scrollHeight; });
         const bounds = await dialog.evaluate(d => {
-            const r=d.getBoundingClientRect(), a=d.querySelector('[role=alert]').getBoundingClientRect(), v=d.querySelector('.ui-dialog-scroll').getBoundingClientRect();
-            return { top:r.top, alertTop:a.top, alertBottom:a.bottom, bodyTop:v.top, outerScroll:d.scrollTop };
+            const alert=d.querySelector('[role=alert]'), body=d.querySelector('.ui-dialog-body');
+            const r=d.getBoundingClientRect(), a=alert.getBoundingClientRect(), v=d.querySelector('.ui-dialog-scroll').getBoundingClientRect();
+            return { top:r.top, alertTop:a.top, alertBottom:a.bottom, bodyTop:v.top, bodyBottom:v.bottom,
+                position:getComputedStyle(alert).position, paddingTop:parseFloat(getComputedStyle(body).paddingTop), outerScroll:d.scrollTop };
         });
-        assert(bounds.alertTop >= bounds.top && bounds.alertBottom <= bounds.bodyTop + 1);
+        assert.equal(bounds.position, 'absolute', 'form errors float over the body without taking a layout row');
+        assert(bounds.alertTop >= bounds.top && bounds.alertBottom <= bounds.bodyBottom + 1);
+        assert(Math.abs(bounds.alertTop - alertTopBeforeScroll) < 1, 'scrolling the form keeps the error anchored at the top');
+        assert(bounds.paddingTop >= bounds.alertBottom - bounds.bodyTop + 1, 'body padding protects the first form item');
         assert.equal(bounds.outerScroll, 0);
         await settle();
         await captureWindow('endpoint-error-fixed.png');

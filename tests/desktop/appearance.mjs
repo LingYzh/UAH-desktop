@@ -41,9 +41,10 @@ try {
             const box = element.getBoundingClientRect();
             return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
         };
-        return { row: center(row), input: center(row.querySelector('textarea')), buttons: [...row.querySelectorAll('button')].map((button) => ({ button: center(button), icon: center(button.querySelector('svg')) })) };
+        return { row: center(row), input: center(row.querySelector('textarea')), buttons: [...row.querySelectorAll('button')].filter(button => button.getClientRects().length > 0).map((button) => ({ button: center(button), icon: center(button.querySelector('svg')) })) };
     });
     assert.ok(Math.abs(centers.input.y - centers.row.y) < 0.5);
+    assert.equal(centers.buttons.length, 2, 'attachment and send actions are the two visible composer buttons');
     for (const item of centers.buttons) {
         assert.ok(Math.abs(item.button.y - centers.row.y) < 0.5);
         assert.ok(Math.abs(item.button.x - item.icon.x) < 0.5);
