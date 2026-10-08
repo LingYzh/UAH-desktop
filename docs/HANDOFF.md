@@ -1,5 +1,23 @@
 # UAH / UI 新会话交接
 
+## 2026-10-09：当前批次收尾、提交推送后停止
+
+用户要求完成手中批次后更新 handoff、分别提交推送并停止；全库深度对齐尚未完成。续作入口为 `D:/UI/HANDOFF.md`、`D:/UI/VALIDATION.md` 和 `D:/UI/docs/component-audit-2026-10-08/NEXT-SESSION-2026-10-09.md`，其中保留用户已批准的默认/模型规则、未答布局决策及 Stepper/列表/树/弹层容器残留。
+
+UAH 没有业务/运行时代码变更，仍固定消费正式 npm `@lingyzh/ui@0.3.2`；此次保留既有 package-lock 可选依赖 dev 标记变化和交接文档。完整提交前检查结果见 docs/VALIDATION 最新入口。两仓保持 `codex/handoff-component-alignment-20261008`，提交 SHA 以各仓实际 `git log -1` 为准；不发布 npm、不打版本标签、不升级消费端、不制作安装包。
+
+## 2026-10-09：UI 全库深度对齐续作（最新入口）
+
+当前两仓均在 `codex/handoff-component-alignment-20261008`，UI HEAD `784a46f`、UAH HEAD `25d357d`。UI 多批协议与真实组件 demo 改动尚未提交，全库深度对齐仍在进行；最新决定、审计和视觉验收范围以 `D:/UI/HANDOFF.md` 顶部及其链接为准，不采用下文旧“已停止”或旧待回复状态。
+
+UAH 本轮未改业务或运行时代码，仍固定消费正式 npm `@lingyzh/ui@0.3.2`。尚未发布的 UI 源码不进入 UAH；其入场已有 package-lock 可选依赖 dev 标记改动继续保留。本轮没有提交、推送、发布、依赖升级或桌面安装包变更。
+
+## 2026-10-08：交接分支恢复继续（当前入口）
+
+本机两仓均在codex/handoff-component-alignment-20261008，UI HEAD 784a46f、UAH HEAD 25d357d，与远端核对一致。Node24.19.0和.NET SDK10.0.400可用。UAH入场已有package-lock.json可选依赖dev标记改动，本会话保留原样。
+
+续作集中于相邻UI组件对齐：用户明确ConfirmEdit/Hover/DefaultsProvider直接统一标准行为，经济型GPT-6 Luna/max执行非视觉部分，root负责契约、真实示例和验收。语言作用域和分组wrapper也补齐相应契约，具体见D:/UI/HANDOFF.md最新入口及修复台账。本会话未改UAH业务/运行时代码；UAH仍固定消费已发布npm @lingyzh/ui0.3.2，本地未发布组件不会自动接入。没有发布、依赖升级或桌面安装包变更。
+
 ## 2026-10-08 Git 分支交接（最新入口）
 
 用户要求 UI 与 UAH 的未提交工作分别提交推送新分支 `codex/handoff-component-alignment-20261008`，无需离线包；UAH 基于 `97c43a9`，本次保留此前官方 npm 源、代理、依赖升级及 .NET 验证记录，未新增业务功能。完整提交前检查结果见 VALIDATION 最新记录，既有桌面滚动断言的历史复现证据保留。

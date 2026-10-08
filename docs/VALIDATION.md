@@ -1,5 +1,17 @@
 # 本次验收记录
 
+## 2026-10-09 当前批次交接提交前检查
+
+用户要求当前批次完成后更新两仓交接、提交推送并停止。UAH 没有业务或运行时代码修改，继续消费正式 npm `@lingyzh/ui@0.3.2`；package-lock 只保留入场已有的 20 个可选包 dev 标记删除，没有版本、resolved 或 integrity 变化。
+
+- `npm run typecheck` 通过。
+- `npm test` 原始全量退出码 1：1045 项中 1041 通过、2 跳过、2 失败计数，均对应 context-long-run 的 OpenAI Chat 30 轮超时；单独 `tsx --test tests/runtime/context-long-run.test.ts` 4/4 通过。保留全量失败，不把复跑当作全量成功。
+- `npm run build` 通过，ExecutionHelper 0 警告/0 错误；renderer 保留既有的大 chunk 提示。
+- `npm run test:ui` 的 build:ui 通过，桌面测试启动前受本机 Electron 44.7.0 二进制缺失阻断。运行官方包自带 install.js 尝试修复；本机 7890 代理不可达，官方直连跳转 release-assets.githubusercontent.com 后连接超时。未替换其他版本、未改依赖或持久代理设置。`npm run test:desktop` 依赖相同二进制，未运行。
+- `npm ls --depth=0`、Vue 去重检查和 `git diff --check` 通过。UI 0.3.2、Electron 包 44.7.0、Vue 3.5.43；UI 本地未发布变更没有进入 UAH。
+
+原始日志位于 `artifacts/handoff-20261009/`：results.txt、unit-tests.log、unit-context-long-run-recheck.log、build.log、test-ui.log、electron-44.7.0-install.log 和 electron-44.7.0-direct-diagnostic.log。忽略产物不随 Git 传递，新设备按记录复测并准备锁定版本 Electron。此次提交仅交接文档与已有锁文件标记；无安装包、npm 发布或消费端升级。
+
 ## 2026-10-08 新分支交接完整门禁（最新）
 
 用户要求将 UI 与 UAH 分别提交推送 `codex/handoff-component-alignment-20261008`。UAH 保留原官方 registry/7890代理、依赖升级与此前 .NET 记录，本次没有业务代码、组件外观或测试断言改动；仍使用固定 npm UI 0.3.2。UI 分支已推送 `784a46f`，其新组件功能尚未发布或传入 UAH。
