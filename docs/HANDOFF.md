@@ -1,5 +1,13 @@
 # UAH / UI 新会话交接
 
+## 2026-10-08 Git 分支交接（最新入口）
+
+用户要求 UI 与 UAH 的未提交工作分别提交推送新分支 `codex/handoff-component-alignment-20261008`，无需离线包；UAH 基于 `97c43a9`，本次保留此前官方 npm 源、代理、依赖升级及 .NET 验证记录，未新增业务功能。完整提交前检查结果见 VALIDATION 最新记录，既有桌面滚动断言的历史复现证据保留。
+
+新设备在两个仓库分别 `git fetch origin`，再 `git switch --track origin/codex/handoff-component-alignment-20261008`；已有本地同名分支则切换并 fast-forward，先保存当地未提交改动。使用 Node 24+ 和 .NET 10 SDK；`.npmrc` 中的 127.0.0.1:7890 代理需要按新设备网络设置处理。
+
+UI 组件修复及剩余阶段在相邻 UI 分支 HANDOFF 顶部，UAH 仍从官方 npm tarball 消费 `@lingyzh/ui@0.3.2`，没有自动接入 UI 未发布的新功能。此次只交接 Git 分支，不推送发布标签或发包。原生截图、测试日志、依赖与构建产物均为本机忽略文件，需要时按记录重跑。
+
 本轮 UI 发布与消费端升级的最新状态见文末「2026-10-05：升级 UI 0.3.2」；此前0.2.3及未发布描述属于历史记录。
 
 更新日期：2026-10-04。本文记录历次增量，文末为最新状态；新会话先检查实际 Git 状态和用户最新要求。
@@ -538,3 +546,17 @@ TypeScript7不再提供ts.sys，Vite Vue plugin显式使用Node的existsSync/rea
 最终完整UI25/25（含60个文档路由）、Agent15/15、端点11/11通过，无pageerror；证据分别为artifacts/ui-q949vX、artifacts/agents-sQ9goh、artifacts/endpoints-98M7dG，日志artifacts/ui-0.3.2-gallery.log、ui-0.3.2-agents-final.log、ui-0.3.2-endpoints-final.log。实际能力弹窗初始化／选择／保存正常；错误浮层为absolute、滚动后顶部位置不变，body顶部padding覆盖浮层高度且外层scrollTop为0，原旧行占位断言已同步用户要求。root复核最终endpoint-error-fixed.png、模型能力深色窄屏图像，主题与控件布局正确。
 
 UI独立仓库已发布并推送v0.3.2；UAH本轮只升级固定npm依赖、编译适配和桌面测试夹具／记录，没有改动业务组件或运行时代码，也没有发布桌面应用安装包。此前单测／外观／扩展验证仍适用；最终source API和样式与UI已验收版本一致。无阻断项。
+
+## 2026-10-08：官方 npm 源与依赖更新
+
+- 项目新增 `.npmrc`：官方源 `https://registry.npmjs.org/`，HTTP/HTTPS 代理均为 `http://127.0.0.1:7890`，覆盖用户级 npmmirror 配置。锁文件全部 resolved URL 使用官方 npm 域名。
+- 固定升级 MCP SDK 1.32.0 → 1.32.1、Electron 44.4.5 → 44.7.0、Playwright 1.63.0 → 1.64.0、Vite 8.3.1 → 8.3.3，并刷新范围内间接依赖。Node 类型锁定 24.19.1，保持 24.x 范围。UI 保持 0.3.2，安装目录从旧 0.1.0 同步到声明版本；Vue 3.5.43 保持 dedupe。
+- 当前默认 Node 为 22.19.0，本轮安装和验证使用已有 Node 24.19.0；未切换系统配置。Electron 首次引用才下载二进制，需要当前进程的 HTTP_PROXY/HTTPS_PROXY=http://127.0.0.1:7890 与 ELECTRON_GET_USE_PROXY=true；本轮已独立完成 44.7.0 二进制下载。
+- ci、typecheck、Electron/Vue 构建和依赖一致性检查通过。完整 build 因本机仅有 .NET 9、缺少 .NET 10 SDK 失败；完整回归中的原生执行测试同样受限。桌面滚动断言在升级前完整依赖锁文件的隔离对照中也失败。具体数字、复跑和证据见 VALIDATION 最新增量，不能把本轮标为全量验证通过。
+- 无界面实现或组件缺口，无 UI 源码、业务代码、提示词与运行时能力变更。UI 独立仓库原有锁文件修改保持原样。项目记忆见 `.Codex/memory/2026-10-08-official-npm-registry.md`；未提交、推送或发布。
+
+### 同日补充：本机 .NET SDK 更新
+
+用户要求更新本机 .NET，已通过 7890 代理下载并校验微软官方 SDK 10.0.401 Windows x64 安装包，系统安装成功（退出码 0，无需重启）。默认 `dotnet --version` 为 10.0.401，SDK 9.0.302 保留，10.0.12 运行时原本已安装。
+
+完整 `npm run build`（含 ExecutionHelper）与 NativeHelper Release 构建均通过；此前受 SDK 缺失影响的四个执行相关测试文件串行复跑 54/54 通过。缺少 .NET 10 的环境阻塞已解除，既有桌面滚动断言问题未在本轮修改。证据见 VALIDATION 最新补充；无业务代码或测试断言变更，未提交或推送。

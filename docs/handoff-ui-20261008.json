@@ -1,0 +1,30 @@
+{
+    "passed": [
+        "search hover belongs to the entire shell; icon and input backgrounds stay transparent",
+        "enter and exit have measured intermediate opacity; focus remains modal until exit completes",
+        "reopening during exit cancels the stale close",
+        "system reduced motion opens and closes with no dialog animations",
+        "workspace underline tabs have square bottom corners and retain accessible panel switching",
+        "shared fields connect labels and errors; disabled inputs and numeric select values work",
+        "manual tabs skip disabled items, separate arrow focus from activation, and link panels across both axes",
+        "user reduced motion and actual closed event share the same dialog lifecycle",
+        "snackbar supports all six positions, manual close, and independent pointer/focus timer pauses",
+        "all 60 documentation routes render without page overflow",
+        "source preview copies actual sample text and supports wrapping",
+        "mobile documentation search, empty results, navigation dismissal and Escape focus restoration",
+        "built documentation remains within viewport at 200% zoom and 800px window",
+        "select placeholder/disabled values render, validation resets, pointer commit blurs and keyboard retains focus",
+        "tabs indicator animates through intermediate positions and anchors to the vertical trailing edge",
+        "ripple handles pointer and keyboard holds, releases without residue, supports disabling and reduced motion",
+        "card forms, native scroll keyboard handling, spacing utilities and escaped syntax-highlighted Vue code work",
+        "vertical wheel over horizontal-only content scrolls the parent without interception",
+        "overlay scrollbar supports thumb drag, track seek, horizontal overflow and dynamic content resizing",
+        "dense, ghost and square variants compose across fields, tabs, cards, buttons and code blocks",
+        "all seven component pages render independent default/dense/ghost/square demos and source",
+        "pagination handles ellipses, keyboard activation, boundaries and shrinking page counts",
+        "server table requests pages and sorting, resets on page-size change, locks while loading, retries errors and rejects stale demo requests",
+        "documentation API tables use UiTable and fixed headers remain anchored during keyboard scrolling",
+        "ghost hover has no border and uses a translucent state layer on light and dark surfaces; sort uses triangle SVGs"
+    ],
+    "errors": []
+}
