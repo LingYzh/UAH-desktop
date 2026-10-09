@@ -1,5 +1,13 @@
 # UI-first implementation workflow
 
+## 当前工作区与验证命令
+
+- 当前仓库 `E:/WebstormProjects/UAH-desktop`；共享库 `E:/WebstormProjects/UI`。下文历史 `D:/UI` / `D:/UAH` 指同一项目角色，按当前 checkout 解析。
+- 架构：Electron main/preload 保持隔离，通过 IPC 连接独立 runtime supervisor；Vue renderer 用 Pinia 管理界面状态。远程页面使用独立原生 WebContentsView，不获得 UAH 文件或运行权限。
+- Node >=24；Windows native helper 需要 .NET 10 SDK。常规修改只跑相关专项；提交推送前运行 `npm run typecheck`、`npm test`、`npm run build`、`npm run test:ui`，再跑受影响桌面脚本。
+- 完整单测按 4 个文件并发，保留全部用例和时限。随机端口测试夹具在已有有界循环内重试 EADDRINUSE/EACCES，不修改系统端口排除配置；尺寸断言测试固定 display scale=1，仍覆盖应用 zoom。
+- 当前 UI 固定官方 `@lingyzh/ui@0.4.2`，版本与正式 provenance/消费验收见 `.Codex/memory/2026-09-29-npm-ui-dependency.md` 和 `docs/VALIDATION.md`。UI 依赖升级须核对 Vue dedupe、tarball/integrity、非 link 安装及其他 lock 元数据不变。
+
 - For a project with a highly consistent custom visual style and no existing third-party UI library, first derive tokens, shared components and interaction states from its prototype.
 - Build the reusable UI library and an interactive preview/documentation HTML page before implementing business/system screens. Examples must use the real library components.
 - Complete visual acceptance of component states, typography, icons, spacing, transitions, light/dark themes, keyboard interaction and responsive/zoom layouts before starting system implementation. Record evidence and unresolved items; functional tests alone are not visual acceptance.

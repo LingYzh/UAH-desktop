@@ -1,5 +1,17 @@
 # 本次验收记录
 
+## 2026-10-09：正式 UI 0.4.2 消费验收通过
+
+UI 已先合并 main 并正式发布 0.4.2（7f63179 / v0.4.2，Actions 37896838790）。UAH 固定官方 registry 包，lock resolved/integrity 与安装目录一致，Root 核对单一物理 Vue 运行时；其他依赖锁元数据保持原 HEAD。五处 TabsWindow / 十五个 eager Items 迁移完成，保留 model/idPrefix、keyboard=false、transition=false、表单实例和原生浏览器宿主。
+
+ChatWorkspace 等待所选 IPC 历史和 DOM 更新后恢复阅读位置，原 600px 回归通过。SearchDialog 用公开 width 与转发 attrs/工具类恢复 800px 宽度、padding=0、关闭按钮靠右，默认动画由正式 UI 0.4.2 修复。测试按 DOM 弹层真实 closed 生命周期等待焦点/原生视图恢复；系统 DPI 仅在精确原生尺寸夹具固定为 1，应用 zoom 仍受测。
+
+最新 11 项门禁全部通过：typecheck、完整 npm test（1045 项 / 1043 通过 / 0 失败 / 2 跳过）、build、完整 test:ui，以及 appearance 8、extensions 32、browser 7、agents 14、smoke 8、rich-chat 4 组和 plan-mode。test:ui 保留 173 旧文档 URL/hash、家族标题、生产搜索动画/焦点/布局、分页和表格；当前页名称和按钮 ::before 悬停状态层断言与正式包一致。
+
+完整单测限制四个文件并发，保留全部用例和原时限；既有有界随机端口循环遇到 Windows 保留端口 EACCES 时重选，没有修改系统网络。初次 0.4.1 消费 10 门禁 4 通过 / 6 失败、单测 1045/1037/6/2，以及 0.4.2 中间失败、旧构建与测试协议漂移均保留。后续真正完整单测 1045/1043/0/2 单独记录，不把定向复跑当作全量通过。
+
+版本化证据：docs/checkpoint-evidence/2026-10-09-ui-0.4.2-consumer.json，包含源码 SHA-256、各门禁 attempt、原始日志哈希、截图目录及覆盖边界；本机原始日志在 artifacts/ui-0.4.2-consumer。最终 build 0023 和最后完整 UI 回归覆盖 SearchDialog 最终修改，完整单测与七组桌面专项的覆盖范围另列。当前分支准备提交推送并创建到 main 的审阅请求；UAH 尚未合并 main、未制作安装包。
+
 ## 2026-10-09 当前批次交接提交前检查
 
 用户要求当前批次完成后更新两仓交接、提交推送并停止。UAH 没有业务或运行时代码修改，继续消费正式 npm `@lingyzh/ui@0.3.2`；package-lock 只保留入场已有的 20 个可选包 dev 标记删除，没有版本、resolved 或 integrity 变化。

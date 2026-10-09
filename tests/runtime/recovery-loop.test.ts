@@ -42,7 +42,7 @@ async function fixture(t: { after(fn: () => Promise<void>): void }, respond: (re
                 const onReady = () => { server.off('error', onError); listening(); };
                 server.once('error', onError); server.once('listening', onReady); server.listen(randomInt(20000, 60000), '127.0.0.1');
             }); break;
-        } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error; }
+        } catch (error) { if (!['EADDRINUSE', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error; }
     }
     const address = server.address(); assert.ok(address && typeof address !== 'string');
     const connection: ApiConnection = { id: 'fixture', name: 'Recovery fixture', protocol: 'openai-chat', baseUrl: `http://127.0.0.1:${address.port}/v1`, apiKey: 'LOCAL_RECOVERY_SECRET', models: ['fixture-model'], enabled: true, revision: 1, modelDetails: [{ id: 'fixture-model', tools: true }] };

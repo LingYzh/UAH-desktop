@@ -135,7 +135,8 @@ let parentRunId;
 let lockedRuns = [];
 
 async function launch() {
-    desktop = await electron.launch({ args: ['.'], cwd: root, env: environment, timeout: 30000 });
+    // Keep native-size assertions deterministic under Windows fractional display scaling.
+    desktop = await electron.launch({ args: ['.', '--force-device-scale-factor=1'], cwd: root, env: environment, timeout: 30000 });
     page = await desktop.firstWindow();
     page.setDefaultTimeout(15000);
     page.on('pageerror', (error) => pageErrors.push(error.message));

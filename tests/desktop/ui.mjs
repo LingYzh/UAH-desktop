@@ -4,6 +4,8 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { pages as docPages } from '@lingyzh/ui/docs-content';
+// The fixed source package supplies the same family routing used by its preview.
+const { getDocsUsageFamily } = await import(new URL('./navigation.js', import.meta.resolve('@lingyzh/ui/docs-content')));
 
 await mkdir('artifacts', { recursive: true });
 const evidence = await mkdtemp(path.resolve('artifacts', 'ui-'));
@@ -14,7 +16,7 @@ async function launch(name, url) {
     delete env.ELECTRON_RUN_AS_NODE;
     delete env.UAH_DEV_URL;
     if (url) env.UAH_UI_PREVIEW_URL = url;
-    const app = await electron.launch({ args: [url ? 'tests/desktop/ui-host.cjs' : '.'], cwd: process.cwd(), env });
+    const app = await electron.launch({ args: [url ? 'tests/desktop/ui-host.cjs' : '.', '--force-device-scale-factor=1'], cwd: process.cwd(), env });
     const page = await app.firstWindow();
     page.on('pageerror', (error) => errors.push(error.message));
     return { app, page };
@@ -48,6 +50,13 @@ try {
     });
     assert.ok(entering.some((sample) => sample.opacity > 0 && sample.opacity < 1));
     const dialog = page.getByRole('dialog', { name: '搜索', exact: true });
+    assert.equal(await dialog.evaluate(element => Number.parseFloat(getComputedStyle(element).width)), 800, 'search keeps its configured width through the DOM overlay');
+    assert.equal(await dialog.evaluate(element => getComputedStyle(element).padding), '0px');
+    assert.equal(await dialog.evaluate(element => {
+        const header = element.querySelector('.search-header');
+        const close = element.querySelector('.search-close');
+        return Math.abs(header.getBoundingClientRect().right - close.getBoundingClientRect().right - Number.parseFloat(getComputedStyle(header).paddingRight)) < 1;
+    }), true, 'search close action stays on the header trailing edge');
     const input = dialog.getByRole('textbox');
     await page.mouse.move(0, 0);
     const normal = await page.locator('.search-box').evaluate((element) => getComputedStyle(element).backgroundColor);
@@ -114,7 +123,8 @@ try {
     const { page, app } = gallery;
     async function openDoc(id) {
         await page.goto(`${server.resolvedUrls.local[0]}ui.html#/${id}`);
-        await page.getByRole('heading', { name: new RegExp(docPages.find((doc) => doc.id === id).title), level: 1 }).waitFor();
+        const familyId = getDocsUsageFamily(id).id;
+        await page.getByRole('heading', { name: new RegExp(docPages.find((doc) => doc.id === familyId).title), level: 1 }).waitFor();
     }
     await openDoc('input');
     const search = page.getByRole('textbox', { name: '搜索', exact: true });
@@ -176,11 +186,12 @@ try {
     passed.push('user reduced motion and actual closed event share the same dialog lifecycle');
     await openDoc('motion');
     await page.getByRole('checkbox', { name: '示例减少动效', exact: true }).uncheck();
-    await openDoc('snackbar');
-    await page.getByRole('combobox', { name: '提示时长' }).selectOption('0');
+    await openDoc('snackbar-service');
+    const snackbarService = page.getByRole('region', { name: '创建、撤销与清空', exact: true });
+    await snackbarService.getByRole('combobox', { name: '提示时长' }).selectOption('0');
     for (const position of ['top-left', 'top-center', 'top-right', 'bottom-left', 'bottom-center', 'bottom-right']) {
-        await page.getByRole('combobox', { name: '提示方位' }).selectOption(position);
-        await page.getByRole('button', { name: '显示提示', exact: true }).click();
+        await snackbarService.getByRole('combobox', { name: '提示方位' }).selectOption(position);
+        await snackbarService.getByRole('button', { name: '显示提示', exact: true }).click();
         const notice = page.locator(`.ui-snackbar-stack[data-position="${position}"] .ui-snackbar`);
         await notice.waitFor();
         await notice.evaluate(async (element) => { await Promise.all(element.getAnimations().map((animation) => animation.finished.catch(() => {}))); });
@@ -195,8 +206,8 @@ try {
         await notice.getByRole('button', { name: '关闭通知' }).click();
         await notice.waitFor({ state: 'hidden' });
     }
-    await page.getByRole('combobox', { name: '提示时长' }).selectOption('800');
-    await page.getByRole('button', { name: '显示提示', exact: true }).click();
+    await snackbarService.getByRole('combobox', { name: '提示时长' }).selectOption('800');
+    await snackbarService.getByRole('button', { name: '显示提示', exact: true }).click();
     const notice = page.locator('.ui-snackbar');
     await notice.hover();
     await notice.getByRole('button').focus();
@@ -205,12 +216,14 @@ try {
     await page.mouse.move(0, 0);
     await page.waitForTimeout(900);
     assert.equal(await notice.isVisible(), true);
-    await page.getByRole('button', { name: '显示提示', exact: true }).focus();
+    await snackbarService.getByRole('button', { name: '显示提示', exact: true }).focus();
     await notice.waitFor({ state: 'hidden' });
     passed.push('snackbar supports all six positions, manual close, and independent pointer/focus timer pauses');
     for (const doc of docPages) {
         await openDoc(doc.id);
-        assert.ok((await page.getByRole('heading', { name: new RegExp(doc.title), level: 1 }).first().textContent()).includes(doc.title), `document heading: ${doc.id}`);
+        const family = docPages.find(candidate => candidate.id === getDocsUsageFamily(doc.id).id);
+        assert.ok((await page.getByRole('heading', { name: new RegExp(family.title), level: 1 }).first().textContent()).includes(family.title), `document family heading: ${doc.id}`);
+        assert.equal(await page.evaluate(() => location.hash), `#/${doc.id}`, `original child route: ${doc.id}`);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, `horizontal overflow: ${doc.id}`);
     }
     passed.push(`all ${docPages.length} documentation routes render without page overflow`);
@@ -229,9 +242,12 @@ try {
     await capture(app, '07-docs-200.png');
     const menu = page.getByRole('button', { name: '切换文档导航' });
     await menu.click();
-    await page.getByRole('textbox', { name: '搜索文档' }).fill('UiInput');
+    const inputPage = docPages.find(doc => doc.id === 'input');
+    await page.getByRole('textbox', { name: '搜索文档' }).fill(inputPage.name);
     await page.getByRole('textbox', { name: '搜索文档' }).press('Enter');
-    await page.getByRole('heading', { name: '输入框 UiInput', level: 1 }).waitFor();
+    const inputFamily = docPages.find(doc => doc.id === getDocsUsageFamily('input').id);
+    await page.getByRole('heading', { name: new RegExp(inputFamily.title), level: 1 }).waitFor();
+    assert.equal(await page.evaluate(() => location.hash), '#/input', 'search preserves the child route inside its component family');
     assert.equal(await menu.getAttribute('aria-expanded'), 'false');
     await menu.click();
     await page.getByRole('textbox', { name: '搜索文档' }).fill('no-component-exists');
@@ -425,13 +441,13 @@ try {
     const pagination = paginationDemo.getByRole('navigation', { name: '示例分页', exact: true });
     assert.equal(await pagination.getByRole('button', { name: '上一页', exact: true }).isDisabled(), true);
     await paginationDemo.getByRole('button', { name: '跳到中段', exact: true }).click();
-    assert.equal(await pagination.getByRole('button', { name: '第 12 页', exact: true }).getAttribute('aria-current'), 'page');
+    assert.equal(await pagination.getByRole('button', { name: '第 12 页，当前页', exact: true }).getAttribute('aria-current'), 'page');
     assert.equal(await pagination.locator('.ui-pagination-ellipsis').count(), 2);
     await pagination.getByRole('button', { name: '下一页', exact: true }).focus();
     await page.keyboard.press('Enter');
-    assert.equal(await pagination.getByRole('button', { name: '第 13 页', exact: true }).getAttribute('aria-current'), 'page');
+    assert.equal(await pagination.getByRole('button', { name: '第 13 页，当前页', exact: true }).getAttribute('aria-current'), 'page');
     await paginationDemo.getByRole('button', { name: '缩减为 2 页', exact: true }).click();
-    assert.equal(await pagination.getByRole('button', { name: '第 2 页', exact: true }).getAttribute('aria-current'), 'page');
+    assert.equal(await pagination.getByRole('button', { name: '第 2 页，当前页', exact: true }).getAttribute('aria-current'), 'page');
     assert.equal(await pagination.getByRole('button', { name: '下一页', exact: true }).isDisabled(), true);
     await capture(app, '19-pagination.png');
     passed.push('pagination handles ellipses, keyboard activation, boundaries and shrinking page counts');
@@ -449,20 +465,20 @@ try {
     await serverTable.getByRole('cell', { name: '工作区 01', exact: true }).waitFor();
     assert.equal(await serverTable.locator('tbody tr').count(), 10);
     await serverTable.getByRole('button', { name: '文件数排序', exact: true }).click();
-    await serverDemo.locator('.ui-table[aria-busy="true"]').waitFor({ state: 'detached' });
+    await serverDemo.locator('.u-data-table[aria-busy="true"]').waitFor({ state: 'detached' });
     assert.equal(await serverTable.getByRole('columnheader', { name: /文件数/ }).getAttribute('aria-sort'), 'ascending');
     assert.equal(await serverTable.getByRole('button', { name: '文件数排序', exact: true }).locator('svg path.is-active').count(), 1);
     assert.equal(await serverTable.getByRole('button', { name: '文件数排序', exact: true }).locator('svg path').count(), 2);
     const values = await serverTable.locator('tbody tr td:last-child').allTextContents();
     assert.deepEqual(values.map(Number), [...values.map(Number)].sort((a, b) => a - b));
     await serverTable.getByRole('button', { name: '文件数排序', exact: true }).click();
-    await serverDemo.locator('.ui-table[aria-busy="true"]').waitFor({ state: 'detached' });
+    await serverDemo.locator('.u-data-table[aria-busy="true"]').waitFor({ state: 'detached' });
     assert.equal(await serverTable.getByRole('columnheader', { name: /文件数/ }).getAttribute('aria-sort'), 'descending');
     await serverDemo.getByRole('button', { name: '模拟失败', exact: true }).click();
     await serverDemo.getByRole('alert').waitFor();
     await serverDemo.getByRole('button', { name: '重试', exact: true }).click();
     await serverDemo.getByRole('alert').waitFor({ state: 'detached' });
-    await serverDemo.locator('.ui-table[aria-busy="true"]').waitFor({ state: 'detached' });
+    await serverDemo.locator('.u-data-table[aria-busy="true"]').waitFor({ state: 'detached' });
     await serverDemo.getByRole('textbox', { name: '筛选项目', exact: true }).fill('不存在');
     await serverDemo.getByRole('button', { name: '查询', exact: true }).click();
     await serverTable.getByRole('status').filter({ hasText: '暂无数据' }).waitFor();
@@ -475,9 +491,9 @@ try {
     assert.equal(await serverTable.locator('tbody tr').count(), 1);
     await serverDemo.getByRole('textbox', { name: '筛选项目', exact: true }).fill('');
     await serverDemo.getByRole('button', { name: '查询', exact: true }).click();
-    await serverDemo.locator('.ui-table[aria-busy="true"]').waitFor({ state: 'detached' });
+    await serverDemo.locator('.u-data-table[aria-busy="true"]').waitFor({ state: 'detached' });
     await serverDemo.getByRole('combobox', { name: '每页', exact: true }).selectOption('5');
-    await serverDemo.locator('.ui-table[aria-busy="true"]').waitFor({ state: 'detached' });
+    await serverDemo.locator('.u-data-table[aria-busy="true"]').waitFor({ state: 'detached' });
     await serverDemo.scrollIntoViewIfNeeded();
     await capture(app, '20-server-table-light.png');
     await page.getByRole('checkbox', { name: '深色主题', exact: true }).check();
@@ -503,20 +519,54 @@ try {
 
 
     await openDoc('button');
-    const ghostButton = page.getByRole('button', { name: '轻量操作', exact: true });
+    const textButton = page.getByRole('button', { name: '轻量操作', exact: true });
     for (const dark of [false, true]) {
         await page.getByRole('checkbox', { name: '深色主题', exact: true }).setChecked(dark);
         for (const surface of ['var(--surface)', 'var(--soft)', 'var(--background)']) {
-            await ghostButton.evaluate((button, surface) => { button.parentElement.style.background = surface; }, surface);
-            await ghostButton.hover();
+            await textButton.evaluate((button, surface) => { button.parentElement.style.background = surface; }, surface);
+            await page.mouse.move(1, 1);
+            await page.waitForFunction((button) => Number(getComputedStyle(button, '::before').opacity) === 0, await textButton.elementHandle());
+            const idle = await textButton.evaluate((button) => {
+                const style = getComputedStyle(button);
+                const state = getComputedStyle(button, '::before');
+                return {
+                    background: style.backgroundColor,
+                    border: style.borderTopColor,
+                    borderWidth: style.borderTopWidth,
+                    borderStyle: style.borderTopStyle,
+                    color: style.color,
+                    stateBackground: state.backgroundColor,
+                    stateOpacity: Number(state.opacity)
+                };
+            });
+            await textButton.hover();
             await page.waitForTimeout(200);
-            const hover = await ghostButton.evaluate((button) => { const style = getComputedStyle(button); return { border: style.borderTopColor, background: style.backgroundColor }; });
+            const hover = await textButton.evaluate((button) => {
+                const style = getComputedStyle(button);
+                const state = getComputedStyle(button, '::before');
+                return {
+                    background: style.backgroundColor,
+                    border: style.borderTopColor,
+                    borderWidth: style.borderTopWidth,
+                    borderStyle: style.borderTopStyle,
+                    color: style.color,
+                    stateBackground: state.backgroundColor,
+                    stateOpacity: Number(state.opacity)
+                };
+            });
             assert.equal(hover.border, 'rgba(0, 0, 0, 0)');
-            assert.notEqual(hover.background, 'rgba(0, 0, 0, 0)');
+            assert.equal(hover.border, idle.border, 'hover does not paint a real border on the text button');
+            assert.equal(hover.borderWidth, idle.borderWidth, 'hover does not change the text button border width');
+            assert.equal(hover.borderStyle, idle.borderStyle, 'hover does not change the text button border style');
+            assert.equal(hover.background, idle.background, 'the button background stays transparent; the state layer is separate');
+            assert.equal(idle.stateBackground, idle.color, 'the idle ::before layer is based on currentColor');
+            assert.equal(hover.stateBackground, hover.color, 'the ::before state layer uses currentColor');
+            assert.equal(idle.stateOpacity, 0, 'the state layer is transparent before hover');
+            assert.ok(hover.stateOpacity > idle.stateOpacity, 'hover raises the ::before state-layer opacity');
         }
-        await capture(app, dark ? '24-ghost-dark.png' : '23-ghost-light.png');
+        await capture(app, dark ? '24-text-dark.png' : '23-text-light.png');
     }
-    passed.push('ghost hover has no border and uses a translucent state layer on light and dark surfaces; sort uses triangle SVGs');
+    passed.push('text button hover has no border and uses a translucent state layer on light and dark surfaces; sort uses triangle SVGs');
 
 
 } finally { await gallery.app.close(); await new Promise((resolve, reject) => server.httpServer.close((error) => error ? reject(error) : resolve())); }

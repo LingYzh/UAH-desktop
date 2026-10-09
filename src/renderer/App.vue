@@ -11,7 +11,7 @@ import SearchDialog from './components/SearchDialog.vue';
 import EndpointManager from './components/EndpointManager.vue';
 import AgentManager from './components/AgentManager.vue';
 import ExtensionManager from './components/ExtensionManager.vue';
-import { UiAlert, UiButton, UiSelect, UiSwitch, UiField, UiTabs, UiTabPanel, UiDialog, UiSnackbarHost, snackbar } from '@lingyzh/ui';
+import { UiAlert, UiButton, UiSelect, UiSwitch, UiField, UiTabs, UiTabsWindow, UiTabsWindowItem, UiDialog, UiSnackbarHost, snackbar } from '@lingyzh/ui';
 
 const workspace = useWorkspace();
 const width = ref(window.innerWidth);
@@ -248,8 +248,8 @@ onBeforeUnmount(() => {
                             <h2>设置</h2>
                             <UiTabs v-model="settingsSection" id-prefix="settings" orientation="vertical" aria-label="设置分类" :items="[{ id: 'appearance', label: '外观', icon: 'sun' }, { id: 'about', label: '关于与能力', icon: 'info' }]"><template #default="{ item }"><Icon :name="item.icon" />{{ item.label }}</template></UiTabs>
                         </nav>
-                        <div class="settings-body">
-                            <UiTabPanel :model-value="settingsSection" value="appearance" id-prefix="settings">
+                        <UiTabsWindow class="settings-body" :model-value="settingsSection" id-prefix="settings" eager :keyboard="false">
+                            <UiTabsWindowItem value="appearance" :transition="false">
                                 <h2 class="settings-title">外观</h2>
                                 <p class="muted">让工作台适合你的阅读习惯。</p>
                                 <h3 class="section-heading" id="theme-label">主题</h3>
@@ -266,9 +266,9 @@ onBeforeUnmount(() => {
                                     <UiField label="侧栏" description="收起后保留常用入口，让对话获得更多空间。"><UiButton size="sm" @click="toggleNavigation"><Icon name="panel" />{{ compact ? '展开侧栏' : '收起侧栏' }}</UiButton></UiField>
                                 </div>
                                 <div class="button-row settings-save"><UiButton variant="primary" :disabled="!dirty" @click="saveSettings">保存设置</UiButton><span class="muted small">{{ dirty ? '有未保存的更改' : '已保存' }}</span></div>
-                            </UiTabPanel>
-                            <UiTabPanel :model-value="settingsSection" value="about" id-prefix="settings" class="capability-summary"><h2 class="settings-title">关于与能力</h2><p>UAH · 本地桌面工作区</p><h3>当前可用</h3><p>三协议 API · 原生 Codex · 工作区文件工具与命令审批 · 计划与子代理 · 日志与用量 · MCP 连接器 · 插件与技能管理 · 独立浏览器</p><h3>能力边界</h3><p>原生 Codex 需要本机 CLI 与有效认证，运行记录为可观察事件的部分覆盖。插件支持 skills 与 MCP，不执行 hooks 和安装脚本。长期记忆、完整 PTY 与 Agent 电脑操作尚未接入。</p></UiTabPanel>
-                        </div>
+                            </UiTabsWindowItem>
+                            <UiTabsWindowItem value="about" class="capability-summary" :transition="false"><h2 class="settings-title">关于与能力</h2><p>UAH · 本地桌面工作区</p><h3>当前可用</h3><p>三协议 API · 原生 Codex · 工作区文件工具与命令审批 · 计划与子代理 · 日志与用量 · MCP 连接器 · 插件与技能管理 · 独立浏览器</p><h3>能力边界</h3><p>原生 Codex 需要本机 CLI 与有效认证，运行记录为可观察事件的部分覆盖。插件支持 skills 与 MCP，不执行 hooks 和安装脚本。长期记忆、完整 PTY 与 Agent 电脑操作尚未接入。</p></UiTabsWindowItem>
+                        </UiTabsWindow>
                     </div>
                 </section>
             </main>

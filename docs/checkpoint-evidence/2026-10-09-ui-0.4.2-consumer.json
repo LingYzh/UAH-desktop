@@ -1,0 +1,1529 @@
+{
+    "generatedAt": "2026-10-09T07:37:06.734Z",
+    "status": "validated-for-review",
+    "uiVersion": "0.4.2",
+    "uiReleaseCommit": "7f6317940535e2d37f4db2eadba1b502ddcb8fd4",
+    "uiPublishRun": 37896838790,
+    "dependency": {
+        "version": "0.4.2",
+        "resolved": "https://registry.npmjs.org/@lingyzh/ui/-/ui-0.4.2.tgz",
+        "integrity": "sha512-eQiOy5BIz1ncwP2IrRP+wDxTXNRmjBryt+p394RujK0HAiLZlWYIIYT9zJAzmLjZ9fJ0++3KiwyvjVgqPVb5rg==",
+        "license": "MIT",
+        "dependencies": {
+            "@mdi/js": "7.4.47",
+            "@vuetify/v0": "1.2.3",
+            "diff": "9.0.0",
+            "dompurify": "3.4.16",
+            "highlight.js": "11.12.0",
+            "katex": "0.18.9",
+            "markdown-it": "15.0.2",
+            "markdown-it-deflist": "4.0.0",
+            "markdown-it-footnote": "4.0.0",
+            "markdown-it-mark": "4.0.0",
+            "markdown-it-sub": "2.0.0",
+            "markdown-it-sup": "2.0.0",
+            "markdown-it-task-lists": "2.1.1",
+            "mermaid": "11.17.2"
+        },
+        "peerDependencies": {
+            "vue": "^3.5.0"
+        }
+    },
+    "onePhysicalVueRuntime": "E:\\WebstormProjects\\UAH-desktop\\node_modules\\vue\\index.js",
+    "completeUnit": {
+        "total": 1045,
+        "pass": 1043,
+        "fail": 0,
+        "skip": 2
+    },
+    "effectiveGates": {
+        "typecheck": {
+            "attempt": 1,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0001-typecheck.json",
+            "evidence": []
+        },
+        "unit": {
+            "attempt": 21,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0021-unit-rerun.json"
+        },
+        "build": {
+            "attempt": 23,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0023-build-after-dialog-header.json",
+            "evidence": []
+        },
+        "test-ui": {
+            "attempt": 26,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0026-test-ui-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\01-search-hover.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\02-library-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\03-library-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\04-panel-tabs.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\05-snackbar.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\06-docs-source.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\07-docs-200.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\08-docs-narrow.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\09-select-states.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\10-tabs-slider.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\11-ripple-held.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\12-card-form.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\13-code-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\14-code-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\15-scrollbar.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\16-variants-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\17-variants-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\18-local-variants-input.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\18-local-variants-tabs.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\19-pagination.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\20-server-table-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\21-server-table-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\22-server-table-narrow.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\23-text-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\24-text-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\motion.json",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\report.json"
+                    ]
+                }
+            ]
+        },
+        "appearance": {
+            "attempt": 13,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0013-appearance-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\01-home.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\02-split-panel.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\03-settings-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\04-select-open.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\05-settings-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\06-settings-150.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\06-settings-200.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\07-settings-200-scrolled.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\report.json"
+                    ]
+                }
+            ]
+        },
+        "extensions": {
+            "attempt": 14,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0014-extensions-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\mcp-editor-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\mcp-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-args-help-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-boundaries-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-chat-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-plan-question-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-plan-question-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-settings-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-settings-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\plugins-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\skills-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\summary.json"
+                    ]
+                }
+            ]
+        },
+        "plan-mode": {
+            "attempt": 15,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0015-plan-mode-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\plan-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\plan-editor-preview.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\plan-editor.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\plan-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\plan-revise.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\report.json"
+                    ]
+                }
+            ]
+        },
+        "browser": {
+            "attempt": 16,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0016-browser-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\browser-BFOraY",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\browser-BFOraY\\report.json"
+                    ]
+                }
+            ]
+        },
+        "agents": {
+            "attempt": 17,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0017-agents-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\agent-list-dark-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\agent-list-light-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-alt-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-alt-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-alt-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-alt-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-fixture-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-fixture-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-fixture-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-fixture-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\primary-editor-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\primary-editor-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\primary-editor-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\primary-editor-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\report.json",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\session-controls-plan-dark-1440-960.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\session-effort-menu-dark-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\session-effort-menu-light-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\session-permission-menu-dark-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\session-permission-menu-light-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-role-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-role-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-role-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-role-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-scheduler-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-scheduler-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-scheduler-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-scheduler-light-900-800-125-top.png"
+                    ]
+                }
+            ]
+        },
+        "smoke": {
+            "attempt": 18,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0018-smoke-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-J60os3",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-J60os3\\desktop-800.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-J60os3\\desktop-home.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-J60os3\\desktop-snapshot.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-J60os3\\report.json"
+                    ]
+                }
+            ]
+        },
+        "rich-chat": {
+            "attempt": 19,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0019-rich-chat-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\rich-chat-9U6olN",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\rich-chat-9U6olN\\report.json",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\rich-chat-9U6olN\\stream-completed.png"
+                    ]
+                }
+            ]
+        }
+    },
+    "sourceSha256": {
+        "package-lock.json": "49fd0cb9ee92cb47cea59f53139fcdea2f608439a61f89558cb9cacb4d5f4f36",
+        "package.json": "30da0ec680b83b5e95edd4d53f318e0a67908df6f5f24494ef9c62fe8b565cc7",
+        "scripts/benchmark-harness.ts": "097740b409dc2bd02264afb5d6abddb2da11b8df4b0837e8422e07e0f75f489a",
+        "scripts/benchmark-journal.ts": "bf48141a811ea95d7bb4fc60df9a44f38dbc59d7a75f5188eccaebef28ca3ed0",
+        "scripts/build-ui.mjs": "b6d9b8163484b07c99a76fb689a1d634dc2d5bf02ce0f20f1568d50533cbfa9f",
+        "scripts/build.mjs": "4ccc71347d7437e4e06f89f18d7a9a037cb929c8d1fa775f626dab190eb5a150",
+        "scripts/dev.mjs": "63a85924227f63217bb83cd9c7ebd8430428dad378a26bea22862964f85554d7",
+        "scripts/export-tool-docs.mjs": "31eccea93f90c5154c46022a3213b81e12ba1a937a8e35efe158d541ea0b494c",
+        "scripts/generate-gpt-prompts.mjs": "204a6ddb89db5c8985ba654367722244a213758585c7b895bf2d4c9bfd63cc80",
+        "scripts/test-kiro-prompts.mjs": "86ff8f50705673e33e3927b66b609dac80d3e959a6f391156742fc39888b7c6b",
+        "scripts/transcript.ts": "07ba5c1c2c7676ea9feaa119926d23f5e7ac6a7cbeadb66ce963460f495dcd72",
+        "src/main/agent-store.ts": "06bb4f518be360b2fc0ba8ef6a1b47ddc62286a0644fd8694b5c8bbacd7b96c1",
+        "src/main/attachment-store.ts": "243d8df8b7050def3eb168795f34496e5474678ab977d603416b6d8a80dcf0cb",
+        "src/main/browser-host.ts": "b1cfe716621cff14b1cf3d7b1814faf2aeadbc01bf0540fda7326f32f3784ccb",
+        "src/main/endpoint-store.ts": "39e92872ca534640ef45a5d78b51621605131c1d85fe54345eac4b490ab29e82",
+        "src/main/extension-store.ts": "2189b880097e605d33061a54dbc55a0d97d562034b9035426a2e17bbcae8e343",
+        "src/main/index.ts": "b9caf06dd227346f0178b70d1843f4b0cb0c646ff81f50c4a6aa9720c00b9177",
+        "src/main/native-client.ts": "8882e190e480c8d85a02daf4b20167f9768c4b2fe98fe45cdcf8c3959f2d6204",
+        "src/main/native-codex-discovery.ts": "28a0a5d9064d7d3619308ac3b61d578d7de201b11dc0f56a48b6ae120fef5300",
+        "src/main/native-codex-store.ts": "92328d38b652fc47662e1696106f3b2a688eedc1df7112ca31ce02bdc52a5e6b",
+        "src/main/runtime-client.ts": "b870cd67a78b7940f7c330bee0ed86c6733fbb48859617f916ea6ed8894f1c3d",
+        "src/main/runtime-worker.ts": "414452477a28d5d97bfc5bd11fc49399c6f4351345510e306ffd0fe991d98e44",
+        "src/main/security.ts": "c88c6273b64c469be8482311b9e021a39bea66ee8cf04c99e4f6e12a45d1d017",
+        "src/preload/index.ts": "9531ec9a95d0f9c7b38ba53ec77ca1d70f09458e546d08c0e565fea0a086e127",
+        "src/renderer/App.vue": "f9133777a36046069071348227eb63deb682bd1f255f7f6d200a8e516cc02990",
+        "src/renderer/activity-groups.js": "bef8cfb972127bffeaede8ed6c5037001440d3c7c7893252421e1532c7c3812b",
+        "src/renderer/change-presentation.js": "323c2dce1ac138632427c7ff0d3118648ab71a2d81ec336f16d150683452348a",
+        "src/renderer/components/AgentManager.vue": "1f4c6c15d106acf59caca77c98fbb2fbbdc0e24aae0b0d49e8c6d722720d2e5b",
+        "src/renderer/components/ChatWorkspace.vue": "b8a291bb4a6f19181e665ce172087e5cc53d735697e55eeea924a8bf1a4daec0",
+        "src/renderer/components/EndpointManager.vue": "5b766bcf3190c7e7ef8be8aab3874a1614807de8685d549ff765c64107e1164c",
+        "src/renderer/components/ExtensionManager.vue": "580ef0ba3b14edb8e4645a527f48bbebe0c10ab4287856c75b25f0da3b6f8462",
+        "src/renderer/components/GitPanel.vue": "95b8ea697ef6f8797358b498ec02b6e8f4a02387247c23533ba94df5f1154546",
+        "src/renderer/components/GoalVerificationDialog.vue": "353b0eecd40c2bd95876254bcc1599f0123505b4f387d69338c2791b80ac7463",
+        "src/renderer/components/Icon.vue": "212917898bcb925c24d4eb49c798a9e234c43d2f22e59a5cc4321990a5b79482",
+        "src/renderer/components/JournalDialog.vue": "db73090efc5731b1cd7c4d18a3bff912732abace8b748511f01a1734896f861a",
+        "src/renderer/components/ModelCapabilitiesEditor.vue": "b6bc41742bdcd223b4d379a025e0e46ebc35229694cc9af5eb0dfd2896999056",
+        "src/renderer/components/ModelParametersEditor.vue": "872f8441959005325a77b7dffb50b016aef72cab4b6a09cee3a74e9771a10fe2",
+        "src/renderer/components/NativeCodexSettings.vue": "28fbe18ddd9834abf3eef4fba18017923a4dd63768e3b6f943dcc2f0fe1d1a9d",
+        "src/renderer/components/NativeContextDialog.vue": "375adac684436001d10dd05330a21a568c3a938b1894dc4219b272b083bfcd6d",
+        "src/renderer/components/NativePlanPanel.vue": "83aa99cf5c314b7364a710eecc420cb6f3556f2b2c93e67785890be42c900f91",
+        "src/renderer/components/NativeQuestionCard.vue": "e1772a0b3a3d94dd064d0e18447a795bd64c2a89faa9293925ed1b23353926a5",
+        "src/renderer/components/PlanFiles.vue": "d31291a5c0de8fa976e4cb247bc190d2f6698a3207d0bbab4e4729b9d68af9d8",
+        "src/renderer/components/PlanReview.vue": "5c9a1e6d34c2ae6cfb0aad2b2b04eeeb60b19ffbd13209c24abbe8aa2bbf4093",
+        "src/renderer/components/RecoveryDialog.vue": "86638402cc8a4e1863625e30a568646eaddd3e1208c3ea56aea03ea76f7cd7ae",
+        "src/renderer/components/RequestContextDialog.vue": "de60b2c13742753cc0019e4ab13f540543c7d7e05abd386d221acf3d4feba0be",
+        "src/renderer/components/RunActions.vue": "a39f3758e16def0c34fed3ba73e4eee3fd4edca8b93bfb0d3eb2c144168f4f44",
+        "src/renderer/components/RunActivity.vue": "9d60326152627f814ee0adc459ce3c3881d7a6ad3d4bfd015c3b5bb3c9f28be2",
+        "src/renderer/components/RunContent.vue": "a28994bfa473bcf11d93487b2978057f72b41733904476cbe47aec8891945956",
+        "src/renderer/components/SearchDialog.vue": "dddc0629ded021a4c8cdaa098575ed6d326305ba6b76c4baef98499badd042cf",
+        "src/renderer/components/SubagentPanel.vue": "c5dbba726ca059cce766507047f40f93a3f0308a749016f6ad04d22d1170d0df",
+        "src/renderer/components/WorkspacePanel.vue": "ec945d36bea6256563da32bb81cd3e337e667b74ec2f521082bdf7025bdc9b47",
+        "src/renderer/composables/use-git.js": "b019d8adb140d9487c2d88eb009cd660fa7e8aab94f1baecf9950fbf6d6916d1",
+        "src/renderer/file-changes.js": "4cbc8f5f82fbb8983538a7be125fe844158c4d1873dd62b9f1cebffe98319e6f",
+        "src/renderer/forms.css": "68c0e051b761f4fce8608d976512aa6cf6230b8609b955b6de4607eb3680aced",
+        "src/renderer/index.html": "5d7f6356b657400ebdc173a9024f302fc193407406c11200dfa14bda6319ef34",
+        "src/renderer/main.js": "d9613d04b50cb77e8c4622ce8fc093a26667ac1864cd973b72bd95fab88d28dd",
+        "src/renderer/markdown-links.js": "d6e0220861e9ca83a2a44f57c20375bda6d06f6251caba9de8552da3384b4c2e",
+        "src/renderer/message-time.js": "9498ad8895616e8132068e6112dc985f715892bf8ccadc95156bff7864740a83",
+        "src/renderer/plan-presentation.js": "35531eeb1cdfa301b6b4c225a1e9ad6dd42e71fbbdb8d9d340e96a7c051e0241",
+        "src/renderer/public/assets/uah-mark.svg": "7bf990f904df494e500b40f2c5ab5fb5a66ccfde5fcb42178a6133bc239d290c",
+        "src/renderer/run-events.js": "90d4e9a1bdca38c58199ab67778c2bd29691f90190c76bf6b0c0dd4c84c498c3",
+        "src/renderer/stores/workspace.js": "b892e89ba310233522dcce4c3479a9c0752cc27b32a33bc269ba3ff2b9441c68",
+        "src/renderer/styles.css": "f5cae4e587c43fa96542ee03d75a28b7646da4f79fb4b46cddbeee04e4f0b77f",
+        "src/renderer/tool-presentation.js": "08206a715b7350d10108f1716f1996f1713111c07a72ecad340b74e165f8e804",
+        "src/renderer/ui-preview.js": "0a6a45c7a9c625fca635887f9392fa1b1aeed6e98c62aff6f124fbf8f32f30a5",
+        "src/renderer/ui.html": "41f59292e5b87ea81d27a701e286696a3f220279b5b39453055a54531ffb283b",
+        "src/runtime/api-transport.ts": "1b661bf11c1be832cff6d5d509ee53c7db95d9bd025fdc19785eb4f5213b5ec4",
+        "src/runtime/application-journal.ts": "6d77c44ec466f6f007b27cd59bbf1596f52e75ebfba35e5067d34d557e5016c2",
+        "src/runtime/artifact-tools.ts": "60f376a299e759e138d2f16e59fcba6da49dc8b213911d37523ed99f9947c286",
+        "src/runtime/codex-app-server.ts": "d564bcf617dc7887b37456af6ff872aa6c1f3f7ef64d5373b3f4a66d1a8e65e1",
+        "src/runtime/context-compaction.ts": "e7ef86a1da2739402e554d7aa5abf5e52f682b1dd9e7ce2c44b25680efff1692",
+        "src/runtime/context-governor.ts": "3350a77d45978de6632cd026da7c6d3d930d1320604836c9b14f78df7327dccd",
+        "src/runtime/context-sources.ts": "c1169272e8343a0a66b57350d21869b99238868e4501c2a2d51c48cf44b6efdf",
+        "src/runtime/context/cache-planner.ts": "29892eb52442401be6afd833cd40f46563cd9b6c79144350f40068555b61b410",
+        "src/runtime/context/compaction.ts": "b4cad1eed4b4a63d154fce9b9f4dc12f7c277e7e290fa6e42a4c74d0e820498a",
+        "src/runtime/context/contracts.ts": "31eaeb47737f78452e128827c463ea5a690c77382411749ee8d9d14f94a9890a",
+        "src/runtime/context/engine.ts": "59c63ec8e4c9d509ebd064019a6c273a77e09f789e80a0906b44926a8f994020",
+        "src/runtime/context/meter.ts": "4d06f06d94f5ab62670984c5d308cb7d03be4082c877de2b9064244f5f304a7f",
+        "src/runtime/context/portable-history.ts": "714ca0cfcadb8037f2ce38c76757badc99bb2e8a1c91e6c4da39851132e76c80",
+        "src/runtime/context/projection.ts": "7d6d0821169cf76729badcad468109c27d711490d9ddb871b7710bd05dbc3d05",
+        "src/runtime/context/prune.ts": "91b107de03518908fd9556e4f92586bfa0df10fd6f3f81a7e4e7912c0c99bba5",
+        "src/runtime/context/replay-domain.ts": "3de6332c5aefbbbf383d89880e0210a880e74142f9177ad10093850ba548a57a",
+        "src/runtime/context/session-usage.ts": "ab0dfebd1b12abba2b1845b788ee2a8ca4c061c1d9db73beefb74f950e984327",
+        "src/runtime/context/usage-normalizer.ts": "fd695f417aab96738f8898d7e5e5fbd7c72c4fe643a64fe1c4d74ce4edf43c5d",
+        "src/runtime/delegation-tools.ts": "eb77a95be19d04f5126575e446ed5a08b2c68b8943b51fd88d60f09230fc492e",
+        "src/runtime/diagnostics.ts": "740b97a0efd4cbbb4bf2a4f9b2290be9c929f19520d19f3e6e8e952fb22eed4c",
+        "src/runtime/execution-backend.ts": "e5bdd1c44b6e75d2ec729cea9ff0b030a0fbda69c7d283df9103650f0242cbcc",
+        "src/runtime/file-codec.ts": "aba358cbf6aab82ec456e7a0b2d888d5a8c767a78e577406a0fdc8a0e3196a5d",
+        "src/runtime/git-tools.ts": "975b78b601785fa77cb0ce1ef6c5c5628be0f3238aff70c8c7714c95669ed369",
+        "src/runtime/git.ts": "056b625fa25cdfc2f49e6764c7507df101f8170cf0855756f4aec3757cb53f34",
+        "src/runtime/journal-artifacts.ts": "dc7af9ccebfee0b8b250c5615750089bba05eba29d2b607c9d883f7cbc1b061a",
+        "src/runtime/journal-gc.ts": "b8ad81e12b3238b5a10c027ad4dbc19e85fca6c10d9f4cd001530bf0361b2a33",
+        "src/runtime/journal-policy.ts": "c014ffe9a50ec5e7182ec74024e469c95580effb99aaa9b5ebd9200a400c9718",
+        "src/runtime/knowledge-service.ts": "17ffe87be3ac9717c647d29fcb213cdccf18ac24485ad28cbc6d7d8a0a81ea2f",
+        "src/runtime/knowledge-tools.ts": "69102b86c0c652f108dabe69328de0db0c2a3b4a2935e03ef560a7a7e4cfb6b0",
+        "src/runtime/local-verification.ts": "da7dea4788bc86ad139151dc1eab319d08ca39acdc07deb537bdcbd59250d195",
+        "src/runtime/managed-command.ts": "6d9a0b0784ba02688aba33479cdff129a1b22fe94adf056c477fc4f0ec3bba1d",
+        "src/runtime/mcp-client.ts": "e9e00fa1bcb063492542fd97c3d5d8b5d433e478717316770f637ef226b1c604",
+        "src/runtime/memory-store.ts": "589096de0278b1f0b93eb8667172b2a2861fdd752746604c22e4803e53c6008b",
+        "src/runtime/model-details.ts": "5d9a72278f329826edbaa7b23920bad5b3e8ab4788a08845c4eb853191a3be73",
+        "src/runtime/model-history.ts": "86230681698b3f20102c020b8a3cf95802447229f9aedb90c5e20ff0012b013e",
+        "src/runtime/native-activity.ts": "491a95407c9cafc9e9ddd4c03a86fd9cc8badaac3219e94fcc7fc2de1f5f2d75",
+        "src/runtime/paths.ts": "af8aee301943c75066cd862ed139a6d0b4e259827eceb00499c50774d46e7bb4",
+        "src/runtime/plan-tools.ts": "574be310b615457a70bb78da1aab8e33d4c4e4b7ae6f83605099832078e0a5ad",
+        "src/runtime/prompt-assembler.ts": "7ab33afadbb9912bbf2ff7c3438d2ceed9e52dcc5172e6ca6f767baae6b0b40f",
+        "src/runtime/prompt-context.ts": "3ecc08a218d88654f6658a0433164d5b40ae0d0c505153d7b882e5215881150c",
+        "src/runtime/recovery-evidence.ts": "ba5a8528a497a8c800ae10ee0639b5055ce795e6892e44471c471b2dc688763a",
+        "src/runtime/request-context.ts": "4c6e7d30f8b7cf4ca8c0716f1e6e3bb66b14fc420e833b67a8407e3f49f1bc1e",
+        "src/runtime/request-events.ts": "dd4c7b1ff92e033fe83d40ba15cf9b96f5de6b48f437b95e78c977a237ad06ad",
+        "src/runtime/request-journal.ts": "1de7144a0dc02c86a762e35921c9c92023484d5066e0d90ce0eb8c1ca617c48c",
+        "src/runtime/request-retry.ts": "8cf42821b535777265a1513b6722505f7fa18e3cf0f710692ae431078fa9d909",
+        "src/runtime/run-cache.ts": "af1ece68be77928180413606117d19766ee6ccaf0857d83f036e94bbe8db2de4",
+        "src/runtime/run-journal.ts": "f6eb745eadf899826f44b80971a330ccd01860e8b2693e8e62ce8f63439e39f8",
+        "src/runtime/session-purge-data.ts": "71288b244ed9a02051a60e6057778661a91c55a262c86060940a4f45b84200d0",
+        "src/runtime/session-purge-files.ts": "504ce84427015b85284a2d12fc8e4acb0d10fd9642d5d4aa5acd43aa2dca1ae6",
+        "src/runtime/store-backup.ts": "0e99b5949447045419e21f5cf138b4efb54d251ccaf009bb0360ae1e4e702058",
+        "src/runtime/store.ts": "0c19c30c7b600efaea95344200e21248bf38e5d9f5fa134897d639462dd173c0",
+        "src/runtime/supervisor.ts": "481045284f13b5d7a80b7c964c1dcaad8e3ef86ed09f9b7c19728367d9094467",
+        "src/runtime/tool-outcome.ts": "cf995688440907bde8dfc80df0a513383768f317f2bf691bda01405aeb7b6982",
+        "src/runtime/tool-progress.ts": "4c547e5d45fa1c79a87d41fadb4ee1dff8d5a0551bea45cd00799613edd5073b",
+        "src/runtime/tool-scheduler.ts": "3cd8c0b71e66eaee65a92f41ce87514c273d193b914277310a5755b15d234fa1",
+        "src/runtime/transcript-offline.ts": "f259f61cbc14c77de6363b8787c98fcd8b54dac43ac3acfbe1a8945b51579f28",
+        "src/runtime/transcript-writer.ts": "8b7b2b0e0fde72bcffcccf37bb5d5b07233e42d0e5e79611f401cf9e95214755",
+        "src/runtime/workspace-tools.ts": "176e965713ba8094fe2d05a08e241f0c13763d30f791bc93a7246794c88999be",
+        "src/shared/agent-presets.ts": "02fbb62e4534e3b4bc10e8ca1864a9477211a0d13d84b2357cb410ebec7e78c4",
+        "src/shared/agents-legacy.ts": "261f7ba78ce5bace8a16c022b2bd2a4076684f28d187792cc6acec6475db7bbc",
+        "src/shared/agents-v2.ts": "3549138d0fa083263ca2e47b505c8ba7ab1768bd520950650088744f1b86543e",
+        "src/shared/agents.ts": "87d232d2f04d1b05c6f9aca6bef18c0b3aa333daf83697a52576a8eae1d7554f",
+        "src/shared/attachments.ts": "1777282a03879b86f36c4be50ae799a60ad4e89262de0908a3951c73705ee97e",
+        "src/shared/claude-harness-prompts.ts": "10fc501e274c54ceb01b1642fc36cc67f23b610954d6d96fa3ac7a487b95f6f5",
+        "src/shared/claude-prompt-templates.ts": "03e898cb4c07563c43f2c75993317bb76a8f35ad0c5942c712d78bf434e54ba8",
+        "src/shared/client-error.d.ts": "aad379579737d8e26dfdfcc6b85a2ed1735b019037311122e3addaf21729d70f",
+        "src/shared/client-error.js": "f138a4c2e424bdf353ff45729a6758f775cbd2f128f083ea495dca3ea63be482",
+        "src/shared/codex-default-prompt.ts": "46ca2f42a496987717887ae12205859b5c891e91eee1e40abc0a11a42f0d4796",
+        "src/shared/conditional-prompts.ts": "0e33c9f96761989201eecde52d603a3b81ae7e82862f6109e952a83ff85253c8",
+        "src/shared/contracts.ts": "60853dc95032fcd952e9992317bcfb14ac221eb7e3ca4510169c9a94788ebba9",
+        "src/shared/conversation-history.ts": "0d8491f6b7c28a57b243d6097c2a9afcbe26fce6fb7bfb0d86ad9df9c4479353",
+        "src/shared/delegation.ts": "e253bc2720776cf9ecc97d91a264ceb8ce9b691b0056bd1995d43f1e42439343",
+        "src/shared/endpoints.ts": "b9e23013945403ef4c9bac46c65cde6bbedfb596f9264de2e83a4f2b57fdd5b1",
+        "src/shared/extension-runtime.ts": "563b6e10f809cdf3c500e64861a15a90e36470d4bf169af38d1af993ed849748",
+        "src/shared/extensions.ts": "2c533008871c719e4ae5e5cc9363be95008467d32eb1344a69a90c2bbfa1c983",
+        "src/shared/external-url.ts": "9ea124e23a44ae71f5e3e84a6f5c1e9872a94b09d745f8986c26e8648f2c5b37",
+        "src/shared/git.ts": "6f5e0c002b3cf96b06867a4fb5a53ce04c91456962caed80948a4eab6c544c16",
+        "src/shared/goal-verification.ts": "8bd16b457824ec17795ce02e15866c5b06cc4bab907c508d6236ab32db3cc8b2",
+        "src/shared/gpt-harness-prompts.ts": "b59bbdbecfcb2448ac45c384a8c495fda90f7134e9def41a362cf36ec07aa975",
+        "src/shared/gpt-prompt-templates.ts": "c9e0e9c701e74fcd5a2c4e6c7fcf9df852d7a3cb95de45103e981c21d01b60cb",
+        "src/shared/harness-contracts.ts": "4814d7181886b439c6bd371aae64c1b1b4fb197b2caf000c73a7fe8ef7792af0",
+        "src/shared/journal-maintenance.ts": "ffe0b5046a43e48cec18ff47ef1d79d483c8b14cbc23dd3796181a68122672e5",
+        "src/shared/journal-policy.ts": "47d2af0a80aa0b6db3728f82c0a7dc9250832739088b1fd0aa4d17f8640e43b0",
+        "src/shared/journal-view.ts": "d8cd0b1ee6dd3fcbf1f0105c3215a6f9f7cf4bc7d9ce81e0ad357c82f9d9f74c",
+        "src/shared/memory.ts": "823ae7382ef02756d18c0e856b7c2170585e8c986f9d80b8593a37ce3be092be",
+        "src/shared/model-parameters.ts": "e4d53c1e6736905f047654167caef42cce41ac0c47175de3168c88551ebb0e73",
+        "src/shared/native-codex-commands.ts": "a0d5f5d4f51dababa84e58ceee0c2bc88e12c17d16655413e85ab2f09a41c669",
+        "src/shared/native-codex.ts": "191853a31c357bd01bdde447b761555245b14c721c122ec412dc5d7bb33c185d",
+        "src/shared/native-context.ts": "b12333277954586aea8d8eb8f232547a94ba855eeec97d485cbc3afb0ce6ea83",
+        "src/shared/permissions.ts": "b61a741f2e320064b6b92e62410448e947029fee33f750fff9daaf2ad140641c",
+        "src/shared/prompt-context.ts": "e53a81b5eb8e00d12c43304c7808da00f8006068bebcb16982e22242cc85f94b",
+        "src/shared/recovery.ts": "736e27ebcd85dbd775430af2866c383a1661b886375cf4542685dab7f20c8b91",
+        "src/shared/request-context.ts": "dd6d50a9e257340d481b76bf504a6be83fab24e079be779d9a81ed7860d48279",
+        "src/shared/run-effects.ts": "f6e48ff9f1335518502189e555d82904a30279bcb386fe79be71aad0671076af",
+        "src/shared/session-controls.ts": "2a6922ab8f2cc60cb39642fa50a41c67cdeb4af27e7a5e9e10bf9fce25bfb975",
+        "src/shared/session-purge.ts": "707db9066c24719eaad40f70cb35fad6c5843ad257565913105c31c96eaa99ef",
+        "src/shared/snapshot-view.ts": "5c115a025bd4900354af7a40085f09c465df15e2143bb511bc43cc00e15b15bf",
+        "src/shared/tool-protocol.ts": "1987c8870c48d7c4a60866ef0cee2038b4502dd823ddd5b486ee06f2ef8b14b4",
+        "tests/desktop/agent-presets.mjs": "8a66e1de9f14167501a44d25447c711a744c50f1423a3796d94964c73dd768b9",
+        "tests/desktop/agent-settings-scroll.mjs": "c68484242e0778ac2ac7213177f18a112bf64ae1301f50482650b0716f389fd8",
+        "tests/desktop/agent-visual.mjs": "16871d6fb8f7cefe400cd1f738cdc669c948b8db420f12b70b97d4a96ff5013e",
+        "tests/desktop/agents.mjs": "ba29abceddb1400f6de099fd167721e49490bbe357dca1649b3fcacff0a07727",
+        "tests/desktop/appearance.mjs": "39df82bd678e344e8e539b0e18fd972487e43dc4c7c903426fc78f311c156d69",
+        "tests/desktop/browser-purge.mjs": "3bfec7423c514f78655568f8d805c26b6daa1ffe10114acd066d1421fcd13734",
+        "tests/desktop/browser.mjs": "2dba9863ffac1a3a15b20776051d566117e94e6d8ea144f6b4a6da81afbbb531",
+        "tests/desktop/dev-start.mjs": "3d96f8b963de298e8f025907256e0f6b1fc0c98f89ea21a34443677e244df114",
+        "tests/desktop/endpoints.mjs": "85cf198355838b31eec7ac6309e1a459f85c363921271528a47868444f528958",
+        "tests/desktop/extensions.mjs": "0483d852945d538e767fbcda47a0cc1f2e3ef405fff3303d3728640a8106731f",
+        "tests/desktop/git-context.mjs": "290bb70b50c503b7711355685e1a09b9d48592a3a517b08f8b68fdf852c9d6cf",
+        "tests/desktop/goal-verification.mjs": "7f6345757b11eba92d7b542d0e60f9bda7e38ebf6c2382c0a1091ac75ed529fc",
+        "tests/desktop/harness-performance.mjs": "d9abe7a9ec4917bd2b9c0ce12254d3b80c4fde3652d8977a6da17db4e9f024e5",
+        "tests/desktop/journal-gc.mjs": "64e7b674a98b491e5dff10df62766558f98025cbfced860689a1e558359dc13b",
+        "tests/desktop/journal-policy.mjs": "6b24b346833abc7dc0e9205c9cb591a48e15bbc03ace062d8426a7068183bbdc",
+        "tests/desktop/journal.mjs": "4c08792f30bb092d4a07ba48a5661f0ac43a4fd4c1a0adb81986ceb662dd1556",
+        "tests/desktop/native-activity-performance.mjs": "5f39476c709badf68eaaf74f8a0536417a37d964a56febb8dc19f8aa66fc2677",
+        "tests/desktop/native-rich.mjs": "cef59e754c378f6c2d5d78cc69d7851ca85c97aeb0e00e6f6725436565dee91e",
+        "tests/desktop/plan-mode.mjs": "9c1f2c3450cfc717eb49a1afa5328c49dc97a9d2a6ba4c16a6613835649c3691",
+        "tests/desktop/provider-catalog.mjs": "c9afa42cef85c48e93923549863b35f78223fcae2be13ecc5f4ac79fb235b112",
+        "tests/desktop/recovery.mjs": "812aeda363ba7c539b2159768cf379d970275d0a72e56bd70512bb644d414036",
+        "tests/desktop/rich-chat.mjs": "853d38efe3648ceb16d52a1b42b8563dd2645fbaabf5405ed2624c1d1c7f4533",
+        "tests/desktop/search.mjs": "c12158132d493684c68c4a6d2799d26bd7ddbd73f513cf071d874ed968b19f52",
+        "tests/desktop/session-purge.mjs": "3f9a7ff72d7415f5f8889e5b5133fa5defb5ea733480a703bb705d42480476e9",
+        "tests/desktop/smoke.mjs": "69e4df5bfd809036a96a11f873e19d4f00aea7b9241af1cd6bd39022f8c2aa8e",
+        "tests/desktop/steer.mjs": "7a67a6c3e428763070fbd2c5bfb340d60dfd5f80f5eca58682ddc46c8cafff65",
+        "tests/desktop/tool-chat.mjs": "9253d17d6a96ac3dbc3dc1e9ecb06766ea1795ee43b73cc270e7fe88660e1611",
+        "tests/desktop/turn-actions.mjs": "62e66f88f57fde200929f9b9a075401af8a8b0d2842288b31cdbb30a9d1409a4",
+        "tests/desktop/ui-host.cjs": "ae14c12fa57e34e783253cc881814fa4a33421c922ef0b7b1b0cb7e8359a290c",
+        "tests/desktop/ui.mjs": "941d6072d0301dec6ea13f543502d71391ada996e9d7270e4445056957fa0b05",
+        "tests/fixtures/codex-app-server-fixture.mjs": "7d3b06eb571b9f4ec0bd06df4eddad11e4570c7bf317c77526317db7492de32c",
+        "tests/fixtures/harness-v1.json": "9e4a060d670210b1fecabef424058d78b33b31da2e3382c10fa072d1f2707cfe",
+        "tests/fixtures/mcp-fixture.mjs": "8feea64a88df055ba72cb1ac7a8265c808461a15ea35c684b0324779f3f885e8",
+        "tests/main/agent-store.test.ts": "deec57e027273ba27b90156a519478413a776de33f5acd212b57bff824f38281",
+        "tests/main/attachment-store.test.ts": "f72a2f32cf107d90d1377d4e5a8a1846e67bde622f958ba52317035ce71ebfbf",
+        "tests/main/builtin-skills.test.ts": "a3b0f16a41d79df7c5c8aafe8f4443599b351c0f59ac41cb6ea7abeb6760956a",
+        "tests/main/endpoint-store.test.ts": "95f5618c915e19a33bca23396c06e1ed010adf0cabe632b351fa64e2269e806e",
+        "tests/main/endpoints-contract.test.ts": "423d16de0c169f0e1cd8c323e4ff8e60d7a6fb8160ea1773f56302fa2c2eeb53",
+        "tests/main/extension-store.test.ts": "ee1679017ea452c68f39ed2477cdece0b2a373ea8a27981d0478e0af8f8ea76c",
+        "tests/main/external-url.test.ts": "e753723feec968f0bc5873c0583a94747c063eef06a9ee6f5d20bf78676a4b27",
+        "tests/main/journal-query.test.ts": "4c7c62dd69b2a75fe7ced52d4ad095ce685025cd1696990dbf8f02d97e13bd71",
+        "tests/main/native-codex-discovery.test.ts": "9a8642e14b2747f6b715ea25eb3aa9777ca9f8ad31c21ecb02097de7594e1fa3",
+        "tests/main/native-codex-store.test.ts": "7e154421b570c19f2b8169198ee2e6a77aca0154f8504071cc1d27aaabaa4591",
+        "tests/main/recovery-command.test.ts": "7278bcd883e94c018fe70bd5b8d03e56fd580b589a001fb776d0dc4b34ca15cd",
+        "tests/main/security.test.ts": "b608c2a75f8d6654c7b01d4dbc37eba353ae14dab9babe44326483d090b889b8",
+        "tests/main/snapshot-view.test.ts": "3401e757a699657aaf45de5c48e92cd23b7739d8de3120e1810c66fef0260026",
+        "tests/manual/context-coding-live.ts": "d5a5e1c6937dbfa923978cb76dd5f7550e6a913bdd82915aca463bafcd77ecad",
+        "tests/manual/kiro-prompts.ts": "f83fe490e2daeadcf10a885127b697e39d231f3a1dbe2e544f83e07e2b4b1206",
+        "tests/manual/run-context-coding-live.mjs": "642b119bbf16d776c449adcb3ad3335f216c713e541d6cff0861c616996e784f",
+        "tests/native/execution.test.mjs": "9a50c5eda6e6ef3eb7bc74488286c0bafa4bc9bd4c58af2156c56ce64a19b09a",
+        "tests/native/protocol.test.mjs": "6b29affe03e677a54c638f8b4f464ef31af99ac7dc0afd2316a3c9ba061aca14",
+        "tests/renderer/activity-groups.test.mjs": "b4117eda13edb0840a13536d4e93bfb495455c859df5a35cff786ba3b9aa6b05",
+        "tests/renderer/error-message.test.mjs": "662dc57fbe3c8f6d76d2a424d10fc33b4a5ef785731aec32bd9e5ce6a7ee541a",
+        "tests/renderer/file-changes.test.mjs": "f7d6139f238f826017063aaaa69b2d3d64b26496a0df94505e55f0c9f65d043f",
+        "tests/renderer/git-scope.test.mjs": "cd8efd9ff3d28e6256741933fe744afb28eb41fdd1155e325fff63cddbbfc87d",
+        "tests/renderer/history-window.test.mjs": "72cf0ef45abd1978dc3a90cead0db1f073e35876486656e472da7791e4df9774",
+        "tests/renderer/native-catalog.test.mjs": "75a78fe2e96f40ecac3d2a6095da256975ade1a65c0cc80cccd74041af522707",
+        "tests/renderer/plan-presentation.test.mjs": "021294587427a9b8615219b7c8e3f7fa26d4ed6df9e7da670294debd16732bb6",
+        "tests/renderer/run-events.test.mjs": "0337422e8aa43de91e29fb13a62dce4e93347aa95e67fa4caa4d55973e5ed160",
+        "tests/renderer/scoped-snapshot.test.mjs": "3998843869e60fad855a63de0813071b8a5bba9655431000b5e74f658241dddc",
+        "tests/renderer/session-purge.test.mjs": "979621158a56d76efc3e75d9d97910c7b911ae8542a56a5dd7cdb8adc000cac4",
+        "tests/renderer/snackbar.test.mjs": "c726d4316a37abdc2e3499622e59f35c727ade3b5bc7219450804faf40f45769",
+        "tests/renderer/tool-presentation.test.mjs": "0247e5af85d18052b2c1d4364a50ca19ce3effd30e8682ed32deaf962cb440fb",
+        "tests/renderer/workspace.test.mjs": "bef2ee3d6179e635eabb6614054ff965e92c87f56c3eb2060da7e47061cdcf47",
+        "tests/runtime/agent-loop.test.ts": "c9855425cfb89f4a3f7b430f79bef20290e1e179831d455984a39b95b1ab065e",
+        "tests/runtime/api-supervisor.test.ts": "ba617f0f39082d27ce566d30e84b6bd7e7423ca6fcff38128bb39093af2d2ed1",
+        "tests/runtime/api-tool-transport.test.ts": "21010c7b95a5891e5a7828652f06728f2740f2797aa740cd9193e086cff0ca0d",
+        "tests/runtime/api-transport.test.ts": "5cca27f7641a51d68f86d21b05352cde1b4bf1e22be24b63feea5dbfbe534bfb",
+        "tests/runtime/application-journal.test.ts": "62e97fbf17d8e43b0ef72e8dd269eaac01041e84ee6a9e2f15515d0f5e257931",
+        "tests/runtime/artifact-loop.test.ts": "7a44d9f8e3cc8ead931ab5411b8c3d31517d3de693479faa121cdc05c455132a",
+        "tests/runtime/artifact-tools.test.ts": "235bfb180649476e83e149d8583c4260f0f502ef7cbe6a71ebda34e383f0246e",
+        "tests/runtime/budget-loop.test.ts": "4fe3927fd029d9d8f3f08adb23d5f839569f97a1b7a3c59666f0544a971ec8e2",
+        "tests/runtime/codex-app-server.test.ts": "a35ba8fec259abdac4e2d95590e4fd70ba662596b0159d33e66a1703b2756703",
+        "tests/runtime/command-privacy-loop.test.ts": "1ce4278fdb141ae8a1dd75a4ada377130ba5ab1feae836cc90a97f59a2d9381f",
+        "tests/runtime/compaction-loop.test.ts": "0bc997a7c655354bdc5261337a58fa4a6f44f2dc1fa5b14e9afa0ff659b3c806",
+        "tests/runtime/conditional-prompt-loop.test.ts": "6010b1f483d77e40365394f7fc374336bcf6b44e3785db237cd33a86c4ffb97f",
+        "tests/runtime/context-compaction.test.ts": "0a945d4f2eb4357f04fef3ac43013fba7d693f32bd37edee30513dd32661f234",
+        "tests/runtime/context-engine.test.ts": "812a856da53b4808f866bc5db0d8151a80d7d992e8fef771c14a659c75b9cc2c",
+        "tests/runtime/context-governor.test.ts": "a1167948b0a86a8c118ed318e1c2ab4e25dcbcdf0ec2f45733c3bc0c8fd8855e",
+        "tests/runtime/context-long-run.test.ts": "09f684159ad7017eb17bfeb0f9649de3261ceee8d9e89e934df585842889f019",
+        "tests/runtime/context-portable.test.ts": "5705ebbefc5abc7435ea74342397b7490fe25ec2f1d6c16b10ea42c7b2fcfb9e",
+        "tests/runtime/context-prepared.test.ts": "6d7f421226bdb28dc1e429fd6f79c285f3d31708169f349bd5f51a1e30abb353",
+        "tests/runtime/context-projection.test.ts": "f86e7ea610be1f57aaae6116fac06c443b8769f0a649ad9e44975f044557f71b",
+        "tests/runtime/context-prune.test.ts": "615558d9767e3f951a48cdfc791afad6b7a6d7b66d680b906fd757be34d9c0a0",
+        "tests/runtime/context-scaling.test.ts": "1b4274cd91f76b86b62a5a4307529f0668d95ea00011f309e08d8ea8c087e636",
+        "tests/runtime/context-sources.test.ts": "8e2b4fa01328f1b2db4b71cb3d1fd7eea2251e8a2d5681e353c523b602b87779",
+        "tests/runtime/context-store.test.ts": "1885934c88e45a69f2797eb80bb3a5188435349fa0c6ed408ed04f3f2e5ae460",
+        "tests/runtime/context-usage.test.ts": "5489467feff541c7c7b7157668464527febccc1ed9ed95b3c54b9035473ba6f7",
+        "tests/runtime/delegation.test.ts": "47876bbba61c73fc603b6908ede9b41e274bfec43c077d4aa86f39a8d630658b",
+        "tests/runtime/diagnostics.test.ts": "fc1d7da6eb1fff10d7b1cfca9a5a9c50a58a1197a1382bd908181451cfb4b739",
+        "tests/runtime/execution-backend.test.ts": "06ccbf93e79ddd83f65d502b4a56eb1ad8ad6b93bb37d415d8130caad288ec82",
+        "tests/runtime/extensions-loop.test.ts": "99d94bf987ba94a628c2e7fc3707664723974cef1fc8e102b735afa3660f1ff0",
+        "tests/runtime/git.test.ts": "f1a15d1fb0ea03352107752a6c331635eaa09f662780f9c254a82c3bcebd584c",
+        "tests/runtime/goal-verification.test.ts": "c3de1fae6ca42fb2bb239f7a8eab58f39b4d42a119ef76b3401b7d487340d921",
+        "tests/runtime/gpt-prompts.test.ts": "4cbc1ae350439739e2485fb16315e445d95c2b472e7538690279dcdd6a96618d",
+        "tests/runtime/harness-contracts.test.ts": "917e9e6cd00398736ea72c4cbaedc942648659492630450523ad936222c83db9",
+        "tests/runtime/interrupted-history.test.ts": "c5030a1e2759efb93d6616e0f0d498750cf7c6f32c81457ab3ecc3bfe121bcbd",
+        "tests/runtime/journal-gc.test.ts": "e779a61a744ff3923b3ae89b819c165f311df161e53d0e78a8a76849cec0ff13",
+        "tests/runtime/journal-policy.test.ts": "803d0537f6a61266d8de6dfb5c5a98843f9d6ecda26b4b17c7e6d48b64d30dab",
+        "tests/runtime/journal-recovery.test.ts": "0839a46234027f3a75b523e51ad6f53a314e3ecc0d3d89872954814889c84800",
+        "tests/runtime/journal-usage-view.test.ts": "3762526fc026b8cb9fb440a7994a90c1323166c61c2aa41cff5a9e1c00faf8ef",
+        "tests/runtime/knowledge-tools.test.ts": "43c561fb68430e34db14a0de9591fdca0b6233fbf5f04d53dad76c58b6aeed41",
+        "tests/runtime/managed-command.test.ts": "7f124549adcdf6caef4142911b08d69e8153820a49d107e2923d8da893a5a30e",
+        "tests/runtime/mcp-client.test.ts": "f67ed9f81617b5ef994eab63c2f63e47114f1eef1a3f30589a3516e766d36b7b",
+        "tests/runtime/memory-loop.test.ts": "f7b578f1c958416fb4133169be46f68e439fb7cc09163e38e382bbe68b2faaf8",
+        "tests/runtime/memory-store.test.ts": "c5626243bd1cb99aca951b7fa43050fff7fb6fed9c2403c8b6d1424bf8cc79f4",
+        "tests/runtime/model-details.test.ts": "e5ecf7e167b0e4be9f0df9e82f3a1fd861878d9775640caf4ec8f419b32f2e1d",
+        "tests/runtime/model-history-integration.test.ts": "7aac5ab7b0b501d3ffecbfc9fbac6bbc2e0442038b2c3a4de66679a0c97b0c65",
+        "tests/runtime/model-history.test.ts": "19f8dbd8f3b483467be0b249ecf795d6858919b7d710ca4a21d752fbb9dfbd44",
+        "tests/runtime/native-activity.test.ts": "9fd926b27b5fdd6a181a19f7c93d2faa885d7d97e8497d4585cb195ad504c10f",
+        "tests/runtime/native-attachments.test.ts": "ba79658e71bfe5230233b26a4c574a1d4ea2af1441ce37bdcff9499ec0ed4437",
+        "tests/runtime/native-codex-loop.test.ts": "1ea1100b23cb84477671a575bab7d44bdb519efcee38475cd4ca279e03b3035a",
+        "tests/runtime/native-commands.test.ts": "3568c731ae8e107f3326e2349b05e4f33eb7f6c45104721f8ab98b333b222a15",
+        "tests/runtime/native-context.test.ts": "b871d70ecc0c7d20da0cdd099dfc339c7a51294b0bed2066ac619bb6545eb434",
+        "tests/runtime/native-delegation.test.ts": "f692ae3dfc58809363939e9768c52020435ec95abaf80715f68c281ab6d5063b",
+        "tests/runtime/plan-files.test.ts": "dee1879347db551a9e9d52b9a095d5940621ace0a8fb2a4e72f32c678962782a",
+        "tests/runtime/plan-mode.test.ts": "c0446b65f28b18a5f3f8c022fee8e3e66e482d20cf7c8e33b141a9c52c3e317e",
+        "tests/runtime/prompt-assembler.test.ts": "4c3427648592232091f908b8017f5b950febde2894ca0118f074e3f16f9c1d83",
+        "tests/runtime/prompt-context.test.ts": "9af57bf074f62f4ecb547e350b816426bfeef4c3930e7ad857d24ca5c2bbe45d",
+        "tests/runtime/raw-capture-policy.test.ts": "b791589542ac517d0f0582d1eb7e515181d905b3f5386eeb6a1a16d9cd078aad",
+        "tests/runtime/recovery-evidence.test.ts": "5ed197588235144c31ee4e1590c6d80d40d513182aca97f9355176b552084007",
+        "tests/runtime/recovery-loop.test.ts": "d9051d13bcd6aa0eb58ccd7f6d9cd87beb3acf035eff5df3dc7e9e851b2fc28b",
+        "tests/runtime/recovery-snapshot.test.ts": "40f521b7ac46b4cb4eeeae44e9d82ebfa04bc8df76265007ac4cfd6c9b95a43a",
+        "tests/runtime/reply-history.test.ts": "806c24c7c7c0b4266bf023e6aa1491393d5268469f85824941a2ba4fbc21ce9a",
+        "tests/runtime/request-capture.test.ts": "0effe239b54b8976a524154603964656e3cf721221d1566bf0149c0ec5de15fa",
+        "tests/runtime/request-context.test.ts": "24d82ed17047b10c885b900d04b9b8997d2b3e594aee761e0dbd3c0dc8031baf",
+        "tests/runtime/request-events.test.ts": "cfc37d882cd091cc19a40f9cf0b4daa254f8e4ffd6557882124cf7fbc3e942e3",
+        "tests/runtime/request-journal.test.ts": "475e4b7231eda7b22b993b4212a13a5a061e5e1d127a5cd6e32df8a19bec3223",
+        "tests/runtime/request-retry.test.ts": "d8f470cb04cd1255ea939d81b741a9e1e783789cb08fb70c268c156294909e4b",
+        "tests/runtime/retry-loop.test.ts": "987233ee75543a55e2de7d787be457a03c96af7b472be162f15dfb1e6ed6ae86",
+        "tests/runtime/run-cache-loop.test.ts": "0e68a41bc4d73bb3e4f1d9835d60b324a20543e9c09038c9ab1e8b3c6b8207bf",
+        "tests/runtime/run-cache.test.ts": "d560957ad368da8e87165f3cd7d73543dedf82013ef62647b69740339d5b820b",
+        "tests/runtime/run-effects.test.ts": "7967378425d1b214d356caac338802f83f666cb455ac2af3eb99401bc68e107a",
+        "tests/runtime/run-journal.test.ts": "60a558241957fcc0a65cbb76481d09434a1a0775ae5b45091c725fadb1fe5333",
+        "tests/runtime/scheduler-loop.test.ts": "91a2be5f3ac28ea24833858beee382310229072245d765e0cb783ed1e8c44c0e",
+        "tests/runtime/session-purge-files.test.ts": "78c6b981522bd9444991a7385d49bdbb637cac93a9d892ca4233b1dd6f72398a",
+        "tests/runtime/session-purge-loop.test.ts": "495b6283e70e84e051a1c04b748c074fe7edf790cb2acb526d2aa7c1e854d97a",
+        "tests/runtime/session-purge-store.test.ts": "9f88219a36677d295e635a8d3a70a3c50d37a5e15a9e8525327a2a17426778b5",
+        "tests/runtime/session-usage.test.ts": "701aa037e14d09188d3f355ea9a556e758d72a0be96c63f4734e0b0837a6a3f5",
+        "tests/runtime/session-window.test.ts": "89f660415b6d7dbd022ed816eff76cb30872b0eeb421d1c3c129bedad72d555b",
+        "tests/runtime/snapshot-view-loop.test.ts": "8f03749b31ce18ebdc2b63ac0ce0895db2f03d68f965392c379305eaae10a474",
+        "tests/runtime/steer-loop.test.ts": "013b4eb33dc99e5234a8bd1ab196c1a7d67cfa6bab6cefcb44ce4df7a176c845",
+        "tests/runtime/store-backup.test.ts": "f3ec09e3ef644d8a96b26e160bed20bbd0291aac1b54701b8f88d96aa3fcc8f0",
+        "tests/runtime/store-history.test.ts": "fefc836bff3a3eaaa549f9a188ca3bde017f256f04cae7489486c4b4c81625e7",
+        "tests/runtime/store-migration.test.ts": "6d80d666201001b068f3b0cf9e30993b0f00b660cce9347e45779acd031e8f04",
+        "tests/runtime/supervisor.test.ts": "6c0a1573864e54712938b2b14cf3822efc66df4fd271cd4b0513657e59d285d3",
+        "tests/runtime/tool-progress-loop.test.ts": "91fa0d43c31cb1e6b5a3faccbad997773d4bf2cb9538ffc634c05bc9bde2db50",
+        "tests/runtime/tool-progress.test.ts": "20de467014fc446076c0abf1fdf244084655dfad909c3107d9be0a6afb1af232",
+        "tests/runtime/tool-scheduler.test.ts": "2a4dbf55f77a5d4fd4cbc5f747bbf59ee5c30ff2725dc2de28768c4d87c46047",
+        "tests/runtime/transcript-offline.test.ts": "5fb6ddfd08101158c13854d19585d94f23dc63d1980ec427dc67979f25c15ae5",
+        "tests/runtime/transcript-rotation.test.ts": "3ce5f824972bc14b44a00c78b5a7340fd491af1e1f05a69bf1931386736b01fa",
+        "tests/runtime/transcript-segments-offline.test.ts": "58b43581621693d9df03e6e1aa2bf1cca7815d0b9a271e7b476d32b110f4c262",
+        "tests/runtime/transcript-store.test.ts": "79d8613717901a7e0ec0668344c26df1ebb117384754f126e813a8275f0af8e6",
+        "tests/runtime/workspace-patch-loop.test.ts": "e2479edea922be051d6b792f80a10472c6ca9720b3159bba9feec2942e790878",
+        "tests/runtime/workspace-tools.test.ts": "47866c5ef86dc6097da79987afc8c6c07e63ed2388a39abf24baec0c510596f7",
+        "tsconfig.json": "b5c85d6c1ee10b836b129ef4fb625f055a0dc118c740473ff4ca48da175a7e09",
+        "vite.config.ts": "ccd40eb522610caf346381e05e364c0476f26de6a4ab2410527e7ce4056e46da"
+    },
+    "attempts": [
+        {
+            "attempt": 1,
+            "gate": "typecheck",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:08:54.901Z",
+            "endedAt": "2026-10-09T07:08:56.160Z",
+            "durationMs": 1259,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0001-typecheck.json",
+            "evidence": [],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0001-typecheck.stdout.log",
+                    "sha256": "4045496f83e8a7430fcd171d607cb09f58ca2c3071f90abdd8d4638caa7e1945"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0001-typecheck.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 2,
+            "gate": "build",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:08:56.162Z",
+            "endedAt": "2026-10-09T07:09:00.374Z",
+            "durationMs": 4212,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0002-build.json",
+            "evidence": [],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0002-build.stdout.log",
+                    "sha256": "4d4d265cdcecfecdf30165b48eaa20c049b0ba97551bcbb174025e89bafec742"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0002-build.stderr.log",
+                    "sha256": "351b524197fb492920789369e7f1a271420c757633fbb553b280a181ac4c31a4"
+                }
+            }
+        },
+        {
+            "attempt": 3,
+            "gate": "test-ui",
+            "status": "failed",
+            "exitCode": 1,
+            "startedAt": "2026-10-09T07:09:00.377Z",
+            "endedAt": "2026-10-09T07:09:57.980Z",
+            "durationMs": 57603,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0003-test-ui.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-egyibk",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-egyibk\\01-search-hover.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-egyibk\\02-library-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-egyibk\\03-library-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-egyibk\\04-panel-tabs.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-egyibk\\05-snackbar.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-egyibk\\06-docs-source.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-egyibk\\07-docs-200.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-egyibk\\motion.json"
+                    ]
+                }
+            ],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0003-test-ui.stdout.log",
+                    "sha256": "6c9c086ac50d58128b9e5991391bd235352f1c003bb4a005bf87e90cd20a2799"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0003-test-ui.stderr.log",
+                    "sha256": "8f632f2a9dbc8d0033b0b6eb1175c96d233211e21396a84dbbba5e81a0ed345e"
+                }
+            }
+        },
+        {
+            "attempt": 4,
+            "gate": "unit",
+            "status": "failed",
+            "exitCode": 1,
+            "startedAt": "2026-10-09T07:09:57.983Z",
+            "endedAt": "2026-10-09T07:13:19.768Z",
+            "durationMs": 201785,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0004-unit.json",
+            "evidence": [],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0004-unit.stdout.log",
+                    "sha256": "5248d2a6c00687afe0c79276eb142bb9423132cc3ae67716a1c521fd184e533e"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0004-unit.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 5,
+            "gate": "appearance",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:13:19.774Z",
+            "endedAt": "2026-10-09T07:13:26.910Z",
+            "durationMs": 7136,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0005-appearance.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-z45FYZ",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-z45FYZ\\01-home.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-z45FYZ\\02-split-panel.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-z45FYZ\\03-settings-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-z45FYZ\\04-select-open.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-z45FYZ\\05-settings-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-z45FYZ\\06-settings-150.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-z45FYZ\\06-settings-200.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-z45FYZ\\07-settings-200-scrolled.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-z45FYZ\\report.json"
+                    ]
+                }
+            ],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0005-appearance.stdout.log",
+                    "sha256": "25f464ae2879055a9fe23e754620a684f274efd53e89a8279ef6fc3ca970173e"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0005-appearance.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 6,
+            "gate": "extensions",
+            "status": "failed",
+            "exitCode": 1,
+            "startedAt": "2026-10-09T07:13:26.913Z",
+            "endedAt": "2026-10-09T07:13:37.345Z",
+            "durationMs": 10432,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0006-extensions.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-YNwJW4",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-YNwJW4\\failure.txt",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-YNwJW4\\mcp-editor-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-YNwJW4\\mcp-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-YNwJW4\\native-args-help-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-YNwJW4\\native-boundaries-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-YNwJW4\\native-settings-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-YNwJW4\\native-settings-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-YNwJW4\\plugins-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-YNwJW4\\skills-light-1440.png"
+                    ]
+                }
+            ],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0006-extensions.stdout.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0006-extensions.stderr.log",
+                    "sha256": "0c2f12612269630e8db24110bdfe59845004ccafd763b4cbd6cbf733b2936181"
+                }
+            }
+        },
+        {
+            "attempt": 7,
+            "gate": "plan-mode",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:13:37.349Z",
+            "endedAt": "2026-10-09T07:13:46.252Z",
+            "durationMs": 8903,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0007-plan-mode.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Kf1PFV",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Kf1PFV\\plan-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Kf1PFV\\plan-editor-preview.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Kf1PFV\\plan-editor.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Kf1PFV\\plan-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Kf1PFV\\plan-revise.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Kf1PFV\\report.json"
+                    ]
+                }
+            ],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0007-plan-mode.stdout.log",
+                    "sha256": "1c9ff670d696a77e948fc5e2b325648ad817bda7bafd5d5d23e5ec6de1ec3ff9"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0007-plan-mode.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 8,
+            "gate": "browser",
+            "status": "failed",
+            "exitCode": 1,
+            "startedAt": "2026-10-09T07:13:46.255Z",
+            "endedAt": "2026-10-09T07:13:48.931Z",
+            "durationMs": 2676,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0008-browser.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\browser-FFkZbX",
+                    "files": []
+                }
+            ],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0008-browser.stdout.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0008-browser.stderr.log",
+                    "sha256": "5d4d8a029addedc1cb2d6957646e131bd5a070728e0cb109ef910bc1bff59ae1"
+                }
+            }
+        },
+        {
+            "attempt": 9,
+            "gate": "agents",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:13:48.935Z",
+            "endedAt": "2026-10-09T07:14:15.172Z",
+            "durationMs": 26237,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0009-agents.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\agent-list-dark-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\agent-list-light-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\model-settings-alt-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\model-settings-alt-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\model-settings-alt-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\model-settings-alt-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\model-settings-fixture-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\model-settings-fixture-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\model-settings-fixture-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\model-settings-fixture-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\primary-editor-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\primary-editor-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\primary-editor-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\primary-editor-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\report.json",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\session-controls-plan-dark-1440-960.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\session-effort-menu-dark-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\session-effort-menu-light-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\session-permission-menu-dark-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\session-permission-menu-light-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\subagent-role-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\subagent-role-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\subagent-role-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\subagent-role-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\subagent-scheduler-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\subagent-scheduler-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\subagent-scheduler-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-Pa3eMy\\subagent-scheduler-light-900-800-125-top.png"
+                    ]
+                }
+            ],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0009-agents.stdout.log",
+                    "sha256": "20cb2e9138a963d9cd5621c958416a8acc8a5407762f065c2a635b76dcca2dfa"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0009-agents.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 10,
+            "gate": "smoke",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:14:15.175Z",
+            "endedAt": "2026-10-09T07:14:26.029Z",
+            "durationMs": 10854,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0010-smoke.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-iO9Stw",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-iO9Stw\\desktop-800.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-iO9Stw\\desktop-home.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-iO9Stw\\desktop-snapshot.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-iO9Stw\\report.json"
+                    ]
+                }
+            ],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0010-smoke.stdout.log",
+                    "sha256": "379970be3b9317c8417d91b9df3c52c15b12632e501a9850adfac341b9114bc7"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0010-smoke.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 11,
+            "gate": "rich-chat",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:14:26.032Z",
+            "endedAt": "2026-10-09T07:14:29.075Z",
+            "durationMs": 3043,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0011-rich-chat.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\rich-chat-OMK6XE",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\rich-chat-OMK6XE\\report.json",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\rich-chat-OMK6XE\\stream-completed.png"
+                    ]
+                }
+            ],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0011-rich-chat.stdout.log",
+                    "sha256": "e10be055149b9b491c6956c58987f8dd35491465610a5f7e19e4d95310ca0e3c"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0011-rich-chat.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 12,
+            "gate": "build-rerun",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:15:51.434Z",
+            "endedAt": "2026-10-09T07:15:55.273Z",
+            "durationMs": 3839,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0012-build-rerun.json",
+            "evidence": [],
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "adc596e19453aa34c57a87238995faebdfd2c6fd76cdc9a9dd09b3b59ae56f01",
+                "tests": "53b05499feb0d2810a1dded7cad013f4c3dc4d7d7d264241dd986cad2e963bfc",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0012-build-rerun.stdout.log",
+                    "sha256": "e7f1e141b44afb196dd168250990c4541b10d51f162ae2c034e04bfb05b8a685"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0012-build-rerun.stderr.log",
+                    "sha256": "351b524197fb492920789369e7f1a271420c757633fbb553b280a181ac4c31a4"
+                }
+            }
+        },
+        {
+            "attempt": 13,
+            "gate": "appearance-rerun",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:15:55.470Z",
+            "endedAt": "2026-10-09T07:16:02.763Z",
+            "durationMs": 7293,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0013-appearance-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\01-home.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\02-split-panel.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\03-settings-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\04-select-open.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\05-settings-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\06-settings-150.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\06-settings-200.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\07-settings-200-scrolled.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\appearance-eeTBQy\\report.json"
+                    ]
+                }
+            ],
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "adc596e19453aa34c57a87238995faebdfd2c6fd76cdc9a9dd09b3b59ae56f01",
+                "tests": "53b05499feb0d2810a1dded7cad013f4c3dc4d7d7d264241dd986cad2e963bfc",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0013-appearance-rerun.stdout.log",
+                    "sha256": "cc9cce47726423fe08a08bb43e95a702e4919aa82f474bf96844b21b4e7cb990"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0013-appearance-rerun.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 14,
+            "gate": "extensions-rerun",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:16:02.946Z",
+            "endedAt": "2026-10-09T07:16:21.956Z",
+            "durationMs": 19010,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0014-extensions-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\mcp-editor-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\mcp-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-args-help-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-boundaries-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-chat-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-plan-question-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-plan-question-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-settings-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\native-settings-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\plugins-dark-900-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\skills-light-1440.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\extensions-desktop-tMhq2L\\summary.json"
+                    ]
+                }
+            ],
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "adc596e19453aa34c57a87238995faebdfd2c6fd76cdc9a9dd09b3b59ae56f01",
+                "tests": "53b05499feb0d2810a1dded7cad013f4c3dc4d7d7d264241dd986cad2e963bfc",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0014-extensions-rerun.stdout.log",
+                    "sha256": "43d6588099328b21401665c3fc4e00ea673a427d2467583dddc5eb74dc6f4808"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0014-extensions-rerun.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 15,
+            "gate": "plan-mode-rerun",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:16:22.125Z",
+            "endedAt": "2026-10-09T07:16:31.104Z",
+            "durationMs": 8979,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0015-plan-mode-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\plan-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\plan-editor-preview.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\plan-editor.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\plan-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\plan-revise.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\plan-mode-Bt5oEK\\report.json"
+                    ]
+                }
+            ],
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "adc596e19453aa34c57a87238995faebdfd2c6fd76cdc9a9dd09b3b59ae56f01",
+                "tests": "b57933c455c110803b9a75041dd23d2765d751853635c0c7a664c7f98100961f",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0015-plan-mode-rerun.stdout.log",
+                    "sha256": "cd8d40bff9d900ce0313bd9c8d3b2f0a161470da71d4947f4f7e71d249be7879"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0015-plan-mode-rerun.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 16,
+            "gate": "browser-rerun",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:16:31.283Z",
+            "endedAt": "2026-10-09T07:16:35.893Z",
+            "durationMs": 4610,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0016-browser-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\browser-BFOraY",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\browser-BFOraY\\report.json"
+                    ]
+                }
+            ],
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "adc596e19453aa34c57a87238995faebdfd2c6fd76cdc9a9dd09b3b59ae56f01",
+                "tests": "b57933c455c110803b9a75041dd23d2765d751853635c0c7a664c7f98100961f",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0016-browser-rerun.stdout.log",
+                    "sha256": "8cd32a4d08492f3fc5a2753981ddf3f8064c40ba70728486659183e51714286e"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0016-browser-rerun.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 17,
+            "gate": "agents-rerun",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:16:36.073Z",
+            "endedAt": "2026-10-09T07:17:01.764Z",
+            "durationMs": 25691,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0017-agents-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\agent-list-dark-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\agent-list-light-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-alt-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-alt-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-alt-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-alt-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-fixture-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-fixture-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-fixture-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\model-settings-fixture-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\primary-editor-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\primary-editor-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\primary-editor-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\primary-editor-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\report.json",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\session-controls-plan-dark-1440-960.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\session-effort-menu-dark-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\session-effort-menu-light-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\session-permission-menu-dark-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\session-permission-menu-light-900-800-125.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-role-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-role-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-role-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-role-light-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-scheduler-dark-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-scheduler-dark-900-800-125-top.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-scheduler-light-900-800-125-bottom.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\agents-fQHI2D\\subagent-scheduler-light-900-800-125-top.png"
+                    ]
+                }
+            ],
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "adc596e19453aa34c57a87238995faebdfd2c6fd76cdc9a9dd09b3b59ae56f01",
+                "tests": "b57933c455c110803b9a75041dd23d2765d751853635c0c7a664c7f98100961f",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0017-agents-rerun.stdout.log",
+                    "sha256": "cf4ed289db7475ff3b61af4255191e574490b0e417003e92a812e4bd0c460a4b"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0017-agents-rerun.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 18,
+            "gate": "smoke-rerun",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:17:01.943Z",
+            "endedAt": "2026-10-09T07:17:12.805Z",
+            "durationMs": 10862,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0018-smoke-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-J60os3",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-J60os3\\desktop-800.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-J60os3\\desktop-home.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-J60os3\\desktop-snapshot.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\desktop-J60os3\\report.json"
+                    ]
+                }
+            ],
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "adc596e19453aa34c57a87238995faebdfd2c6fd76cdc9a9dd09b3b59ae56f01",
+                "tests": "b57933c455c110803b9a75041dd23d2765d751853635c0c7a664c7f98100961f",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0018-smoke-rerun.stdout.log",
+                    "sha256": "f8572c1dc21ce1b0e523316e88d3b1d4305c0dae3975bb4acc2f168fdae3d256"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0018-smoke-rerun.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 19,
+            "gate": "rich-chat-rerun",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:17:12.978Z",
+            "endedAt": "2026-10-09T07:17:15.996Z",
+            "durationMs": 3018,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0019-rich-chat-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\rich-chat-9U6olN",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\rich-chat-9U6olN\\report.json",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\rich-chat-9U6olN\\stream-completed.png"
+                    ]
+                }
+            ],
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "adc596e19453aa34c57a87238995faebdfd2c6fd76cdc9a9dd09b3b59ae56f01",
+                "tests": "b57933c455c110803b9a75041dd23d2765d751853635c0c7a664c7f98100961f",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0019-rich-chat-rerun.stdout.log",
+                    "sha256": "89afb704737a2bee991fa4844e0ec792cc5cc50440a82aaba88bf5d82617bea1"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0019-rich-chat-rerun.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 20,
+            "gate": "test-ui-rerun",
+            "status": "failed",
+            "exitCode": 1,
+            "startedAt": "2026-10-09T07:17:16.155Z",
+            "endedAt": "2026-10-09T07:18:13.311Z",
+            "durationMs": 57156,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0020-test-ui-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-QqF7oW",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-QqF7oW\\01-search-hover.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-QqF7oW\\02-library-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-QqF7oW\\03-library-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-QqF7oW\\04-panel-tabs.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-QqF7oW\\05-snackbar.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-QqF7oW\\06-docs-source.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-QqF7oW\\07-docs-200.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-QqF7oW\\motion.json"
+                    ]
+                }
+            ],
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "adc596e19453aa34c57a87238995faebdfd2c6fd76cdc9a9dd09b3b59ae56f01",
+                "tests": "b57933c455c110803b9a75041dd23d2765d751853635c0c7a664c7f98100961f",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0020-test-ui-rerun.stdout.log",
+                    "sha256": "a36e534aded1f895500d477b876cc6d40c64ff7df237fb227bff858ab891c320"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0020-test-ui-rerun.stderr.log",
+                    "sha256": "65f237aaa9d080c5212c55db50a2f6dc66285249bd83dd9865a01c2c12183511"
+                }
+            }
+        },
+        {
+            "attempt": 21,
+            "gate": "unit-rerun",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:19:13.994Z",
+            "endedAt": "2026-10-09T07:22:42.096Z",
+            "durationMs": 208102,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0021-unit-rerun.json",
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "adc596e19453aa34c57a87238995faebdfd2c6fd76cdc9a9dd09b3b59ae56f01",
+                "tests": "b57933c455c110803b9a75041dd23d2765d751853635c0c7a664c7f98100961f",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0021-unit-rerun.stdout.log",
+                    "sha256": "ecd413b6b5d4d016d9ebd3e94846d9630802a752325ca1ef8d8ed8171627ea1f"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0021-unit-rerun.stderr.log",
+                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                }
+            }
+        },
+        {
+            "attempt": 22,
+            "gate": "test-ui-rerun",
+            "status": "failed",
+            "exitCode": 1,
+            "startedAt": "2026-10-09T07:23:42.994Z",
+            "endedAt": "2026-10-09T07:23:48.143Z",
+            "durationMs": 5149,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0022-test-ui-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-nZ59u5",
+                    "files": []
+                }
+            ],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0022-test-ui-rerun.stdout.log",
+                    "sha256": "aba4bc2f24de0e106e4abac9c3aebda3df4f2dad0e18cd658270343f1c02afab"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0022-test-ui-rerun.stderr.log",
+                    "sha256": "22679966ae5dd252ddddc9e987a6686795bd261b6f8c7277994ac211515bcf12"
+                }
+            }
+        },
+        {
+            "attempt": 23,
+            "gate": "build-after-dialog-header",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:25:24.855Z",
+            "endedAt": "2026-10-09T07:25:29.286Z",
+            "durationMs": 4431,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0023-build-after-dialog-header.json",
+            "evidence": [],
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "aa2443e21f83e2708c699aec64371621fd386122cf552144e6addb76c7c775bf",
+                "tests": "6079fbda739a3b42508cf76cd434a0843c25d4611a0d2045e94cb64cb090845f",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "sourceHashesAtEnd": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "aa2443e21f83e2708c699aec64371621fd386122cf552144e6addb76c7c775bf",
+                "tests": "6079fbda739a3b42508cf76cd434a0843c25d4611a0d2045e94cb64cb090845f",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "sourceChangesDuringGate": [],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0023-build-after-dialog-header.stdout.log",
+                    "sha256": "d76084e0519e46c69604ddacafba2a0f75a665100820e3b5daa17daecb8a5b47"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0023-build-after-dialog-header.stderr.log",
+                    "sha256": "351b524197fb492920789369e7f1a271420c757633fbb553b280a181ac4c31a4"
+                }
+            }
+        },
+        {
+            "attempt": 24,
+            "gate": "test-ui-after-dialog-header",
+            "status": "failed",
+            "exitCode": 1,
+            "startedAt": "2026-10-09T07:25:29.783Z",
+            "endedAt": "2026-10-09T07:26:44.687Z",
+            "durationMs": 74904,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0024-test-ui-after-dialog-header.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\01-search-hover.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\02-library-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\03-library-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\04-panel-tabs.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\05-snackbar.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\06-docs-source.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\07-docs-200.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\08-docs-narrow.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\09-select-states.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\10-tabs-slider.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\11-ripple-held.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\12-card-form.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\13-code-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\14-code-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\15-scrollbar.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\16-variants-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\17-variants-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\18-local-variants-input.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\18-local-variants-tabs.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-9GfqdS\\motion.json"
+                    ]
+                }
+            ],
+            "sourceHashesAtStart": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "aa2443e21f83e2708c699aec64371621fd386122cf552144e6addb76c7c775bf",
+                "tests": "6079fbda739a3b42508cf76cd434a0843c25d4611a0d2045e94cb64cb090845f",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "sourceHashesAtEnd": {
+                "head": "86f75d41a12ddf3b88474df9c4554e16d0b54314",
+                "product": "aa2443e21f83e2708c699aec64371621fd386122cf552144e6addb76c7c775bf",
+                "tests": "6079fbda739a3b42508cf76cd434a0843c25d4611a0d2045e94cb64cb090845f",
+                "package": "10028b52a9f4713869230967c3a6b1fff8104e564ca294832de0958c0867f59d"
+            },
+            "sourceChangesDuringGate": [],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0024-test-ui-after-dialog-header.stdout.log",
+                    "sha256": "cd7266a41dd60efff1ca5c6abe16073c17f8206e35a5fd762c0d4de224cce361"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0024-test-ui-after-dialog-header.stderr.log",
+                    "sha256": "49a3e8114f8513e4ba303959b507fa532765c52fe5433c97e5ab031b532e3771"
+                }
+            }
+        },
+        {
+            "attempt": 25,
+            "gate": "test-ui-rerun",
+            "status": "failed",
+            "exitCode": 1,
+            "startedAt": "2026-10-09T07:32:25.838Z",
+            "endedAt": "2026-10-09T07:33:22.784Z",
+            "durationMs": 56946,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0025-test-ui-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\01-search-hover.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\02-library-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\03-library-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\04-panel-tabs.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\05-snackbar.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\06-docs-source.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\07-docs-200.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\08-docs-narrow.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\09-select-states.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\10-tabs-slider.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\11-ripple-held.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\12-card-form.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\13-code-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\14-code-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\15-scrollbar.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\16-variants-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\17-variants-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\18-local-variants-input.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\18-local-variants-tabs.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\19-pagination.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\20-server-table-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\21-server-table-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\22-server-table-narrow.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-1jTkIO\\motion.json"
+                    ]
+                }
+            ],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0025-test-ui-rerun.stdout.log",
+                    "sha256": "8ccb9ae8c9761f2425f85fe90f12897ebc5961033083a789bd1c4a6bea5f620c"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0025-test-ui-rerun.stderr.log",
+                    "sha256": "cb55bbc1d736f7fbf72372d92b16e6ae634292df7ff19eda5a939cd7f9cfe533"
+                }
+            }
+        },
+        {
+            "attempt": 26,
+            "gate": "test-ui-rerun",
+            "status": "passed",
+            "exitCode": 0,
+            "startedAt": "2026-10-09T07:34:55.926Z",
+            "endedAt": "2026-10-09T07:35:57.520Z",
+            "durationMs": 61594,
+            "metadata": "artifacts/ui-0.4.2-consumer/attempt-0026-test-ui-rerun.json",
+            "evidence": [
+                {
+                    "directory": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx",
+                    "files": [
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\01-search-hover.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\02-library-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\03-library-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\04-panel-tabs.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\05-snackbar.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\06-docs-source.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\07-docs-200.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\08-docs-narrow.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\09-select-states.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\10-tabs-slider.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\11-ripple-held.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\12-card-form.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\13-code-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\14-code-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\15-scrollbar.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\16-variants-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\17-variants-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\18-local-variants-input.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\18-local-variants-tabs.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\19-pagination.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\20-server-table-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\21-server-table-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\22-server-table-narrow.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\23-text-light.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\24-text-dark.png",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\motion.json",
+                        "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-FAeqYx\\report.json"
+                    ]
+                }
+            ],
+            "logs": {
+                "stdout": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0026-test-ui-rerun.stdout.log",
+                    "sha256": "bca9bd12bbdf985f8ead00b397c80925cc6b5cdd0a3070f6747187e6caac67db"
+                },
+                "stderr": {
+                    "path": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-0.4.2-consumer\\attempt-0026-test-ui-rerun.stderr.log",
+                    "sha256": "351b524197fb492920789369e7f1a271420c757633fbb553b280a181ac4c31a4"
+                }
+            }
+        }
+    ],
+    "earlierConsumer": "artifacts/ui-0.4.1-consumer/final-report.json: 10 gates, 4 pass, 6 fail; unit 1045/1037/6/2; preserved separately",
+    "fixes": [
+        "Five TabsWindow assemblies with 15 eager items preserve form/preview instances and native view bounds",
+        "Chat scroll restoration waits for the selected IPC history and rendered content",
+        "Search layout uses public width and forwarded attrs/utilities through DOM overlay roots",
+        "Bounded fixture allocation retries Windows reserved ports; full suite has four file workers and all original cases/time limits",
+        "Dialog-dependent focus/view/service assertions wait for actual exit completion",
+        "Docs tests use canonical names and family headings while retaining child routes"
+    ],
+    "boundary": "Current Windows/Node24/Electron44.7.0 validation; no UAH installer release or main merge. Earlier failing attempts and stale-dist runs remain historical evidence, not successful acceptance.",
+    "coverageNotes": [
+        "Complete unit attempt 0021 covers runtime/main/renderer logic and all 1045 cases; these suites do not import SearchDialog or other SFCs.",
+        "Build 0023 and the final complete docs/Electron UI attempt cover the final SearchDialog public layout attrs and close-button utility change.",
+        "The seven desktop-specific suites passed on fresh build 0012 after the SearchDialog width fix; the later product edit only aligns its close button through forwarded utility classes, checked by the final production UI test.",
+        "Pagination aria labels and data-table loading selectors were synchronized after build 0023; they are test-only changes exercised by the final UI attempt."
+    ]
+}

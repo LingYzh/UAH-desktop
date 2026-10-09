@@ -37,7 +37,7 @@ async function fixture(t: { after(fn: () => Promise<void>): void }, respond = (r
                 const onReady = () => { server.off('error', onError); ready(); };
                 server.once('error', onError); server.once('listening', onReady); server.listen(randomInt(20000, 60000), '127.0.0.1');
             }); break;
-        } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error; }
+        } catch (error) { if (!['EADDRINUSE', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error; }
     }
     const address = server.address(); assert.ok(address && typeof address !== 'string'); const settings = defaultAgentSettings();
     const connection: ApiConnection = { id: 'fixture', name: 'Goal fixture', protocol: 'openai-chat', baseUrl: `http://127.0.0.1:${address.port}/v1`, apiKey: 'LOCAL_GOAL_SECRET',

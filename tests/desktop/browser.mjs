@@ -59,6 +59,13 @@ try {
     await page.keyboard.press('Escape');
     await page.getByRole('dialog', { name: '搜索', exact: true }).waitFor({ state: 'hidden' });
     await page.waitForFunction(() => !document.querySelector('.browser-host-area > p'));
+    // Native view restoration follows the dialog's actual closed lifecycle, after aria-hidden.
+    await desktop.evaluate(async ({ BrowserWindow }, firstId) => {
+        for (let attempt = 0; attempt < 50; attempt++) {
+            if (BrowserWindow.getAllWindows()[0].contentView.children.find(view => view.webContents?.id === firstId)?.getVisible()) return;
+            await new Promise(resolve => setTimeout(resolve, 20));
+        }
+    }, isolation.id);
     assert.equal(await desktop.evaluate(({ BrowserWindow }, firstId) => BrowserWindow.getAllWindows()[0].contentView.children.find((view) => view.webContents?.id === firstId).getVisible(), isolation.id), true);
     checks.push('search modal hides the remote native view and restores the same host on dismissal');
 

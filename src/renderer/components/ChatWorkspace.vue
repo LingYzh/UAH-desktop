@@ -98,6 +98,21 @@ function resumeScrollIntent(event) {
     if (event.type !== 'keydown' || ['PageDown', 'PageUp', 'Home', 'End', 'ArrowDown', 'ArrowUp'].includes(event.key)) readingDisclosure = false;
 }
 const positions = new Map();
+// A selected session can render an empty view while its IPC history is loading.
+// Defer restoration so that the old/empty content cannot clamp and overwrite its saved position.
+let pendingScrollKey;
+function historyLoaded() {
+    return !Object.hasOwn(workspace.snapshot, 'viewSessionId') || workspace.snapshot.viewSessionId === selectedId.value;
+}
+async function restoreScroll() {
+    const key = selectedId.value || 'draft';
+    await nextTick();
+    if (pendingScrollKey !== key || !historyLoaded() || workspace.page !== 'chat' || !scroll.value?.getClientRects().length) return;
+    const saved = positions.get(key);
+    following.value = saved?.following ?? true;
+    scroll.value.scrollTop = following.value ? scroll.value.scrollHeight : saved?.top ?? 0;
+    pendingScrollKey = undefined;
+}
 const available = computed(() => workspace.connected && workspace.ready && !workspace.busy);
 const apiMode = computed(() => workspace.currentModel && workspace.currentModel !== 'local-verification');
 const inherited = computed(() => selected.value?.branchMessages || []);
@@ -136,7 +151,7 @@ let followFrame = 0;
 let composerWidth = 0;
 
 function followContent() {
-    if (followFrame || readingDisclosure || !following.value) return;
+    if (pendingScrollKey || followFrame || readingDisclosure || !following.value) return;
     followFrame = requestAnimationFrame(() => {
         followFrame = 0;
         const element = scroll.value;
@@ -158,17 +173,15 @@ function resizeComposer() {
 
 function rememberScroll() {
     const element = scroll.value;
-    if (!element?.getClientRects().length || workspace.page !== 'chat') return;
+    if (pendingScrollKey || !historyLoaded() || !element?.getClientRects().length || workspace.page !== 'chat') return;
     if (!readingDisclosure) following.value = element.scrollHeight - element.scrollTop - element.clientHeight < 60;
     positions.set(selectedId.value || 'draft', { top: element.scrollTop, following: following.value });
 }
 watch(selectedId, async (_id, previous) => {
     readingDisclosure = false;
-    if (scroll.value?.getClientRects().length) positions.set(previous || 'draft', { top: scroll.value.scrollTop, following: following.value });
-    await nextTick();
-    const saved = positions.get(selectedId.value || 'draft');
-    following.value = saved?.following ?? true;
-    if (scroll.value) scroll.value.scrollTop = saved?.top ?? scroll.value.scrollHeight;
+    if (!pendingScrollKey && scroll.value?.getClientRects().length) positions.set(previous || 'draft', { top: scroll.value.scrollTop, following: following.value });
+    pendingScrollKey = selectedId.value || 'draft';
+    await restoreScroll();
 }, { flush: 'pre' });
 watch(() => workspace.page, async (page, previous) => {
     if (previous === 'chat' && scroll.value?.getClientRects().length) {
@@ -178,12 +191,14 @@ watch(() => workspace.page, async (page, previous) => {
         await nextTick();
         const saved = positions.get(selectedId.value || 'draft');
         following.value = saved?.following ?? true;
-        if (scroll.value) scroll.value.scrollTop = following.value ? scroll.value.scrollHeight : saved?.top ?? 0;
+        if (pendingScrollKey) await restoreScroll();
+        else if (scroll.value) scroll.value.scrollTop = following.value ? scroll.value.scrollHeight : saved?.top ?? 0;
         resizeComposer();
     }
 }, { flush: 'pre' });
-watch(() => workspace.snapshot.runs.filter(run => run.sessionId === selectedId.value).map((run) => `${run.id}:${run.sequence}:${run.state}`).join(','), async () => {
+watch(() => [workspace.snapshot.viewSessionId, workspace.snapshot.runs.filter(run => run.sessionId === selectedId.value).map((run) => `${run.id}:${run.sequence}:${run.state}`).join(',')], async () => {
     await nextTick();
+    if (pendingScrollKey) await restoreScroll();
     followContent();
 });
 watch(() => [selectedId.value, activeRun.value?.id], async ([sessionId, runId], [previousSessionId, previousRunId]) => {

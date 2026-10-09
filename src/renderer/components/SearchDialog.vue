@@ -52,8 +52,10 @@ defineExpose({ focusSearch });
 </script>
 
 <template>
-    <UiDialog ref="dialog" :open="open" class="search-dialog" aria-labelledby="search-title" @update:open="close" @present-change="emit('present-change', $event)" @closed="closed" @keydown="keydown">
-        <header class="search-header"><h2 id="search-title">搜索</h2><UiButton variant="ghost" size="sm" icon class="search-close" aria-label="关闭搜索" @click="close"><Icon name="close" /></UiButton></header>
+    <!-- The DOM overlay surface receives layout through public props/attrs, outside the parent's scoped root. -->
+    <UiDialog ref="dialog" :open="open" :width="800" class="search-dialog d-flex flex-column" style="padding: 0; overflow: hidden" aria-labelledby="search-title"
+        @update:open="close" @present-change="emit('present-change', $event)" @closed="closed" @keydown="keydown">
+        <header class="search-header"><h2 id="search-title">搜索</h2><UiButton variant="ghost" size="sm" icon class="search-close ml-auto text-muted" aria-label="关闭搜索" @click="close"><Icon name="close" /></UiButton></header>
         <div class="search-body">
             <UiInput ref="input" v-model="query" class="search-box" type="text" autocomplete="off" autofocus placeholder="搜索会话、项目与设置" aria-label="搜索会话、项目与设置"><template #leading><Icon name="search" :size="16" /></template></UiInput>
             <div class="search-results">
@@ -71,15 +73,8 @@ defineExpose({ focusSearch });
 </template>
 
 <style scoped>
-.search-dialog {
-    width: 800px;
-    padding: 0;
-    overflow: hidden;
-}
-.search-dialog[open] { display: flex; flex-direction: column; }
 .search-header { display: flex; align-items: center; gap: 12px; padding: 22px 25px 13px; flex-shrink: 0; }
 .search-header h2 { margin: 0; font: 23px/1.4 var(--serif); }
-.search-close { margin-left: auto; color: var(--muted); }
 .search-body { min-height: 0; overflow-y: auto; padding: 7px 25px 25px; }
 .search-box { min-height: 40px; font-size: 12px; line-height: 20px; }
 .search-results { margin-top: 15px; }

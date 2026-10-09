@@ -2,7 +2,7 @@
 import { clientError } from '../../shared/client-error.js';
 
 import { computed, onMounted, ref, useId } from 'vue';
-import { UiButton, UiCard, UiDialog, UiField, UiInput, UiTextarea, UiSelect, UiSwitch, UiScrollArea, UiTabs, UiTabPanel, UiMarkdown, snackbar } from '@lingyzh/ui';
+import { UiButton, UiCard, UiDialog, UiField, UiInput, UiTextarea, UiSelect, UiSwitch, UiScrollArea, UiTabs, UiTabsWindow, UiTabsWindowItem, UiMarkdown, snackbar } from '@lingyzh/ui';
 import { openMarkdownLink } from '../markdown-links';
 
 import { useWorkspace } from '../stores/workspace';
@@ -92,12 +92,14 @@ function remove() { return perform(async () => { const settings = copy(workspace
                 <section class="d-flex flex-column ga-3 min-w-0" aria-label="Agent 提示词编辑器">
                     <p class="muted small ma-0">支持 Markdown 标题、列表、代码块和表格。预览展示可编辑指令；实际请求还会按角色、权限和可用工具注入宿主规则，指令不能授予额外权限。</p>
                     <UiTabs v-model="instructionMode" :items="instructionTabs" :id-prefix="instructionTabsId" aria-label="提示词显示方式" />
-                    <UiTabPanel :model-value="instructionMode" value="edit" :id-prefix="instructionTabsId">
-                        <UiField v-slot="{ controlAttrs }" label="Agent 指令" for="agent-instructions" description="定义专业要求、工作流程和回答方式。预设开头的 UAH_PROMPT_PROFILE 标记用于选择角色风格；删除后使用通用角色。角色和工具规则由运行时按条件装配。最多 32000 字符。"><UiTextarea v-model="draft.instructions" v-bind="controlAttrs" :rows="12" maxlength="32000" :disabled="busy" spellcheck="false" /></UiField>
-                    </UiTabPanel>
-                    <UiTabPanel :model-value="instructionMode" value="preview" :id-prefix="instructionTabsId">
-                        <template v-if="instructionMode === 'preview'"><UiMarkdown v-if="draft.instructions.trim()" :source="draft.instructions" @link-click="openMarkdownLink" /><p v-else class="muted small">尚未填写提示词，切换到编辑后输入 Markdown。</p></template>
-                    </UiTabPanel>
+                    <UiTabsWindow eager :keyboard="false" :model-value="instructionMode" :id-prefix="instructionTabsId">
+                        <UiTabsWindowItem value="edit" :transition="false">
+                            <UiField v-slot="{ controlAttrs }" label="Agent 指令" for="agent-instructions" description="定义专业要求、工作流程和回答方式。预设开头的 UAH_PROMPT_PROFILE 标记用于选择角色风格；删除后使用通用角色。角色和工具规则由运行时按条件装配。最多 32000 字符。"><UiTextarea v-model="draft.instructions" v-bind="controlAttrs" :rows="12" maxlength="32000" :disabled="busy" spellcheck="false" /></UiField>
+                        </UiTabsWindowItem>
+                        <UiTabsWindowItem value="preview" :transition="false">
+                            <template v-if="instructionMode === 'preview'"><UiMarkdown v-if="draft.instructions.trim()" :source="draft.instructions" @link-click="openMarkdownLink" /><p v-else class="muted small">尚未填写提示词，切换到编辑后输入 Markdown。</p></template>
+                        </UiTabsWindowItem>
+                    </UiTabsWindow>
                     <p class="muted small ma-0" aria-live="polite">{{ draft.instructions.length }} / 32000 字符</p>
                 </section>
                 <UiField v-if="draft.kind === 'subagent'" v-slot="{ controlAttrs }" label="可选绑定模型" for="agent-model" description="不指定时继承父代理模型；主代理启动时仍可指定 provider、模型及思考强度。生成参数在模型设置中维护。"><UiSelect v-model="modelValue" v-bind="controlAttrs" :disabled="busy"><option value="">继承父代理模型</option><optgroup v-for="group in workspace.modelGroups" :key="group.id" :label="group.label"><option v-for="model in group.models" :key="model.value" :value="model.value">{{ model.label }}</option></optgroup><option v-if="modelValue && !modelExists(modelValue)" :value="modelValue" disabled>已配置模型不可用</option></UiSelect></UiField>

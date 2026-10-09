@@ -1,5 +1,31 @@
 # UAH / UI 新会话交接
 
+## 2026-10-09：正式 UI 0.4.2 适配完成，准备主分支审阅
+
+UI 已先合并 main 并正式发布 0.4.2（7f63179 / v0.4.2，Actions 37896838790）。UAH 固定官方 registry 包，lock resolved/integrity 与安装目录一致，Root 核对单一物理 Vue 运行时；其他依赖锁元数据保持原 HEAD。五处 TabsWindow / 十五个 eager Items 迁移完成，保留 model/idPrefix、keyboard=false、transition=false、表单实例和原生浏览器宿主。
+
+ChatWorkspace 等待所选 IPC 历史和 DOM 更新后恢复阅读位置，原 600px 回归通过。SearchDialog 用公开 width 与转发 attrs/工具类恢复 800px 宽度、padding=0、关闭按钮靠右，默认动画由正式 UI 0.4.2 修复。测试按 DOM 弹层真实 closed 生命周期等待焦点/原生视图恢复；系统 DPI 仅在精确原生尺寸夹具固定为 1，应用 zoom 仍受测。
+
+最新 11 项门禁全部通过：typecheck、完整 npm test（1045 项 / 1043 通过 / 0 失败 / 2 跳过）、build、完整 test:ui，以及 appearance 8、extensions 32、browser 7、agents 14、smoke 8、rich-chat 4 组和 plan-mode。test:ui 保留 173 旧文档 URL/hash、家族标题、生产搜索动画/焦点/布局、分页和表格；当前页名称和按钮 ::before 悬停状态层断言与正式包一致。
+
+完整单测限制四个文件并发，保留全部用例和原时限；既有有界随机端口循环遇到 Windows 保留端口 EACCES 时重选，没有修改系统网络。初次 0.4.1 消费 10 门禁 4 通过 / 6 失败、单测 1045/1037/6/2，以及 0.4.2 中间失败、旧构建与测试协议漂移均保留。后续真正完整单测 1045/1043/0/2 单独记录，不把定向复跑当作全量通过。
+
+版本化证据：docs/checkpoint-evidence/2026-10-09-ui-0.4.2-consumer.json，包含源码 SHA-256、各门禁 attempt、原始日志哈希、截图目录及覆盖边界；本机原始日志在 artifacts/ui-0.4.2-consumer。最终 build 0023 和最后完整 UI 回归覆盖 SearchDialog 最终修改，完整单测与七组桌面专项的覆盖范围另列。当前分支准备提交推送并创建到 main 的审阅请求；UAH 尚未合并 main、未制作安装包。
+
+## 2026-10-09：UI补丁0.4.2已正式发布并升级，等待最终消费验收
+
+UI分支先合并main，0.4.1正式发布后，UAH生产验证发现默认transition被Vue Boolean转换的问题。库修复并完成typecheck/308单测/build/完整Electron/feedback/controls/pack/presentation门禁，main7f63179/v0.4.2发布成功，Actions37896838790、official latest0.4.2确认。UAH已从正式registry固定升级0.4.2，保留其他lock元数据、Vue dedupe和普通安装目录。
+
+五处Tabs组合已改为Window/15Items，保留eager实例、共享model/idPrefix、transition=false、keyboard=false及工作面板原滚动和原生浏览器bounds。首轮0.4.1消费验证10门禁4通过6失败留档；修正Windows随机保留端口及DPI测试环境、Plan session索引/重载前提。旧会话滚动恢复缺陷已在ChatWorkspace修复，等待IPC历史加载和DOM更新后恢复、加载期间不覆盖记忆，600px回归专项通过。最终完整验证正在进行，不可把旧失败或定向通过写成全量绿色。最终結果见docs/VALIDATION及新版本化证据。
+
+## 2026-10-09：UI已合并，等待正式发版后进行UAH适配
+
+用户最新要求先合并UI分支后发版，再适配UAH。UI远端main已合并；v0.4.0的Linux CI因API表达式CRLF/LF差异失败，Publish未执行。修复后的e891c76及v0.4.1已通过完整门禁并原子推送，Actions run37893864781正在发布。此前多GitHub账号交互阻断已通过单次显式选择LingYzh解决。正式registry尚待确认，UAH仍固定官方npm0.3.2，没有自动同步未发布源码。
+
+消费盘点：15个UiTabPanel调用分布于App、AgentManager、ExtensionManager、PlanFiles、WorkspacePanel；迁移使用TabsWindow/Item，显式共享model/idPrefix，eager=true、transition=false、keyboard=false保持草稿/预览与键盘边界。WorkspacePanel需由root保持flex滚动及原生browser-host-area尺寸，不能机械替换或复制UI组件。23个Dialog与1个Menu继续通过兼容Ui*入口，真实焦点/关闭生命周期需要消费验证。正式发布后从registry固定安装0.4.1，核对lock resolved/integrity与Vue dedupe，再完成适配和完整验证。
+
+当前增量：UI Actions run37893864781/Linux308测试/Publish均成功，official version/latest0.4.1、541文件tarball/integrity已核对；UAH已正式固定安装0.4.1。package/lock/实际普通安装目录一致，lock除UI版本/resolved/integrity外与原HEAD完全一致。五组Window/15Items已迁移，工作面板高度贯通并将滚动/padding保留在内部被隐藏的内容，保留原GitPanel及Markdown条件渲染。完整消费门禁正在运行，不能将此进度当作验收通过。
+
 ## 2026-10-09：当前批次收尾、提交推送后停止
 
 用户要求完成手中批次后更新 handoff、分别提交推送并停止；全库深度对齐尚未完成。续作入口为 `D:/UI/HANDOFF.md`、`D:/UI/VALIDATION.md` 和 `D:/UI/docs/component-audit-2026-10-08/NEXT-SESSION-2026-10-09.md`，其中保留用户已批准的默认/模型规则、未答布局决策及 Stepper/列表/树/弹层容器残留。

@@ -90,7 +90,7 @@ async function createApiFixture(handler: (body: ChatBody, response: ServerRespon
             });
             port = candidate;
         } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error;
+            if (!['EADDRINUSE', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
         }
     }
     assert.ok(port > 10_080, `could not obtain a free test port above 10080, got ${port}`);

@@ -8,7 +8,8 @@ const evidence = await mkdtemp(path.resolve('artifacts', 'appearance-'));
 const environment = { ...process.env, UAH_DATA_DIR: path.join(evidence, 'data') };
 delete environment.ELECTRON_RUN_AS_NODE;
 delete environment.UAH_DEV_URL;
-const desktop = await electron.launch({ args: ['.'], cwd: process.cwd(), env: environment, timeout: 30000 });
+// Fix the test display scale; application zoom remains exercised separately.
+const desktop = await electron.launch({ args: ['.', '--force-device-scale-factor=1'], cwd: process.cwd(), env: environment, timeout: 30000 });
 const checks = [];
 try {
     const page = await desktop.firstWindow();
@@ -108,6 +109,22 @@ try {
     await page.getByRole('button', { name: '设置', exact: true }).click();
     const font = page.getByRole('combobox', { name: '阅读字体', exact: true });
     await settle();
+    const initialFont = await font.inputValue();
+    await font.evaluate(element => { window.__uahFontControl = element; });
+    const appearanceTab = page.getByRole('tab', { name: '外观', exact: true });
+    const aboutTab = page.getByRole('tab', { name: '关于与能力', exact: true });
+    const appearancePanel = page.locator('#settings-panel-appearance');
+    assert.equal(await appearanceTab.getAttribute('aria-controls'), 'settings-panel-appearance');
+    await aboutTab.click();
+    assert.equal(await appearancePanel.getAttribute('aria-hidden'), 'true');
+    assert.equal(await appearancePanel.getAttribute('inert'), '');
+    assert.equal(await font.isVisible(), false);
+    assert.equal(await page.getByRole('combobox', { name: '阅读字体', exact: true, includeHidden: true }).count(), 1, 'eager panels keep the original form mounted');
+    await appearanceTab.click();
+    assert.equal(await font.evaluate(element => element === window.__uahFontControl), true, 'switching tabs preserves the actual control instance');
+    assert.equal(await font.inputValue(), initialFont);
+    assert.equal(await appearancePanel.getAttribute('aria-hidden'), 'false');
+    checks.push('TabsWindow preserves settings form instances and values, with linked ARIA and inert inactive panels');
     await capture('03-settings-light.png');
     await font.click();
     await settle();
