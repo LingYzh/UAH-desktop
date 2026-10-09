@@ -1,5 +1,9 @@
 # UAH 使用 npm 版共享 UI
 
+## 2026-10-09：UAH 已合并 main
+
+用户明确要求直接合并。PR #1 已从 draft 转为 ready 并成功合并，merge commit c02fb3be04f96acda515b8867d41676a375078fa，https://github.com/LingYzh/UAH-desktop/pull/1。合并后文件树与已验收适配提交 196d397 完全一致（tree d51f06740a4f5f9396da1791e360b094678fd38e），原 11 项门禁证据继续适用；本地 main 已同步。后续仅补记合并状态，未修改产品、依赖或测试，未制作安装包。下方待审阅/未合并状态为合并前历史。
+
 ## 2026-10-09：最新固定版本与验收
 
 UI 已先合并 main 并正式发布 0.4.2（7f63179 / v0.4.2，Actions 37896838790）。UAH 固定官方 registry 包，lock resolved/integrity 与安装目录一致，Root 核对单一物理 Vue 运行时；其他依赖锁元数据保持原 HEAD。五处 TabsWindow / 十五个 eager Items 迁移完成，保留 model/idPrefix、keyboard=false、transition=false、表单实例和原生浏览器宿主。

@@ -1,0 +1,10 @@
+{
+  "status": "merged",
+  "mergedAt": "2026-10-09T07:43:08Z",
+  "pullRequest": "https://github.com/LingYzh/UAH-desktop/pull/1",
+  "mergeCommit": "c02fb3be04f96acda515b8867d41676a375078fa",
+  "validatedHead": "196d397eedbf73bd0bdcb0f9ac0b3b81c0795bb9",
+  "identicalTree": "d51f06740a4f5f9396da1791e360b094678fd38e",
+  "validation": "2026-10-09-ui-0.4.2-consumer.json",
+  "note": "Product tree unchanged by merge; follow-up documentation only."
+}
