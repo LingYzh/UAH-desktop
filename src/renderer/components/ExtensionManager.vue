@@ -2,7 +2,7 @@
 import { clientError } from '../../shared/client-error.js';
 
 import { computed, onMounted, ref, watch } from 'vue';
-import { UiAlert, UiBadge, UiButton, UiCard, UiDialog, UiField, UiInput, UiTextarea, UiSelect, UiSwitch, UiScrollArea, UiTabs, UiTabPanel } from '@lingyzh/ui';
+import { UiAlert, UiBadge, UiButton, UiCard, UiDialog, UiField, UiInput, UiTextarea, UiSelect, UiSwitch, UiScrollArea, UiTabs, UiTabsWindow, UiTabsWindowItem } from '@lingyzh/ui';
 
 const props = defineProps({ section: { type: String, default: 'mcp' } });
 const data = ref({ connectors: [], plugins: [], skills: [], marketplaces: [] });
@@ -103,29 +103,31 @@ watch(editing, value => { if (!value) secrets.value = '{}'; });
                 </template>
                 <template v-else>
                     <UiTabs v-model="tab" :items="[{ id: 'plugins', label: '已安装插件' }, { id: 'skills', label: '技能' }, { id: 'marketplaces', label: '插件市场' }]" id-prefix="extensions" aria-label="扩展类型" />
-                    <UiTabPanel :model-value="tab" value="plugins" id-prefix="extensions">
-                        <div class="d-flex flex-column ga-4">
-                            <div class="d-flex justify-end"><UiButton variant="primary" :disabled="busy" @click="install('install-plugin')">安装插件</UiButton></div>
-                            <p class="text-muted ma-0">支持插件包中的 skills 与 MCP；不执行 hooks、安装脚本和其他未支持组件。</p>
-                            <UiCard v-if="!plugins.length" title="没有匹配的插件" subtitle="从本地目录、HTTPS Git 仓库或插件市场安装。" />
-                            <UiCard v-for="item in plugins" :key="item.id" :title="item.name" :subtitle="item.description" density="compact">
-                                <div class="d-flex flex-wrap align-center justify-space-between ga-3"><span class="text-muted">{{ item.version || '未声明版本' }}</span><div class="d-flex flex-wrap align-center ga-2"><UiSwitch :model-value="item.enabled" :disabled="busy" :aria-label="`启用 ${item.name}`" @update:model-value="run({ type: 'set-plugin-enabled', id: item.id, enabled: $event })" /><UiButton :disabled="busy" @click="run({ type: 'update-plugin', id: item.id })">更新</UiButton><UiButton :disabled="busy" @click="confirm = { name: item.name, command: { type: 'remove-plugin', id: item.id } }">卸载</UiButton></div></div>
-                                <p v-if="item.unsupported.length" class="text-muted mb-0">未启用的组件：{{ item.unsupported.join('、') }}</p>
-                            </UiCard>
-                        </div>
-                    </UiTabPanel>
-                    <UiTabPanel :model-value="tab" value="skills" id-prefix="extensions">
-                        <div class="d-flex flex-column ga-4"><div class="d-flex justify-end"><UiButton variant="primary" :disabled="busy" @click="install('install-skill')">安装技能</UiButton></div>
-                            <UiCard v-if="!skills.length" title="没有匹配的技能" subtitle="选择包含 SKILL.md 的目录，或安装提供技能的插件。" />
-                            <UiCard v-for="item in skills" :key="item.id" :title="item.name" :subtitle="skillDescription(item)" density="compact"><div class="d-flex flex-wrap align-center justify-space-between ga-3"><span class="text-muted">{{ item.builtin ? '内置技能 · 随应用更新，可停用' : item.pluginId ? `来自插件${pluginDisabled(item) ? ' · 插件已停用' : ''}` : '独立技能' }}</span><div class="d-flex align-center ga-2"><UiSwitch :model-value="item.enabled" :disabled="busy || Boolean(pluginDisabled(item))" :aria-label="`启用 ${item.name}`" @update:model-value="run({ type: 'set-skill-enabled', id: item.id, enabled: $event })" /><UiButton v-if="!item.pluginId && !item.builtin" :disabled="busy" @click="confirm = { name: item.name, command: { type: 'remove-skill', id: item.id } }">卸载</UiButton></div></div></UiCard>
-                        </div>
-                    </UiTabPanel>
-                    <UiTabPanel :model-value="tab" value="marketplaces" id-prefix="extensions">
-                        <div class="d-flex flex-column ga-4"><div class="d-flex justify-end"><UiButton variant="primary" :disabled="busy" @click="install('add-marketplace')">添加插件市场</UiButton></div>
-                            <UiCard v-if="!data.marketplaces.length" title="尚未添加插件市场" subtitle="添加包含 .claude-plugin/marketplace.json 的本地目录或 Git 仓库。" />
-                            <UiCard v-for="market in data.marketplaces" :key="market.id" :title="market.name" density="compact"><div class="d-flex flex-column ga-3"><div class="d-flex justify-end"><UiButton :disabled="busy" @click="confirm = { name: market.name, command: { type: 'remove-marketplace', id: market.id } }">移除市场</UiButton></div><UiCard v-for="item in filtered(market.plugins)" :key="item.name" :title="item.name" :subtitle="item.description" density="compact"><UiButton :disabled="busy" @click="run({ type: 'install-marketplace-plugin', marketplaceId: market.id, name: item.name })">安装</UiButton></UiCard></div></UiCard>
-                        </div>
-                    </UiTabPanel>
+                    <UiTabsWindow eager :keyboard="false" :model-value="tab" id-prefix="extensions">
+                        <UiTabsWindowItem value="plugins" :transition="false">
+                            <div class="d-flex flex-column ga-4">
+                                <div class="d-flex justify-end"><UiButton variant="primary" :disabled="busy" @click="install('install-plugin')">安装插件</UiButton></div>
+                                <p class="text-muted ma-0">支持插件包中的 skills 与 MCP；不执行 hooks、安装脚本和其他未支持组件。</p>
+                                <UiCard v-if="!plugins.length" title="没有匹配的插件" subtitle="从本地目录、HTTPS Git 仓库或插件市场安装。" />
+                                <UiCard v-for="item in plugins" :key="item.id" :title="item.name" :subtitle="item.description" density="compact">
+                                    <div class="d-flex flex-wrap align-center justify-space-between ga-3"><span class="text-muted">{{ item.version || '未声明版本' }}</span><div class="d-flex flex-wrap align-center ga-2"><UiSwitch :model-value="item.enabled" :disabled="busy" :aria-label="`启用 ${item.name}`" @update:model-value="run({ type: 'set-plugin-enabled', id: item.id, enabled: $event })" /><UiButton :disabled="busy" @click="run({ type: 'update-plugin', id: item.id })">更新</UiButton><UiButton :disabled="busy" @click="confirm = { name: item.name, command: { type: 'remove-plugin', id: item.id } }">卸载</UiButton></div></div>
+                                    <p v-if="item.unsupported.length" class="text-muted mb-0">未启用的组件：{{ item.unsupported.join('、') }}</p>
+                                </UiCard>
+                            </div>
+                        </UiTabsWindowItem>
+                        <UiTabsWindowItem value="skills" :transition="false">
+                            <div class="d-flex flex-column ga-4"><div class="d-flex justify-end"><UiButton variant="primary" :disabled="busy" @click="install('install-skill')">安装技能</UiButton></div>
+                                <UiCard v-if="!skills.length" title="没有匹配的技能" subtitle="选择包含 SKILL.md 的目录，或安装提供技能的插件。" />
+                                <UiCard v-for="item in skills" :key="item.id" :title="item.name" :subtitle="skillDescription(item)" density="compact"><div class="d-flex flex-wrap align-center justify-space-between ga-3"><span class="text-muted">{{ item.builtin ? '内置技能 · 随应用更新，可停用' : item.pluginId ? `来自插件${pluginDisabled(item) ? ' · 插件已停用' : ''}` : '独立技能' }}</span><div class="d-flex align-center ga-2"><UiSwitch :model-value="item.enabled" :disabled="busy || Boolean(pluginDisabled(item))" :aria-label="`启用 ${item.name}`" @update:model-value="run({ type: 'set-skill-enabled', id: item.id, enabled: $event })" /><UiButton v-if="!item.pluginId && !item.builtin" :disabled="busy" @click="confirm = { name: item.name, command: { type: 'remove-skill', id: item.id } }">卸载</UiButton></div></div></UiCard>
+                            </div>
+                        </UiTabsWindowItem>
+                        <UiTabsWindowItem value="marketplaces" :transition="false">
+                            <div class="d-flex flex-column ga-4"><div class="d-flex justify-end"><UiButton variant="primary" :disabled="busy" @click="install('add-marketplace')">添加插件市场</UiButton></div>
+                                <UiCard v-if="!data.marketplaces.length" title="尚未添加插件市场" subtitle="添加包含 .claude-plugin/marketplace.json 的本地目录或 Git 仓库。" />
+                                <UiCard v-for="market in data.marketplaces" :key="market.id" :title="market.name" density="compact"><div class="d-flex flex-column ga-3"><div class="d-flex justify-end"><UiButton :disabled="busy" @click="confirm = { name: market.name, command: { type: 'remove-marketplace', id: market.id } }">移除市场</UiButton></div><UiCard v-for="item in filtered(market.plugins)" :key="item.name" :title="item.name" :subtitle="item.description" density="compact"><UiButton :disabled="busy" @click="run({ type: 'install-marketplace-plugin', marketplaceId: market.id, name: item.name })">安装</UiButton></UiCard></div></UiCard>
+                            </div>
+                        </UiTabsWindowItem>
+                    </UiTabsWindow>
                 </template>
             </div>
         </UiScrollArea>

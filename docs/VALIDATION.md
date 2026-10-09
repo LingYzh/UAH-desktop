@@ -1,5 +1,41 @@
 # 本次验收记录
 
+## 2026-10-09：正式 UI 0.4.2 消费验收通过
+
+UI 已先合并 main 并正式发布 0.4.2（7f63179 / v0.4.2，Actions 37896838790）。UAH 固定官方 registry 包，lock resolved/integrity 与安装目录一致，Root 核对单一物理 Vue 运行时；其他依赖锁元数据保持原 HEAD。五处 TabsWindow / 十五个 eager Items 迁移完成，保留 model/idPrefix、keyboard=false、transition=false、表单实例和原生浏览器宿主。
+
+ChatWorkspace 等待所选 IPC 历史和 DOM 更新后恢复阅读位置，原 600px 回归通过。SearchDialog 用公开 width 与转发 attrs/工具类恢复 800px 宽度、padding=0、关闭按钮靠右，默认动画由正式 UI 0.4.2 修复。测试按 DOM 弹层真实 closed 生命周期等待焦点/原生视图恢复；系统 DPI 仅在精确原生尺寸夹具固定为 1，应用 zoom 仍受测。
+
+最新 11 项门禁全部通过：typecheck、完整 npm test（1045 项 / 1043 通过 / 0 失败 / 2 跳过）、build、完整 test:ui，以及 appearance 8、extensions 32、browser 7、agents 14、smoke 8、rich-chat 4 组和 plan-mode。test:ui 保留 173 旧文档 URL/hash、家族标题、生产搜索动画/焦点/布局、分页和表格；当前页名称和按钮 ::before 悬停状态层断言与正式包一致。
+
+完整单测限制四个文件并发，保留全部用例和原时限；既有有界随机端口循环遇到 Windows 保留端口 EACCES 时重选，没有修改系统网络。初次 0.4.1 消费 10 门禁 4 通过 / 6 失败、单测 1045/1037/6/2，以及 0.4.2 中间失败、旧构建与测试协议漂移均保留。后续真正完整单测 1045/1043/0/2 单独记录，不把定向复跑当作全量通过。
+
+版本化证据：docs/checkpoint-evidence/2026-10-09-ui-0.4.2-consumer.json，包含源码 SHA-256、各门禁 attempt、原始日志哈希、截图目录及覆盖边界；本机原始日志在 artifacts/ui-0.4.2-consumer。最终 build 0023 和最后完整 UI 回归覆盖 SearchDialog 最终修改，完整单测与七组桌面专项的覆盖范围另列。当前分支准备提交推送并创建到 main 的审阅请求；UAH 尚未合并 main、未制作安装包。
+
+## 2026-10-09 当前批次交接提交前检查
+
+用户要求当前批次完成后更新两仓交接、提交推送并停止。UAH 没有业务或运行时代码修改，继续消费正式 npm `@lingyzh/ui@0.3.2`；package-lock 只保留入场已有的 20 个可选包 dev 标记删除，没有版本、resolved 或 integrity 变化。
+
+- `npm run typecheck` 通过。
+- `npm test` 原始全量退出码 1：1045 项中 1041 通过、2 跳过、2 失败计数，均对应 context-long-run 的 OpenAI Chat 30 轮超时；单独 `tsx --test tests/runtime/context-long-run.test.ts` 4/4 通过。保留全量失败，不把复跑当作全量成功。
+- `npm run build` 通过，ExecutionHelper 0 警告/0 错误；renderer 保留既有的大 chunk 提示。
+- `npm run test:ui` 的 build:ui 通过，桌面测试启动前受本机 Electron 44.7.0 二进制缺失阻断。运行官方包自带 install.js 尝试修复；本机 7890 代理不可达，官方直连跳转 release-assets.githubusercontent.com 后连接超时。未替换其他版本、未改依赖或持久代理设置。`npm run test:desktop` 依赖相同二进制，未运行。
+- `npm ls --depth=0`、Vue 去重检查和 `git diff --check` 通过。UI 0.3.2、Electron 包 44.7.0、Vue 3.5.43；UI 本地未发布变更没有进入 UAH。
+
+原始日志位于 `artifacts/handoff-20261009/`：results.txt、unit-tests.log、unit-context-long-run-recheck.log、build.log、test-ui.log、electron-44.7.0-install.log 和 electron-44.7.0-direct-diagnostic.log。忽略产物不随 Git 传递，新设备按记录复测并准备锁定版本 Electron。此次提交仅交接文档与已有锁文件标记；无安装包、npm 发布或消费端升级。
+
+## 2026-10-08 新分支交接完整门禁（最新）
+
+用户要求将 UI 与 UAH 分别提交推送 `codex/handoff-component-alignment-20261008`。UAH 保留原官方 registry/7890代理、依赖升级与此前 .NET 记录，本次没有业务代码、组件外观或测试断言改动；仍使用固定 npm UI 0.3.2。UI 分支已推送 `784a46f`，其新组件功能尚未发布或传入 UAH。
+
+UAH 使用 bundled Node 24.19.0（进程 PATH 同步）、系统 .NET 10.0.401，完整 typecheck 和完整 build（含 ExecutionHelper）通过。完整单测串行运行共1045项：1039通过、4失败、2跳过。3项为随机localhost端口listen EACCES，1项为记忆索引写入EPERM；四个原失败项分别专项复跑4/4通过，未改产品或测试。最终统计与失败复跑详情保存 docs/handoff-validation-20261008.json；保留全量失败记录，不因专项复跑通过就将全量原始结果改成通过。
+
+完整 Electron UI 最终25/25组通过，包含生产搜索弹窗进入/退出中间态、焦点、减效、60个组件文档路由、分页和表格，pageerrors=[]。首轮尝试在搜索弹窗中间opacity采样断言失败；保留该记录，按原始未修改脚本复跑通过，没有放宽动画断言。曾试用 scale=1 的测试入口改动已撤回，UAH 测试脚本最终与原 HEAD 一致。最终原始报告随 Git 保存 docs/handoff-ui-20261008.json；截图 artifacts/ui-nPolCl 仍为本机忽略文件。
+
+桌面烟测前6组通过，在 smoke.mjs:133 会话切换后的 chat-scroll=600 断言再次失败。此前官方源/依赖升级阶段已用旧HEAD全套package/lock重装重建隔离复现相同失败，本次不继续改业务滚动逻辑或断言；作为现存未解决问题交接，不能宣称桌面烟测全部通过。
+
+本机完整日志：artifacts/handoff-typecheck.log、handoff-build.log、handoff-full-tests.log、handoff-unit-failure-recheck*.log、handoff-full-ui.log（首轮失败）、handoff-full-ui-original.log（最终25组通过）、handoff-desktop.log（既有滚动失败）。完整日志、依赖、dist、profile及截图不随Git，需要时按脚本重跑。此次不创建发布标签、不发包、不发布应用安装包。
+
 日期：2026-09-26。环境：Windows，Node.js 24.19.0，Electron 44.4.5，.NET SDK 10.0.400。方案 A 底座与独立设计原型分别验收。历史 `TEST_REPORT.md` 中的 71 项检查和 142 张截图不自动计入本次结果。
 
 ## 桌面底座
@@ -520,3 +556,22 @@ TypeScript7不再提供ts.sys，Vite Vue plugin显式使用Node的existsSync/rea
 最终完整UI25/25（含60个文档路由）、Agent15/15、端点11/11通过，无pageerror；证据分别为artifacts/ui-q949vX、artifacts/agents-sQ9goh、artifacts/endpoints-98M7dG，日志artifacts/ui-0.3.2-gallery.log、ui-0.3.2-agents-final.log、ui-0.3.2-endpoints-final.log。实际能力弹窗初始化／选择／保存正常；错误浮层为absolute、滚动后顶部位置不变，body顶部padding覆盖浮层高度且外层scrollTop为0，原旧行占位断言已同步用户要求。root复核最终endpoint-error-fixed.png、模型能力深色窄屏图像，主题与控件布局正确。
 
 UI独立仓库已发布并推送v0.3.2；UAH本轮只升级固定npm依赖、编译适配和桌面测试夹具／记录，没有改动业务组件或运行时代码，也没有发布桌面应用安装包。此前单测／外观／扩展验证仍适用；最终source API和样式与UI已验收版本一致。无阻断项。
+
+## 2026-10-08：官方 npm 源、7890 代理与依赖更新
+
+- 环境：Windows、Node 24.19.0、npm 10.9.3；当前系统默认 Node 22.19.0 未改变。项目 registry=https://registry.npmjs.org/，proxy/https-proxy=http://127.0.0.1:7890。直接与间接依赖更新由官方 registry 元数据解析，锁文件 resolved host 唯一值为 registry.npmjs.org。
+- `npm ci`、typecheck、`npm ls --depth=0` 和 Vue dedupe 检查通过，见 artifacts/npm-official-ci.log、npm-official-typecheck.log。UI 普通安装目录为 0.3.2，没有本地链接；最后 outdated 仅列出保留在 Node 24 范围内的 @types/node（24.19.1；latest 为 26.6.4），见 npm-official-outdated.json。
+- 完整 `build` 的原生步骤因 .NET SDK 9.0.302 不支持 net10.0-windows 报 NETSDK1045，见 npm-official-build.log。按 scripts/build.mjs 相同配置单独构建 Electron main/preload/runtime worker、复制 builtin skills 并构建 Vue 成功，见 npm-official-js-build.log；保留已有大 chunk 提示，没有修改构建入口或降低目标框架。
+- 全量现有测试以 4 并发运行：1036 项，1018 通过、16 失败、2 跳过，见 npm-official-tests.log。13 项因原生执行 helper 未构建失败；另 3 项在随机 localhost 端口报 EACCES。相关 3 个文件串行复跑共 35 项，34 通过，原失败的 3 项全部通过；另一个测试随机端口仍报 EACCES，见 npm-official-port-recheck.log。该新增端口失败项单独复跑 1/1 通过，见 npm-official-port-targeted.log。未删除失败记录或放宽断言。
+- Electron 44.7.0 包首次引用下载二进制：无下载器代理时失败，增加 HTTP_PROXY/HTTPS_PROXY 与 ELECTRON_GET_USE_PROXY 后下载成功，但首次下载超过 Playwright 30 秒启动期限。二进制安装确认后重跑桌面烟测，前 6 项通过，在 smoke.mjs:133 的会话切换滚动位置断言失败；见 npm-official-desktop.log、npm-official-desktop-proxy.log、npm-official-electron-install.log、npm-official-desktop-final.log。
+- 旧 Electron 44.4.5 对照同样失败，见 npm-official-desktop-baseline.log。进一步在 artifacts/dependencies-baseline 复制相同源码、使用升级前 HEAD 完整 package.json/package-lock.json 从官方源重新安装、按原配置重新构建，再使用旧 Electron 二进制运行，复现相同 smoke.mjs:133 断言失败；见 npm-official-baseline-ci.log、npm-official-baseline-build.log、npm-official-desktop-full-baseline.log。由此确认该烟测问题在此次依赖更新前已存在；没有改业务代码或测试去掩盖问题。
+- 当前 audit 为 3 项 low，涉及 UI/mermaid/嵌套 KaTeX 链，fixAvailable=false；见 npm-official-audit.json。本轮没有升级 UI 固定发布版本或强制替换间接依赖。未进行应用安装包发布、提交或推送。
+
+### 同日补充：.NET SDK 10.0.401 安装与阻塞测试复跑
+
+- 微软官方下载：https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.401/dotnet-sdk-10.0.401-win-x64.exe，HTTP 代理为 http://127.0.0.1:7890。下载文件 215437248 字节；Authenticode=Valid，签名组织 Microsoft Corporation。安装退出码 0，无需重启，见 artifacts/dotnet-sdk-10.0.401-install.log。
+- SHA512：F0D8F8E7EC24EFB05172A65DD80C4A9B1EF17EFCEBDBF0F57C15F436EEA417960A7EEB6726C473A042373D6A8B94AC1ADC7D680DECBF7D2C45FA5C5662D62265（本地计算值，未声称与发布校验值比对）。
+- `dotnet --version`=10.0.401；SDK 列表同时保留 9.0.302 与 10.0.401，安装于 C:/Program Files/dotnet。原有 .NET/ASP.NET Core/Windows Desktop 10.0.12 运行时保留。完整信息见 artifacts/dotnet10-info.log。
+- 原入口 `npm run build` 成功，含 ExecutionHelper、Electron main/preload/runtime worker 及 Vue；见 artifacts/dotnet10-full-build.log，仅有已有大 chunk 提示。`dotnet build native/UAH.NativeHelper/UAH.NativeHelper.csproj -c Release --nologo` 成功，0 警告/0 错误，见 dotnet10-native-helper-build.log。
+- Node 24.19.0 下串行复跑 command-privacy-loop、execution-backend、managed-command、workspace-tools 四个文件：54 项全部通过，0 失败/0 跳过，包含上一轮全部 13 项因 helper 缺失失败的测试；见 artifacts/dotnet10-execution-tests.log。
+- 本次未再次运行其余已验证的单测或桌面滚动测试；SDK 阻塞已解除，保留前述全量原始失败与隔离对照记录。无业务代码、目标框架或测试断言变更，未提交、推送或发布。

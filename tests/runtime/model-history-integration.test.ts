@@ -71,7 +71,7 @@ async function fixture(t: { after(fn: () => void | Promise<void>): void }, proto
                 server.listen(randomInt(20000, 60000), '127.0.0.1');
             });
             break;
-        } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error; }
+        } catch (error) { if (!['EADDRINUSE', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error; }
     }
     const address = server.address(); assert.ok(address && typeof address !== 'string' && address.port >= 20000);
     const settings = defaultAgentSettings(); let revision = 1;

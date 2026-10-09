@@ -14,7 +14,7 @@
         "build": "node scripts/build.mjs",
         "start": "electron .",
         "typecheck": "tsc --noEmit",
-        "test": "tsx --test tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs",
+        "test": "tsx --test --test-concurrency=4 tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs",
         "test:desktop": "node tests/desktop/smoke.mjs",
         "test:extensions": "node tests/desktop/extensions.mjs",
         "test:endpoints": "node tests/desktop/endpoints.mjs",
@@ -36,19 +36,19 @@
         "build:ui": "node scripts/build-ui.mjs"
     },
     "dependencies": {
-        "@lingyzh/ui": "0.3.2",
-        "@modelcontextprotocol/sdk": "1.32.0",
+        "@lingyzh/ui": "0.4.2",
+        "@modelcontextprotocol/sdk": "1.32.1",
         "pinia": "4.0.3",
         "vue": "3.5.43"
     },
     "devDependencies": {
         "@types/node": "^24.0.0",
         "@vitejs/plugin-vue": "6.0.9",
-        "electron": "44.4.5",
+        "electron": "44.7.0",
         "esbuild": "0.28.2",
-        "playwright": "1.63.0",
+        "playwright": "1.64.0",
         "tsx": "4.23.15",
         "typescript": "7.0.2",
-        "vite": "8.3.1"
+        "vite": "8.3.3"
     }
 }

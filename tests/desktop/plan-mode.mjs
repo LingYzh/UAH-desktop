@@ -50,7 +50,7 @@ for (let attempt = 0; attempt < 32; attempt++) {
             server.listen(randomInt(20000, 60000), '127.0.0.1');
         });
         break;
-    } catch (error) { if (error.code !== 'EADDRINUSE') throw error; }
+    } catch (error) { if (!['EADDRINUSE', 'EACCES'].includes(error.code)) throw error; }
 }
 assert.ok(server.address() && server.address().port >= 20000, 'local fixture uses a Fetch-safe port');
 const env = { ...process.env, UAH_DATA_DIR: path.join(evidence, 'data') };
@@ -143,6 +143,8 @@ try {
     }
     await app.evaluate(({ BrowserWindow }) => { const win = BrowserWindow.getAllWindows()[0]; win.setSize(1440, 900); win.webContents.setZoomFactor(1); });
     await page.reload();
+    // Startup intentionally shows a new draft; select the persisted proposal before reviewing it.
+    await page.getByRole('navigation', { name: '会话列表' }).getByRole('button', { name: /Plan fixture/ }).click();
     await approve.waitFor();
     assert.equal(requests.length, requestCount, 'reload retains proposal without model calls');
     await writeFile(edited.filePath, '# External edit must not be silently approved');
@@ -151,7 +153,7 @@ try {
     assert.equal(requests.length, requestCount, 'changed plan file blocks stale approval');
     state = await page.evaluate(() => window.uah.command({ type: 'snapshot' }));
     assert.equal(state.runs[0].plan.status, 'proposed');
-    assert.equal(state.sessions[0].controls.permissionMode, 'plan');
+    assert.equal(state.sessions.find(session => session.id === first.sessionId).controls.permissionMode, 'plan');
     await writeFile(edited.filePath, userPlan);
     await page.getByRole('button', { name: '指导 Agent 修订', exact: true }).click();
     await page.getByRole('textbox', { name: '计划修改意见', exact: true }).fill('保留兼容，只修改一个文件。');
@@ -164,7 +166,7 @@ try {
     state = await page.evaluate(() => window.uah.command({ type: 'snapshot' }));
     assert.equal(state.runs[0].plan.status, 'revision-requested');
     assert.equal(state.runs.at(-1).plan.status, 'proposed');
-    assert.equal(state.sessions[0].controls.permissionMode, 'plan');
+    assert.equal(state.sessions.find(session => session.id === first.sessionId).controls.permissionMode, 'plan');
     assert.equal(state.runs.at(-1).plan.documentId, first.plan.documentId);
     assert.equal(state.runs.at(-1).plan.version, 3);
     assert.equal(state.runs.at(-1).plan.title, '用户命名的任务计划');
@@ -176,7 +178,7 @@ try {
     await approve.click();
     await page.getByRole('button', { name: '批准本次操作', exact: true }).waitFor();
     state = await page.evaluate(() => window.uah.command({ type: 'snapshot' }));
-    assert.equal(state.sessions[0].controls.permissionMode, 'manual');
+    assert.equal(state.sessions.find(session => session.id === first.sessionId).controls.permissionMode, 'manual');
     assert.equal(state.runs[1].plan.status, 'approved');
     assert.equal(await readFile(path.join(project, 'example.txt'), 'utf8'), 'before\n', 'plan approval respects selected per-edit permission');
     await page.getByRole('button', { name: '批准本次操作', exact: true }).click();

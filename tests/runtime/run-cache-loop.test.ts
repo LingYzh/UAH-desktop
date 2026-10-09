@@ -38,7 +38,7 @@ test('Supervisor keeps 1000 durable historical runs out of its resident cache wh
         try { await new Promise<void>((ready, reject) => {
             const failed = (error: Error) => { server.off('listening', listening); reject(error); }; const listening = () => { server.off('error', failed); ready(); };
             server.once('error', failed); server.once('listening', listening); server.listen(randomInt(20000, 60000), '127.0.0.1');
-        }); break; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error; }
+        }); break; } catch (error) { if (!['EADDRINUSE', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error; }
     }
     const address = server.address(); assert.ok(address && typeof address !== 'string'); const settings = defaultAgentSettings();
     const supervisor = new Supervisor({ dataDirectory: data, delayMs: 0,

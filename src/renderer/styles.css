@@ -1148,6 +1148,22 @@ button.location-chip:hover:not(:disabled) {
     overflow: auto;
 }
 
+/* TabsWindow adds a shared grid and an item surface; both must pass through the panel's available height. */
+.workspace-tabs-window {
+    flex: 1;
+    min-height: 0;
+}
+
+.workspace-tabs-window > .ui-tabs-window-item,
+.workspace-tabs-window > .ui-tabs-window-item > .u-window-item {
+    height: 100%;
+    min-height: 0;
+}
+
+.workspace-tabs-window > .ui-tabs-window-item {
+    overflow: hidden;
+}
+
 .panel-content > select {
     width: 100%;
     padding: 8px 10px;

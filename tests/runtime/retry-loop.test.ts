@@ -31,7 +31,7 @@ async function fixture(t: { after(fn: () => Promise<void>): void }, respond: (bo
         try { await new Promise<void>((resolveListen, reject) => {
             const failed = (error: Error) => { server.off('listening', listening); reject(error); }; const listening = () => { server.off('error', failed); resolveListen(); };
             server.once('error', failed); server.once('listening', listening); server.listen(randomInt(20000, 60000), '127.0.0.1');
-        }); break; } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error; }
+        }); break; } catch (error) { if (!['EADDRINUSE', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error; }
     }
     const address = server.address(); assert.ok(address && typeof address !== 'string' && address.port >= 20000);
     const settings = defaultAgentSettings();

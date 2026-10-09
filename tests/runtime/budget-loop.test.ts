@@ -38,7 +38,8 @@ async function fixture(t: { after(fn: () => Promise<void>): void }, handler: (bo
                 const listening = () => { server.off('error', failed); resolveListen(); };
                 server.once('error', failed); server.once('listening', listening); server.listen(randomInt(20000, 60000), '127.0.0.1');
             }); break;
-        } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error; }
+        // Windows reserved port ranges reject an otherwise unused random fixture port.
+        } catch (error) { if (!['EADDRINUSE', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error; }
     }
     const address = server.address(); assert.ok(address && typeof address !== 'string');
     const settings = defaultAgentSettings(); settings.subagents.enabled = true; settings.profiles[0].instructions = 'ROOT BUDGET FIXTURE';

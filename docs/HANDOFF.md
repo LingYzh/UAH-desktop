@@ -1,5 +1,57 @@
 # UAH / UI 新会话交接
 
+## 2026-10-09：正式 UI 0.4.2 适配完成，准备主分支审阅
+
+UI 已先合并 main 并正式发布 0.4.2（7f63179 / v0.4.2，Actions 37896838790）。UAH 固定官方 registry 包，lock resolved/integrity 与安装目录一致，Root 核对单一物理 Vue 运行时；其他依赖锁元数据保持原 HEAD。五处 TabsWindow / 十五个 eager Items 迁移完成，保留 model/idPrefix、keyboard=false、transition=false、表单实例和原生浏览器宿主。
+
+ChatWorkspace 等待所选 IPC 历史和 DOM 更新后恢复阅读位置，原 600px 回归通过。SearchDialog 用公开 width 与转发 attrs/工具类恢复 800px 宽度、padding=0、关闭按钮靠右，默认动画由正式 UI 0.4.2 修复。测试按 DOM 弹层真实 closed 生命周期等待焦点/原生视图恢复；系统 DPI 仅在精确原生尺寸夹具固定为 1，应用 zoom 仍受测。
+
+最新 11 项门禁全部通过：typecheck、完整 npm test（1045 项 / 1043 通过 / 0 失败 / 2 跳过）、build、完整 test:ui，以及 appearance 8、extensions 32、browser 7、agents 14、smoke 8、rich-chat 4 组和 plan-mode。test:ui 保留 173 旧文档 URL/hash、家族标题、生产搜索动画/焦点/布局、分页和表格；当前页名称和按钮 ::before 悬停状态层断言与正式包一致。
+
+完整单测限制四个文件并发，保留全部用例和原时限；既有有界随机端口循环遇到 Windows 保留端口 EACCES 时重选，没有修改系统网络。初次 0.4.1 消费 10 门禁 4 通过 / 6 失败、单测 1045/1037/6/2，以及 0.4.2 中间失败、旧构建与测试协议漂移均保留。后续真正完整单测 1045/1043/0/2 单独记录，不把定向复跑当作全量通过。
+
+版本化证据：docs/checkpoint-evidence/2026-10-09-ui-0.4.2-consumer.json，包含源码 SHA-256、各门禁 attempt、原始日志哈希、截图目录及覆盖边界；本机原始日志在 artifacts/ui-0.4.2-consumer。最终 build 0023 和最后完整 UI 回归覆盖 SearchDialog 最终修改，完整单测与七组桌面专项的覆盖范围另列。当前分支准备提交推送并创建到 main 的审阅请求；UAH 尚未合并 main、未制作安装包。
+
+## 2026-10-09：UI补丁0.4.2已正式发布并升级，等待最终消费验收
+
+UI分支先合并main，0.4.1正式发布后，UAH生产验证发现默认transition被Vue Boolean转换的问题。库修复并完成typecheck/308单测/build/完整Electron/feedback/controls/pack/presentation门禁，main7f63179/v0.4.2发布成功，Actions37896838790、official latest0.4.2确认。UAH已从正式registry固定升级0.4.2，保留其他lock元数据、Vue dedupe和普通安装目录。
+
+五处Tabs组合已改为Window/15Items，保留eager实例、共享model/idPrefix、transition=false、keyboard=false及工作面板原滚动和原生浏览器bounds。首轮0.4.1消费验证10门禁4通过6失败留档；修正Windows随机保留端口及DPI测试环境、Plan session索引/重载前提。旧会话滚动恢复缺陷已在ChatWorkspace修复，等待IPC历史加载和DOM更新后恢复、加载期间不覆盖记忆，600px回归专项通过。最终完整验证正在进行，不可把旧失败或定向通过写成全量绿色。最终結果见docs/VALIDATION及新版本化证据。
+
+## 2026-10-09：UI已合并，等待正式发版后进行UAH适配
+
+用户最新要求先合并UI分支后发版，再适配UAH。UI远端main已合并；v0.4.0的Linux CI因API表达式CRLF/LF差异失败，Publish未执行。修复后的e891c76及v0.4.1已通过完整门禁并原子推送，Actions run37893864781正在发布。此前多GitHub账号交互阻断已通过单次显式选择LingYzh解决。正式registry尚待确认，UAH仍固定官方npm0.3.2，没有自动同步未发布源码。
+
+消费盘点：15个UiTabPanel调用分布于App、AgentManager、ExtensionManager、PlanFiles、WorkspacePanel；迁移使用TabsWindow/Item，显式共享model/idPrefix，eager=true、transition=false、keyboard=false保持草稿/预览与键盘边界。WorkspacePanel需由root保持flex滚动及原生browser-host-area尺寸，不能机械替换或复制UI组件。23个Dialog与1个Menu继续通过兼容Ui*入口，真实焦点/关闭生命周期需要消费验证。正式发布后从registry固定安装0.4.1，核对lock resolved/integrity与Vue dedupe，再完成适配和完整验证。
+
+当前增量：UI Actions run37893864781/Linux308测试/Publish均成功，official version/latest0.4.1、541文件tarball/integrity已核对；UAH已正式固定安装0.4.1。package/lock/实际普通安装目录一致，lock除UI版本/resolved/integrity外与原HEAD完全一致。五组Window/15Items已迁移，工作面板高度贯通并将滚动/padding保留在内部被隐藏的内容，保留原GitPanel及Markdown条件渲染。完整消费门禁正在运行，不能将此进度当作验收通过。
+
+## 2026-10-09：当前批次收尾、提交推送后停止
+
+用户要求完成手中批次后更新 handoff、分别提交推送并停止；全库深度对齐尚未完成。续作入口为 `D:/UI/HANDOFF.md`、`D:/UI/VALIDATION.md` 和 `D:/UI/docs/component-audit-2026-10-08/NEXT-SESSION-2026-10-09.md`，其中保留用户已批准的默认/模型规则、未答布局决策及 Stepper/列表/树/弹层容器残留。
+
+UAH 没有业务/运行时代码变更，仍固定消费正式 npm `@lingyzh/ui@0.3.2`；此次保留既有 package-lock 可选依赖 dev 标记变化和交接文档。完整提交前检查结果见 docs/VALIDATION 最新入口。两仓保持 `codex/handoff-component-alignment-20261008`，提交 SHA 以各仓实际 `git log -1` 为准；不发布 npm、不打版本标签、不升级消费端、不制作安装包。
+
+## 2026-10-09：UI 全库深度对齐续作（最新入口）
+
+当前两仓均在 `codex/handoff-component-alignment-20261008`，UI HEAD `784a46f`、UAH HEAD `25d357d`。UI 多批协议与真实组件 demo 改动尚未提交，全库深度对齐仍在进行；最新决定、审计和视觉验收范围以 `D:/UI/HANDOFF.md` 顶部及其链接为准，不采用下文旧“已停止”或旧待回复状态。
+
+UAH 本轮未改业务或运行时代码，仍固定消费正式 npm `@lingyzh/ui@0.3.2`。尚未发布的 UI 源码不进入 UAH；其入场已有 package-lock 可选依赖 dev 标记改动继续保留。本轮没有提交、推送、发布、依赖升级或桌面安装包变更。
+
+## 2026-10-08：交接分支恢复继续（当前入口）
+
+本机两仓均在codex/handoff-component-alignment-20261008，UI HEAD 784a46f、UAH HEAD 25d357d，与远端核对一致。Node24.19.0和.NET SDK10.0.400可用。UAH入场已有package-lock.json可选依赖dev标记改动，本会话保留原样。
+
+续作集中于相邻UI组件对齐：用户明确ConfirmEdit/Hover/DefaultsProvider直接统一标准行为，经济型GPT-6 Luna/max执行非视觉部分，root负责契约、真实示例和验收。语言作用域和分组wrapper也补齐相应契约，具体见D:/UI/HANDOFF.md最新入口及修复台账。本会话未改UAH业务/运行时代码；UAH仍固定消费已发布npm @lingyzh/ui0.3.2，本地未发布组件不会自动接入。没有发布、依赖升级或桌面安装包变更。
+
+## 2026-10-08 Git 分支交接（最新入口）
+
+用户要求 UI 与 UAH 的未提交工作分别提交推送新分支 `codex/handoff-component-alignment-20261008`，无需离线包；UAH 基于 `97c43a9`，本次保留此前官方 npm 源、代理、依赖升级及 .NET 验证记录，未新增业务功能。完整提交前检查结果见 VALIDATION 最新记录，既有桌面滚动断言的历史复现证据保留。
+
+新设备在两个仓库分别 `git fetch origin`，再 `git switch --track origin/codex/handoff-component-alignment-20261008`；已有本地同名分支则切换并 fast-forward，先保存当地未提交改动。使用 Node 24+ 和 .NET 10 SDK；`.npmrc` 中的 127.0.0.1:7890 代理需要按新设备网络设置处理。
+
+UI 组件修复及剩余阶段在相邻 UI 分支 HANDOFF 顶部，UAH 仍从官方 npm tarball 消费 `@lingyzh/ui@0.3.2`，没有自动接入 UI 未发布的新功能。此次只交接 Git 分支，不推送发布标签或发包。原生截图、测试日志、依赖与构建产物均为本机忽略文件，需要时按记录重跑。
+
 本轮 UI 发布与消费端升级的最新状态见文末「2026-10-05：升级 UI 0.3.2」；此前0.2.3及未发布描述属于历史记录。
 
 更新日期：2026-10-04。本文记录历次增量，文末为最新状态；新会话先检查实际 Git 状态和用户最新要求。
@@ -538,3 +590,17 @@ TypeScript7不再提供ts.sys，Vite Vue plugin显式使用Node的existsSync/rea
 最终完整UI25/25（含60个文档路由）、Agent15/15、端点11/11通过，无pageerror；证据分别为artifacts/ui-q949vX、artifacts/agents-sQ9goh、artifacts/endpoints-98M7dG，日志artifacts/ui-0.3.2-gallery.log、ui-0.3.2-agents-final.log、ui-0.3.2-endpoints-final.log。实际能力弹窗初始化／选择／保存正常；错误浮层为absolute、滚动后顶部位置不变，body顶部padding覆盖浮层高度且外层scrollTop为0，原旧行占位断言已同步用户要求。root复核最终endpoint-error-fixed.png、模型能力深色窄屏图像，主题与控件布局正确。
 
 UI独立仓库已发布并推送v0.3.2；UAH本轮只升级固定npm依赖、编译适配和桌面测试夹具／记录，没有改动业务组件或运行时代码，也没有发布桌面应用安装包。此前单测／外观／扩展验证仍适用；最终source API和样式与UI已验收版本一致。无阻断项。
+
+## 2026-10-08：官方 npm 源与依赖更新
+
+- 项目新增 `.npmrc`：官方源 `https://registry.npmjs.org/`，HTTP/HTTPS 代理均为 `http://127.0.0.1:7890`，覆盖用户级 npmmirror 配置。锁文件全部 resolved URL 使用官方 npm 域名。
+- 固定升级 MCP SDK 1.32.0 → 1.32.1、Electron 44.4.5 → 44.7.0、Playwright 1.63.0 → 1.64.0、Vite 8.3.1 → 8.3.3，并刷新范围内间接依赖。Node 类型锁定 24.19.1，保持 24.x 范围。UI 保持 0.3.2，安装目录从旧 0.1.0 同步到声明版本；Vue 3.5.43 保持 dedupe。
+- 当前默认 Node 为 22.19.0，本轮安装和验证使用已有 Node 24.19.0；未切换系统配置。Electron 首次引用才下载二进制，需要当前进程的 HTTP_PROXY/HTTPS_PROXY=http://127.0.0.1:7890 与 ELECTRON_GET_USE_PROXY=true；本轮已独立完成 44.7.0 二进制下载。
+- ci、typecheck、Electron/Vue 构建和依赖一致性检查通过。完整 build 因本机仅有 .NET 9、缺少 .NET 10 SDK 失败；完整回归中的原生执行测试同样受限。桌面滚动断言在升级前完整依赖锁文件的隔离对照中也失败。具体数字、复跑和证据见 VALIDATION 最新增量，不能把本轮标为全量验证通过。
+- 无界面实现或组件缺口，无 UI 源码、业务代码、提示词与运行时能力变更。UI 独立仓库原有锁文件修改保持原样。项目记忆见 `.Codex/memory/2026-10-08-official-npm-registry.md`；未提交、推送或发布。
+
+### 同日补充：本机 .NET SDK 更新
+
+用户要求更新本机 .NET，已通过 7890 代理下载并校验微软官方 SDK 10.0.401 Windows x64 安装包，系统安装成功（退出码 0，无需重启）。默认 `dotnet --version` 为 10.0.401，SDK 9.0.302 保留，10.0.12 运行时原本已安装。
+
+完整 `npm run build`（含 ExecutionHelper）与 NativeHelper Release 构建均通过；此前受 SDK 缺失影响的四个执行相关测试文件串行复跑 54/54 通过。缺少 .NET 10 的环境阻塞已解除，既有桌面滚动断言问题未在本轮修改。证据见 VALIDATION 最新补充；无业务代码或测试断言变更，未提交或推送。

@@ -8,7 +8,7 @@ import SubagentPanel from './SubagentPanel.vue';
 import PlanFiles from './PlanFiles.vue';
 import NativePlanPanel from './NativePlanPanel.vue';
 import GitPanel from './GitPanel.vue';
-import { UiButton, UiInput, UiSelect, UiTabs, UiTabPanel, UiScrollArea, UiDiff, UiFileChanges } from '@lingyzh/ui';
+import { UiButton, UiInput, UiSelect, UiTabs, UiTabsWindow, UiTabsWindowItem, UiScrollArea, UiDiff, UiFileChanges } from '@lingyzh/ui';
 import { roundFileChanges } from '../file-changes';
 import { fileChangeItem, displayFilePath } from '../change-presentation';
 
@@ -111,31 +111,38 @@ onBeforeUnmount(() => { epoch++; observer?.disconnect(); hideBrowser(); });
         <header class="panel-header"><strong>工作面板</strong><UiButton variant="ghost" size="sm" class="text-button panel-close" aria-label="关闭工作面板" @click="workspace.panel.open = false"><Icon name="close" /></UiButton></header>
         <UiScrollArea label="工作面板标签" axis="horizontal" :rounded="false" class="flex-shrink-0"><UiTabs dense variant="underline" v-model="workspace.panel.tab" class="panel-tabs" style="width: max-content; min-width: 100%" id-prefix="workspace" :items="tabs" aria-label="工作面板内容"><template #default="{ item }"><Icon :name="item.icon" />{{ item.label }}</template></UiTabs></UiScrollArea>
         <div v-if="error" class="inline-error" role="alert">{{ error }}</div>
-        <UiTabPanel :model-value="workspace.panel.tab" value="agents" id-prefix="workspace" class="overflow-hidden" style="display: flex; flex-direction: column; flex: 1; min-height: 0"><SubagentPanel v-if="workspace.historyPanelReady" /><p v-else role="status">正在加载会话历史…</p></UiTabPanel>
-        <UiTabPanel :model-value="workspace.panel.tab" value="plans" id-prefix="workspace" class="panel-content"><NativePlanPanel v-if="workspace.historyPanelReady && workspace.nativeMode" /><PlanFiles v-else-if="workspace.historyPanelReady" /><p v-else role="status">正在加载会话历史…</p></UiTabPanel>
-        <UiTabPanel :model-value="workspace.panel.tab" value="git" id-prefix="workspace" class="panel-content"><GitPanel v-if="workspace.panel.tab === 'git' && workspace.panel.open && workspace.page === 'chat'" /></UiTabPanel>
-        <UiTabPanel :model-value="workspace.panel.tab" value="files" id-prefix="workspace" class="panel-content">
-            <p v-if="!workspace.historyPanelReady" role="status">正在加载会话历史…</p>
-            <template v-else>
-            <UiFileChanges v-if="changeRun && !artifact" :title="changeTitle" :items="changeItems" @select="workspace.panel.artifactId = $event" @view-all="workspace.panel.artifactId = null" />
-            <UiButton v-if="changeRun && artifact" variant="ghost" size="sm" @click="workspace.panel.artifactId = null">全部文件改动</UiButton>
-            <template v-if="artifact">
-                <label class="field-label" for="snapshot-choice">{{ changeRun ? changeTitle : '本会话的不可变快照' }}</label>
-                <UiSelect id="snapshot-choice" v-model="workspace.panel.artifactId"><option v-for="item in artifacts" :key="item.id" :value="item.id">{{ displayFilePath(item.path, workspace.selected?.directory) }}</option></UiSelect>
-                <h3>{{ artifact.path.split(/[\\/]/).at(-1) }}</h3>
-                <p class="muted small">{{ new Date(artifact.createdAt).toLocaleString() }} · 文件工具</p>
-                <p v-if="changeRun && artifact.artifactIds.length > 1" class="muted small">汇总 {{ artifact.artifactIds.length }} 次实际修改：首次修改前 → 最后修改后。</p>
-                <p class="muted small break-word">{{ artifact.path }}</p>
-                <UiDiff :key="artifact.id" :path="displayFilePath(artifact.path, workspace.selected?.directory)" :before="artifact.oldContent" :after="artifact.newContent" />
-                <details><summary>快照身份</summary><p class="muted small break-word">{{ changeRun ? `关联 ${artifact.artifactIds.length} 个已保存快照` : `轮次 ${artifact.turnId}` }}<br />SHA-256 {{ artifact.hash }}</p></details>
-            </template>
-            <div v-else-if="!changeRun" class="empty-state"><Icon name="history" /><h3>还没有文件快照</h3><p>批准文件改动后，该轮次的内容会保存在这里。磁盘后续修改不会覆盖历史。</p></div>
-            </template>
-        </UiTabPanel>
-        <UiTabPanel :model-value="workspace.panel.tab" value="browser" id-prefix="workspace" class="browser-panel">
-            <div class="browser-controls"><label class="field-label" for="browser-address">手动浏览 · 当前会话独立登录态</label><div class="button-row"><UiInput id="browser-address" v-model="address" type="url" placeholder="https://" @keydown.enter="openBrowser" /><UiButton :disabled="busy || !workspace.selectedId || !workspace.connected" @click="openBrowser"><Icon name="external" />打开</UiButton><UiButton v-if="browserReady" :disabled="busy" aria-label="关闭网页" title="关闭网页" @click="closeBrowser"><Icon name="close" /></UiButton></div><p class="muted small">Agent 操作未授权。网站没有 UAH 文件和运行权限。</p></div>
-            <div ref="browserArea" class="browser-host-area"><p v-if="!browserReady" class="muted">{{ workspace.selectedId ? '输入 HTTPS 地址以打开网页。' : '建立会话后可使用独立浏览器。' }}</p></div>
-        </UiTabPanel>
-        <UiTabPanel :model-value="workspace.panel.tab" value="native" id-prefix="workspace" class="panel-content"><div class="eyebrow">WINDOWS · 只读</div><h3>观察当前前台窗口</h3><p class="muted">手动读取窗口和 UI Automation 根元素信息。不会截图、点击或输入。</p><UiButton class="panel-action" :disabled="busy || !workspace.connected" @click="observe"><Icon name="monitor" />{{ busy ? '正在观察…' : '读取窗口信息' }}</UiButton><pre v-if="observation" class="snapshot-code observation">{{ JSON.stringify(observation, null, 4) }}</pre></UiTabPanel>
+        <!-- Keep each panel mounted; native browser bounds and saved drafts depend on the existing instances. -->
+        <UiTabsWindow class="workspace-tabs-window" :model-value="workspace.panel.tab" id-prefix="workspace" eager :keyboard="false">
+            <UiTabsWindowItem value="agents" :transition="false"><div class="overflow-hidden h-100" style="display: flex; flex-direction: column; flex: 1; min-height: 0"><SubagentPanel v-if="workspace.historyPanelReady" /><p v-else role="status">正在加载会话历史…</p></div></UiTabsWindowItem>
+            <UiTabsWindowItem value="plans" :transition="false"><div class="panel-content h-100"><NativePlanPanel v-if="workspace.historyPanelReady && workspace.nativeMode" /><PlanFiles v-else-if="workspace.historyPanelReady" /><p v-else role="status">正在加载会话历史…</p></div></UiTabsWindowItem>
+            <UiTabsWindowItem value="git" :transition="false"><div class="panel-content h-100"><GitPanel v-if="workspace.panel.tab === 'git' && workspace.panel.open && workspace.page === 'chat'" /></div></UiTabsWindowItem>
+            <UiTabsWindowItem value="files" :transition="false">
+                <div class="panel-content h-100">
+                    <p v-if="!workspace.historyPanelReady" role="status">正在加载会话历史…</p>
+                    <template v-else>
+                        <UiFileChanges v-if="changeRun && !artifact" :title="changeTitle" :items="changeItems" @select="workspace.panel.artifactId = $event" @view-all="workspace.panel.artifactId = null" />
+                        <UiButton v-if="changeRun && artifact" variant="ghost" size="sm" @click="workspace.panel.artifactId = null">全部文件改动</UiButton>
+                        <template v-if="artifact">
+                            <label class="field-label" for="snapshot-choice">{{ changeRun ? changeTitle : '本会话的不可变快照' }}</label>
+                            <UiSelect id="snapshot-choice" v-model="workspace.panel.artifactId"><option v-for="item in artifacts" :key="item.id" :value="item.id">{{ displayFilePath(item.path, workspace.selected?.directory) }}</option></UiSelect>
+                            <h3>{{ artifact.path.split(/[\\/]/).at(-1) }}</h3>
+                            <p class="muted small">{{ new Date(artifact.createdAt).toLocaleString() }} · 文件工具</p>
+                            <p v-if="changeRun && artifact.artifactIds.length > 1" class="muted small">汇总 {{ artifact.artifactIds.length }} 次实际修改：首次修改前 → 最后修改后。</p>
+                            <p class="muted small break-word">{{ artifact.path }}</p>
+                            <UiDiff :key="artifact.id" :path="displayFilePath(artifact.path, workspace.selected?.directory)" :before="artifact.oldContent" :after="artifact.newContent" />
+                            <details><summary>快照身份</summary><p class="muted small break-word">{{ changeRun ? `关联 ${artifact.artifactIds.length} 个已保存快照` : `轮次 ${artifact.turnId}` }}<br />SHA-256 {{ artifact.hash }}</p></details>
+                        </template>
+                        <div v-else-if="!changeRun" class="empty-state"><Icon name="history" /><h3>还没有文件快照</h3><p>批准文件改动后，该轮次的内容会保存在这里。磁盘后续修改不会覆盖历史。</p></div>
+                    </template>
+                </div>
+            </UiTabsWindowItem>
+            <UiTabsWindowItem value="browser" :transition="false">
+                <div class="browser-panel h-100">
+                    <div class="browser-controls"><label class="field-label" for="browser-address">手动浏览 · 当前会话独立登录态</label><div class="button-row"><UiInput id="browser-address" v-model="address" type="url" placeholder="https://" @keydown.enter="openBrowser" /><UiButton :disabled="busy || !workspace.selectedId || !workspace.connected" @click="openBrowser"><Icon name="external" />打开</UiButton><UiButton v-if="browserReady" :disabled="busy" aria-label="关闭网页" title="关闭网页" @click="closeBrowser"><Icon name="close" /></UiButton></div><p class="muted small">Agent 操作未授权。网站没有 UAH 文件和运行权限。</p></div>
+                    <div ref="browserArea" class="browser-host-area"><p v-if="!browserReady" class="muted">{{ workspace.selectedId ? '输入 HTTPS 地址以打开网页。' : '建立会话后可使用独立浏览器。' }}</p></div>
+                </div>
+            </UiTabsWindowItem>
+            <UiTabsWindowItem value="native" :transition="false"><div class="panel-content h-100"><div class="eyebrow">WINDOWS · 只读</div><h3>观察当前前台窗口</h3><p class="muted">手动读取窗口和 UI Automation 根元素信息。不会截图、点击或输入。</p><UiButton class="panel-action" :disabled="busy || !workspace.connected" @click="observe"><Icon name="monitor" />{{ busy ? '正在观察…' : '读取窗口信息' }}</UiButton><pre v-if="observation" class="snapshot-code observation">{{ JSON.stringify(observation, null, 4) }}</pre></div></UiTabsWindowItem>
+        </UiTabsWindow>
     </aside>
 </template>

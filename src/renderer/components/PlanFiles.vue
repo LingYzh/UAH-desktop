@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch, useId, onBeforeUnmount } from 'vue';
-import { UiSelect, UiMarkdown, UiButton, UiField, UiInput, UiTextarea, UiTabs, UiTabPanel, snackbar, writeClipboard } from '@lingyzh/ui';
+import { UiSelect, UiMarkdown, UiButton, UiField, UiInput, UiTextarea, UiTabs, UiTabsWindow, UiTabsWindowItem, snackbar, writeClipboard } from '@lingyzh/ui';
 import { useWorkspace } from '../stores/workspace';
 import { openMarkdownLink } from '../markdown-links';
 import { currentPlanRun, planDocuments, planStatusLabels } from '../plan-presentation';
@@ -96,14 +96,16 @@ async function copy() {
                 <UiInput :id="id + '-title'" v-model="title" class="w-100" :maxlength="200" :disabled="saving" />
             </UiField>
             <UiTabs v-model="editorMode" :items="tabs" :id-prefix="id + '-editor'" aria-label="计划编辑方式" />
-            <UiTabPanel :model-value="editorMode" value="edit" :id-prefix="id + '-editor'">
-                <UiField class="flex-column align-start ga-2" :for="id + '-content'" label="计划 Markdown" description="支持标题、列表、表格和代码块。">
-                    <UiTextarea :id="id + '-content'" v-model="content" :rows="16" :maxlength="100000" :disabled="saving" spellcheck="false" />
-                </UiField>
-            </UiTabPanel>
-            <UiTabPanel :model-value="editorMode" value="preview" :id-prefix="id + '-editor'">
-                <UiMarkdown :source="content" @link-click="openMarkdownLink" />
-            </UiTabPanel>
+            <UiTabsWindow eager :keyboard="false" :model-value="editorMode" :id-prefix="id + '-editor'">
+                <UiTabsWindowItem value="edit" :transition="false">
+                    <UiField class="flex-column align-start ga-2" :for="id + '-content'" label="计划 Markdown" description="支持标题、列表、表格和代码块。">
+                        <UiTextarea :id="id + '-content'" v-model="content" :rows="16" :maxlength="100000" :disabled="saving" spellcheck="false" />
+                    </UiField>
+                </UiTabsWindowItem>
+                <UiTabsWindowItem value="preview" :transition="false">
+                    <UiMarkdown :source="content" @link-click="openMarkdownLink" />
+                </UiTabsWindowItem>
+            </UiTabsWindow>
             <div class="d-flex flex-wrap ga-2">
                 <UiButton variant="primary" :loading="saving" :disabled="!idle || !title.trim() || !content.trim()" @click="save">保存新版本</UiButton>
                 <UiButton :disabled="saving" @click="editing = false">关闭</UiButton>

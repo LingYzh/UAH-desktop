@@ -1,0 +1,77 @@
+{
+    "date": "2026-10-08",
+    "branch": "codex/handoff-component-alignment-20261008",
+    "base": "97c43a907520c5d747abdd00b985d3ec4dde9d32",
+    "uiCheckpoint": "784a46fe581120c22f12d4053555b9329eb7c96a",
+    "environment": {
+        "node": "24.19.0",
+        "dotnetSdk": "10.0.401"
+    },
+    "typecheck": "passed",
+    "build": "passed",
+    "dependencyTree": "passed; official npm @lingyzh/ui@0.3.2",
+    "fullUnitTests": {
+        "command": "node --import tsx --test --test-concurrency=1 tests/runtime/*.test.ts tests/main/*.test.ts tests/renderer/*.test.mjs",
+        "exitCode": 1,
+        "tests": 1045,
+        "passed": 1039,
+        "failed": 4,
+        "skipped": 2,
+        "durationMs": 811829.578,
+        "failures": [
+            {
+                "name": "updating keeps the current filename while applying exact-hash compare and swap",
+                "location": "tests/runtime/memory-store.test.ts:107",
+                "error": "MEMORY_INDEX_UPDATE_FAILED; filesystem EPERM",
+                "targetedRecheck": "passed"
+            },
+            {
+                "name": "legacy estimated-token suspension resumes without a token grant or replaying tools",
+                "location": "tests/runtime/recovery-loop.test.ts:106",
+                "error": "listen EACCES 127.0.0.1:54776",
+                "targetedRecheck": "passed"
+            },
+            {
+                "name": "canonical reconciliation failure cannot clear an unresolved effect across restart",
+                "location": "tests/runtime/recovery-loop.test.ts:215",
+                "error": "listen EACCES 127.0.0.1:54708",
+                "targetedRecheck": "passed"
+            },
+            {
+                "name": "Supervisor keeps 1000 durable historical runs out of its resident cache while preserving old-run access, effects and Agent locking",
+                "location": "tests/runtime/run-cache-loop.test.ts:15",
+                "error": "listen EACCES 127.0.0.1:50147",
+                "targetedRecheck": "passed"
+            }
+        ]
+    },
+    "fullUi": {
+        "finalStatus": "passed",
+        "groups": 25,
+        "documentationRoutes": 60,
+        "pageErrors": [],
+        "report": "docs/handoff-ui-20261008.json",
+        "firstAttempt": "failed search dialog intermediate opacity sample; unchanged original script recheck passed",
+        "testAssertionsChanged": false
+    },
+    "desktopSmoke": {
+        "status": "failed",
+        "passedBeforeFailure": 6,
+        "failure": "session-switch chat-scroll position assertion",
+        "location": "tests/desktop/smoke.mjs:133",
+        "existingBaseline": "Earlier official-registry validation reproduced this failure using previous HEAD package and lock with old Electron in an isolated rebuild.",
+        "fixedInThisCheckpoint": false
+    },
+    "fullGateAllGreen": false,
+    "published": false,
+    "localLogs": [
+        "artifacts/handoff-typecheck.log",
+        "artifacts/handoff-build.log",
+        "artifacts/handoff-full-tests.log",
+        "artifacts/handoff-unit-failure-recheck.log",
+        "artifacts/handoff-unit-failure-recheck-2.log",
+        "artifacts/handoff-full-ui.log",
+        "artifacts/handoff-full-ui-original.log",
+        "artifacts/handoff-desktop.log"
+    ]
+}

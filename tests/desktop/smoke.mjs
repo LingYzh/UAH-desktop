@@ -122,7 +122,8 @@ try {
         await page.getByRole('button', { name: '无目录', exact: true }).click();
         await page.getByRole('button', { name: '发送消息', exact: true }).click();
         await page.locator('.turn .status').last().filter({ hasText: '已完成' }).waitFor();
-        await page.locator('.chat-scroll').evaluate((element) => { element.scrollTop = 600; });
+        // Notify the scroll listener before leaving, matching a user's reading intent.
+        await page.locator('.chat-scroll').evaluate((element) => { element.scrollTop = 600; element.dispatchEvent(new Event('scroll')); });
         await page.waitForFunction(() => Math.abs(document.querySelector('.chat-scroll').scrollTop - 600) < 1);
         await page.getByRole('button', { name: '设置', exact: true }).click();
         await page.getByRole('navigation', { name: '会话列表' }).getByRole('button', { name: /滚动回归/ }).click();
@@ -130,6 +131,8 @@ try {
         await page.getByRole('button', { name: '设置', exact: true }).click();
         await page.getByRole('navigation', { name: '会话列表' }).getByRole('button', { name: /无目录流式验证/ }).click();
         await page.getByRole('navigation', { name: '会话列表' }).getByRole('button', { name: /滚动回归/ }).click();
+        // Session selection loads its history asynchronously before restoring the reading position.
+        await page.waitForFunction(() => Math.abs(document.querySelector('.chat-scroll').scrollTop - 600) < 1);
         assert.ok(Math.abs(await page.locator('.chat-scroll').evaluate((element) => element.scrollTop) - 600) < 1);
     });
     const savedSessions = (await snapshot()).sessions.length;
