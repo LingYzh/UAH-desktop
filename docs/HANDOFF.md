@@ -1,5 +1,34 @@
 # UAH / UI 新会话交接
 
+## 2026-10-09：UI 0.5.0 已发布，UAH 图标适配待续作（最新入口）
+
+本次用户要求给 UAH 留交接并推送，仅更新文档与项目记忆。UAH 基线 main `9c07aeff92bc3752f60b9519e2ee5856e5be278f`，继续固定官方 `@lingyzh/ui@0.4.2`；本次没有升级依赖、修改业务/运行时代码或制作安装包。
+
+### 已完成的上游工作
+
+- UI 已合并 main 并正式发布 **0.5.0**，发布提交 `ee8fa4eb88196fa95d9c38b079c6fff215059e54` / `v0.5.0`；后续发布证据提交 `22bbfde`。 [Actions 37911472623](https://github.com/LingYzh/UI/actions/runs/37911472623) 全部成功，Linux 327/327、Build、Publish 通过；官方 registry version/latest、tarball/integrity 和 provenance 已确认。
+- 新协议统一 `IconValue`：MDI 原始 SVG 路径、多路径及 `[path, opacity]`、Vue 组件和 `$alias`；按钮、输入等入口直接接收。修复本地 `icon/name` 与别名解析、默认分页/Carousel 图标和 Stepper 文字输出。
+- 保留旧 `name/path/registerIcons` 与有限 MDI 名称；优先级 `path > icon > name`。未知名称开发告警并留空；按钮默认插槽优先，图标加文字使用 `prependIcon/appendIcon`。裸本地 `copy/close/edit` 不被默认语义别名覆盖。
+- 正式包在独立目录完成 9 项 SSR 消费验证，以及 UAH Vite 8.3.3 / plugin-vue 6.0.9 / TS 7.0.2 适配器的代表性 SFC 构建；这些结果不等于 UAH 生产应用已升级或完成运行时验收。
+- 正式 integrity：`sha512-gsuKUvq26X7hB+O1bbise3XbOkVpNNXITD4AFjfi18GiPJRE/qF+EoxtMVEdhYeiRtRvpUYsIBAcGaYCUwaJPQ==`。续作时重新核对 official registry，不使用本地 link 或 sibling 源码代替正式包。
+
+### 续作范围与顺序
+
+1. 阅读本节、[图标适配评估](UI-0.5.0-ICON-HANDOFF.md)、`.Codex/memory/2026-10-09-ui-0.5.0-icon-handoff.md`，重新检查两仓实际状态。
+2. 固定升级官方 `@lingyzh/ui@0.5.0`；npm 官方源使用 `127.0.0.1:7890`。核对 package/lock/实际安装目录的版本、resolved、integrity、非 link 和单一 Vue；其他依赖锁元数据保持不变。
+3. 推荐将 `src/renderer/components/Icon.vue` 收敛为共享 `UiIcon` 薄包装，保留现有 `name/size` 调用、默认 18px、根样式和装饰性 ARIA，转发 `icon/path/label`。不要增加第二层 `.prototype-icon` 外壳；原型 design 资产保留。
+4. 补图标薄包装协议与真实按钮 SVG 回归，再覆盖标题栏/搜索弹窗、模型能力、回复操作、工具活动的明暗主题、键盘、焦点和窄屏布局。提交前运行完整 typecheck/test/build/test:ui，以及 appearance/endpoints/turn-actions/tool-chat 等受影响专项，记录所有首次失败和修复后的完整结果。
+
+### 已核对的影响面与约束
+
+- 自有 Icon 共 34 处调用，分布于 App、ChatWorkspace、SearchDialog、WorkspacePanel；29 个可枚举名称及动态有限映射均存在。UI 与 UAH 的 67 个本地 SVG 逐字节一致，无需批量换成 MDI。
+- UiButton 共 142 处，仅 App:215 与 SearchDialog:58 的两处裸布尔 `icon` + 默认插槽；没有字符串 `icon` 与插槽冲突。EndpointManager 的共享 UiIcon、RunActivity、RunActions 的名称继续兼容。两个 Tabs 的图标来自自定义插槽，无需重写组合协议。
+- UAH 当前未导入 `@mdi/js`、未配置 `createUI` 图标集；仅升级无需强制安装插件。后续业务开始具名导入 MDI 时再声明自己的直接依赖，不依赖传递依赖。
+- UI 的 67 个本地 SVG 仍 eager；此次薄包装旨在消除 UAH 运行时重复字典，不宣称库支持逐图裁剪。
+- 保留上一批 TabsWindow 的 eager 实例、model/idPrefix、keyboard=false/transition=false、SearchDialog 动画/焦点/800px 布局、旧会话阅读位置与原生浏览器宿主约束。
+
+完整评估及上游证据来源在 UI 仓库 `docs/UAH-ICON-ASSESSMENT-0.5.0.md`、`docs/RELEASE-0.5.0.md`、`docs/component-audit-2026-10-08/checkpoint-evidence/2026-10-09-release-0.5.0-published.json`。本次交接检查结果见 `docs/VALIDATION.md` 最新条目；下方旧“当前版本/待发布/未合并”保留为历史，不能覆盖本节状态。
+
 ## 2026-10-09：UAH 已合并 main
 
 用户明确要求直接合并。PR #1 已从 draft 转为 ready 并成功合并，merge commit c02fb3be04f96acda515b8867d41676a375078fa，https://github.com/LingYzh/UAH-desktop/pull/1。合并后文件树与已验收适配提交 196d397 完全一致（tree d51f06740a4f5f9396da1791e360b094678fd38e），原 11 项门禁证据继续适用；本地 main 已同步。后续仅补记合并状态，未修改产品、依赖或测试，未制作安装包。下方待审阅/未合并状态为合并前历史。

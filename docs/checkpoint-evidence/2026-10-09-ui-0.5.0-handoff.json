@@ -1,0 +1,53 @@
+{
+    "generatedAt": "2026-10-09T09:44:45.661Z",
+    "purpose": "handoff-only commit and push; future UI 0.5.0 adaptation remains pending",
+    "base": "9c07aeff92bc3752f60b9519e2ee5856e5be278f",
+    "node": "v24.19.0",
+    "unchangedProductSource": true,
+    "consumerVersion": "0.4.2",
+    "gates": {
+        "typecheck": {
+            "exitCode": 0,
+            "log": {
+                "path": "artifacts/handoff-ui-0.5.0/typecheck.log",
+                "sha256": "7c4b28f72144ea2d0df2461382a304b54cb5848b62bd6316129196e18a217d3a"
+            }
+        },
+        "unit": {
+            "exitCode": 0,
+            "total": 1045,
+            "passed": 1043,
+            "failed": 0,
+            "skipped": 2,
+            "cancelled": 0,
+            "log": {
+                "path": "artifacts/handoff-ui-0.5.0/unit.log",
+                "sha256": "5aa0d9b481b5834d76e5defc05de5224164523963a2b8a1f5f77b41133a1db3b"
+            }
+        },
+        "build": {
+            "exitCode": 0,
+            "log": {
+                "path": "artifacts/handoff-ui-0.5.0/build.log",
+                "sha256": "22e2ccd73d7149a73b08b55d9dda8d634ccfe45914b541373f8d17b2ee5439e7"
+            }
+        },
+        "ui": {
+            "exitCode": 0,
+            "groups": 25,
+            "routes": 173,
+            "errors": [],
+            "report": "E:\\WebstormProjects\\UAH-desktop\\artifacts\\ui-nN3mwB/report.json",
+            "log": {
+                "path": "artifacts/handoff-ui-0.5.0/ui.log",
+                "sha256": "8fdc2d0ece27c45d36015910113c4eb868034fc28902247b047533cba58e3cc1"
+            }
+        }
+    },
+    "documentation": {
+        "releaseMetadataMatched": true,
+        "handoffReferencesExist": true,
+        "whitespacePassed": true
+    },
+    "boundary": "These checks exercise the current UI 0.4.2 consumer; they do not verify an upgraded UI 0.5.0 production application."
+}

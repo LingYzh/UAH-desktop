@@ -1,5 +1,13 @@
 # 本次验收记录
 
+## 2026-10-09：UI 0.5.0 待适配交接推送检查
+
+本次仅更新交接/评估文档与项目记忆，基线 main 9c07aef。生产源码、测试、构建脚本、package/lock 均与基线一致，UAH 继续消费正式 UI 0.4.2；0.5.0 上游已发布，UAH 适配留给下一批。
+
+按仓库提交前约定复核：typecheck 通过；完整 npm test 1045 项 / 1043 pass / 0 fail / 2 skip；build 通过（Node v24.19.0、.NET 10.0.401）；test:ui 25 组 / 173 文档路由通过，报告无页面错误。交接中上游 SHA/integrity 与 UI 已提交发布证据一致，引用文件存在，git diff --check 通过。
+
+证据：docs/checkpoint-evidence/2026-10-09-ui-0.5.0-handoff.json；原始日志 artifacts/handoff-ui-0.5.0。此处门禁针对当前 0.4.2 消费端，不代表 UAH 已安装或验收 0.5.0。下方历史失败及其后完整验收记录继续保留。
+
 ## 2026-10-09：正式 UI 0.4.2 消费验收通过
 
 UI 已先合并 main 并正式发布 0.4.2（7f63179 / v0.4.2，Actions 37896838790）。UAH 固定官方 registry 包，lock resolved/integrity 与安装目录一致，Root 核对单一物理 Vue 运行时；其他依赖锁元数据保持原 HEAD。五处 TabsWindow / 十五个 eager Items 迁移完成，保留 model/idPrefix、keyboard=false、transition=false、表单实例和原生浏览器宿主。
